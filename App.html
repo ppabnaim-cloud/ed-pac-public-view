@@ -157,8 +157,12 @@
     var crisis = (data.kpi && data.kpi.crisisBeds > 0);
     strip.className = 'narr' + (crisis ? ' is-crisis' : '');
     icon.textContent = crisis ? '⚠️' : 'ℹ️';
+
+    // The overlay keeps the full narrative; the strip itself carries only the
+    // line the cards do not, so nothing is said twice on one screen.
     S.narrativeHtml = narrativeHtml(data);
-    txtEl.innerHTML = S.narrativeHtml;
+    txtEl.innerHTML = '<strong>' + esc(t('public.tapTitle')) + '</strong> ' +
+                      esc(t('public.tapBody'));
   }
 
   /* ── Help overlay: the full narrative plus the reviewed illustrations. ── */
@@ -310,16 +314,25 @@
 
   function arrivalsPanel(d, area) {
     var fc = (d.forecast && d.forecast.available) ? d.forecast.points : [];
+
+    // Plot complete hours only. The hour in progress holds a few minutes of
+    // arrivals, so drawing it alongside full hours makes the line dive to the
+    // floor and reads as a collapse in attendances that has not happened.
+    var series = d.arrivals.series.filter(function (p) { return !p.partial; });
+    var droppedPartial = series.length < d.arrivals.series.length;
+
     var notes = [];
     if (d.forecast && d.forecast.available) {
       notes.push(d.forecast.model === 'holtWintersAdditive' ? t('note.modelHW') : t('note.modelDamped'));
       if (d.forecast.stale) notes.push(t('note.staleForecast'));
     }
+    if (droppedPartial) notes.push(t('note.partialExcluded'));
+
     return panel({
       area: area, title: t('panel.arrivals'),
-      sub: d.arrivals.series.length + ' ' + t('chart.hour').toLowerCase(),
+      sub: series.length + ' ' + t('chart.hour').toLowerCase(),
       chart: {
-        type: 'forecastLine', observed: d.arrivals.series, forecast: fc,
+        type: 'forecastLine', observed: series, forecast: fc,
         t: t('chart'), aria: t('panel.arrivals')
       },
       legend: [
@@ -331,7 +344,7 @@
       table: {
         caption: t('panel.arrivals'),
         head: [t('chart.hour'), t('chart.arrivals'), t('chart.projected'), t('chart.pi80')],
-        body: d.arrivals.series.map(function (p) {
+        body: series.map(function (p) {
           return [Charts.pad2(p.hour) + ':00', p.count, '', ''];
         }).concat(fc.map(function (p) {
           return [Charts.pad2(p.hour) + ':00', '', Charts.num(p.yhat, 1),
@@ -700,6 +713,189 @@
      STEP DEFINITIONS
      ══════════════════════════════════════════════════════════ */
   /** KPI row summarising the bed establishment for one scope. */
+  /* ══════════════════════════════════════════════════════════
+     PUBLIC VIEW — tabs 1 to 3
+
+     These screens answer the three questions a waiting family
+     actually has: where is my relative, how full is the zone they
+     are in, and how long is the green-zone queue. No charts: the
+     analysis lives on the Administrative tab.
+     ══════════════════════════════════════════════════════════ */
+
+  /** The search prompt, shown inline rather than hidden behind the header. */
+  function searchPrompt(area) {
+    var n = node('div', 'seek');
+    n.style.gridArea = area;
+    n.innerHTML =
+      '<div class="seek-copy">' +
+        '<h2>' + esc(t('search.title')) + '</h2>' +
+        '<p>' + esc(t('public.seekSub')) + '</p>' +
+      '</div>' +
+      '<button class="seek-btn" type="button">' +
+        '<span aria-hidden="true">🔍</span> ' + esc(t('searchBtn')) +
+      '</button>';
+    n.querySelector('.seek-btn').onclick = function () {
+      var b = $('searchBtn'); if (b) b.click();
+    };
+    return n;
+  }
+
+  /**
+   * One card per zone: how many patients are being cared for against the
+   * zone's normal bed count, and whether escalation beds are open.
+   * The green zone also carries the queue length and the average wait,
+   * which is the single most asked question in the waiting area.
+   */
+  function zoneCards(d, area) {
+    var wrap = node('div', 'zone-grid');
+    wrap.style.gridArea = area;
+
+    // Bedded zones first, consultation rooms last: the green-zone card spans
+    // the full width and reads as the summary line it is.
+    var zones = d.occupancy.filter(function (z) { return z.capacity > 0; })
+      .sort(function (a, b) { return (a.isRoomZone ? 1 : 0) - (b.isRoomZone ? 1 : 0); });
+
+    var bedded = zones.filter(function (z) { return !z.isRoomZone; }).length;
+    var cols = bedded >= 5 ? 3 : bedded >= 3 ? 2 : 1;
+    wrap.style.gridTemplateColumns = 'repeat(' + cols + ', minmax(0, 1fr))';
+
+    // One row of cards should not swell to fill a tall screen.
+    var rows = Math.ceil(bedded / cols) + (zones.length - bedded);
+    if (rows <= 1) {
+      wrap.style.maxHeight = 'calc(210px * var(--s))';
+      wrap.style.alignSelf = 'start';
+    }
+    wrap.innerHTML = zones.map(function (z) {
+      var total = z.funded + z.crisis;
+      var isRoom = z.isRoomZone;
+      var full = z.crisis > 0 || total >= z.capacity;
+      var pct = z.capacity > 0 ? Math.min(100, Math.round(total / z.capacity * 100)) : 0;
+
+      var state = z.crisis > 0 ? 'crisis' : (total >= z.capacity ? 'full' : (pct >= 70 ? 'busy' : 'ok'));
+      var stateText = t('public.state.' + state);
+
+      var badge = z.crisis > 0
+        ? '<span class="zc-badge is-crisis">⚠ ' + z.crisis + ' ' + esc(t('public.crisisBeds')) + '</span>'
+        : '<span class="zc-badge is-' + state + '">' + esc(stateText) + '</span>';
+
+      var extra = '';
+      if (isRoom) {
+        extra = '<div class="zc-gz">' +
+          '<div class="zc-gz-row"><span class="zc-gz-n">' + z.waiting + '</span>' +
+            '<span class="zc-gz-l">' + esc(t('public.waitingNow')) + '</span></div>' +
+          (d.kpi.gzAverageWaitMin
+            ? '<div class="zc-gz-wait">⏱ ' + esc(t('public.avgWait')) + ' <strong>' +
+              esc(fmtMin(d.kpi.gzAverageWaitMin)) + '</strong></div>'
+            : '<div class="zc-gz-wait zc-muted">' + esc(t('public.avgWaitNone')) + '</div>') +
+          '</div>';
+      }
+
+      return '<div class="zone-card z-' + z.zone + (full ? ' is-full' : '') +
+             (isRoom ? ' is-wide' : '') + '">' +
+        '<div class="zc-head">' +
+          '<span class="zc-name">' + esc(zoneName(z.zone)) + '</span>' + badge +
+        '</div>' +
+        '<div class="zc-nums">' +
+          '<span class="zc-big">' + total + '</span>' +
+          '<span class="zc-cap">/ ' + z.capacity + ' ' +
+            esc(isRoom ? t('public.rooms') : t('public.beds')) + '</span>' +
+        '</div>' +
+        '<div class="zc-bar"><span style="width:' + pct + '%"></span></div>' +
+        extra +
+      '</div>';
+    }).join('');
+    return wrap;
+  }
+
+  /** The crisis alert the specification asks for, in plain Malay. */
+  function crisisBanner(d, area) {
+    var k = d.kpi;
+    if (!k.crisisBeds) return null;
+    return bannerPanel({
+      area: area, tone: 'critical', icon: '⚠️',
+      html: '<strong>' + esc(t('public.crisisTitle')) + '</strong> ' +
+            esc(tf('public.crisisBody', k.crisisBeds))
+    });
+  }
+
+  /** Plain-language guidance: what the zones mean and what happens next. */
+  function guidePanel(d, area) {
+    var rows = t('public.guide');
+    var html = '<div class="guide">' + rows.map(function (g) {
+      return '<div class="guide-row"><span class="guide-ic" aria-hidden="true">' + esc(g.icon) +
+             '</span><div><strong>' + esc(g.title) + '</strong><p>' + esc(g.body) + '</p></div></div>';
+    }).join('') + '</div>';
+    var p = panel({ area: area, title: t('public.guideTitle'), html: html });
+    return p;
+  }
+
+  /** Where each patient stands: how many are at each stage of care. */
+  function stagePanel(d, area) {
+    var k = d.kpi;
+    var stages = [
+      { key: 'ongoingtreatment', n: d.statusMix.reduce(function (a, x) {
+          return a + (x.key === 'ongoingtreatment' ? x.count : 0); }, 0) },
+      { key: 'referred',  n: k.referred },
+      { key: 'preadmit',  n: k.preadmit },
+      { key: 'admitted',  n: k.admitted },
+      { key: 'discharge', n: k.discharge }
+    ].filter(function (x) { return x.n > 0; });
+
+    var html = '<div class="stages">' + stages.map(function (x) {
+      return '<div class="stage"><span class="stage-n">' + x.n + '</span>' +
+             '<span class="stage-l">' + esc(statusName(x.key)) + '</span></div>';
+    }).join('') + '</div>';
+    return panel({ area: area, title: t('public.stageTitle'), sub: t('public.stageSub'), html: html });
+  }
+
+  function publicSteps(d) {
+    var hasCrisis = d.kpi.crisisBeds > 0;
+    var zoneCount = d.occupancy.filter(function (z) { return z.capacity > 0; }).length;
+
+    // A unit with a single zone - PAC - has too little to justify a second
+    // screen, so it gets everything at once rather than a half-empty one.
+    if (zoneCount <= 1) {
+      return [{
+        title: t('public.stepNow'),
+        rows: (hasCrisis ? 'auto auto auto auto minmax(0,1fr)' : 'auto auto auto minmax(0,1fr)'),
+        cols: '1fr',
+        areas: (hasCrisis
+          ? '"seek" "alert" "zones" "stage" "guide"'
+          : '"seek" "zones" "stage" "guide"'),
+        build: function () {
+          var out = [searchPrompt('seek')];
+          if (hasCrisis) out.push(crisisBanner(d, 'alert'));
+          out.push(zoneCards(d, 'zones'), stagePanel(d, 'stage'), guidePanel(d, 'guide'));
+          return out;
+        }
+      }];
+    }
+
+    return [
+      {
+        title: t('public.stepNow'),
+        rows: hasCrisis ? 'auto auto minmax(0,1fr) auto' : 'auto minmax(0,1fr) auto',
+        cols: '1fr',
+        areas: hasCrisis ? '"seek" "alert" "zones" "stage"' : '"seek" "zones" "stage"',
+        build: function () {
+          var out = [searchPrompt('seek')];
+          if (hasCrisis) out.push(crisisBanner(d, 'alert'));
+          out.push(zoneCards(d, 'zones'), stagePanel(d, 'stage'));
+          return out;
+        }
+      },
+      {
+        title: t('public.stepGuide'),
+        rows: 'minmax(0,1fr)', cols: '1fr',
+        areas: '"guide"',
+        build: function () { return [guidePanel(d, 'guide')]; }
+      }
+    ];
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     ADMINISTRATIVE VIEW — every visualisation lives here
+     ══════════════════════════════════════════════════════════ */
   function bedKpis(d) {
     var b = d.bedBoard, tot = b.totals;
     return kpiBlock([
@@ -716,111 +912,6 @@
         tone: tot.crisisOccupied > 0 ? 'critical' : 'ok',
         sub: t('chart.crisisBed') + ' ' + tot.crisisOccupied + ' / ' + tot.crisisPlaces }
     ], 4);
-  }
-
-  function bedStep(d, withProjection) {
-    return {
-      title: t('steps.beds'),
-      rows: 'auto minmax(0,1fr)',
-      cols: withProjection ? '1.5fr 1fr' : '1fr',
-      areas: withProjection ? '"kpi kpi" "board proj"' : '"kpi" "board"',
-      build: function () {
-        var blk = bedKpis(d);
-        blk.style.gridArea = 'kpi';
-        var out = [blk, bedBoardPanel(d, 'board')];
-        if (withProjection) out.push(projectionPanel(d, 'proj'));
-        return out;
-      }
-    };
-  }
-
-  function clinicalSteps(d) {
-    var k = d.kpi;
-    var loadTone = k.crisisBeds > 0 ? 'critical' : (k.loadPct >= 100 ? 'serious' : k.loadPct >= 80 ? 'warn' : 'ok');
-    return [
-      {
-        title: t('steps.now'),
-        rows: 'auto minmax(0,1fr)', cols: '1fr',
-        areas: '"kpi" "cap"',
-        build: function () {
-          var tiles = [
-            { label: t('kpi.census'), value: fmtInt(k.census),
-              sub: k.attendances + ' ' + t('kpi.attendances').toLowerCase() },
-            { label: t('kpi.load'), value: fmtPct(k.loadPct), tone: loadTone,
-              sub: (k.fundedOccupied + k.crisisBeds) + ' / ' + k.capacity },
-            { label: t('kpi.crisis'), value: fmtInt(k.crisisBeds),
-              tone: k.crisisBeds > 0 ? 'critical' : 'ok',
-              sub: k.freeFundedBeds + ' ' + t('kpi.freeBeds').toLowerCase() },
-            { label: t('kpi.gzQueue'), value: fmtInt(k.gzQueue),
-              sub: k.gzAverageWaitMin
-                     ? t('kpi.gzAvg') + ' ' + fmtMin(k.gzAverageWaitMin)
-                     : k.gzRooms + ' / ' + k.gzRoomCapacity + ' ' + zoneName('gz') }
-          ];
-          var blk = kpiBlock(tiles, 4);
-          blk.style.gridArea = 'kpi';
-          return [blk, capacityPanel(d, 'cap')];
-        }
-      },
-      bedStep(d, true),
-      {
-        title: t('steps.flow'),
-        rows: 'minmax(0,1.15fr) minmax(0,1fr)', cols: '1.35fr 1fr',
-        areas: '"arr arr" "wait status"',
-        build: function () {
-          return [arrivalsPanel(d, 'arr'), waitsPanel(d, 'wait'), statusPanel(d, 'status')];
-        }
-      },
-      {
-        title: t('steps.pattern'),
-        rows: 'minmax(0,1.1fr) minmax(0,1fr)', cols: '1fr 1fr',
-        areas: '"heat heat" "scat method"',
-        build: function () {
-          return [hourZonePanel(d, 'heat'), scatterPanel(d, 'scat', false), methodPanel(d, 'method')];
-        }
-      }
-    ];
-  }
-
-  function pacSteps(d) {
-    var k = d.kpi;
-    return [
-      {
-        title: t('steps.now'),
-        rows: 'auto minmax(0,1fr) minmax(0,1.1fr)', cols: '1fr 1fr',
-        areas: '"kpi kpi" "cap cap" "status ages"',
-        build: function () {
-          var tiles = [
-            { label: t('kpi.census'), value: fmtInt(k.census),
-              sub: k.attendances + ' ' + t('kpi.attendances').toLowerCase() },
-            { label: t('kpi.load'), value: fmtPct(k.loadPct),
-              tone: k.crisisBeds > 0 ? 'critical' : 'ok',
-              sub: (k.fundedOccupied + k.crisisBeds) + ' / ' + k.capacity },
-            { label: t('kpi.crisis'), value: fmtInt(k.crisisBeds),
-              tone: k.crisisBeds > 0 ? 'critical' : 'ok',
-              sub: k.freeFundedBeds + ' ' + t('kpi.freeBeds').toLowerCase() },
-            { label: t('kpi.preadmit'), value: fmtInt(k.preadmit),
-              sub: t('kpi.referred') + ' ' + k.referred }
-          ];
-          var blk = kpiBlock(tiles, 4);
-          blk.style.gridArea = 'kpi';
-          return [blk, capacityPanel(d, 'cap'), statusPanel(d, 'status'), ageBandPanel(d, 'ages')];
-        }
-      },
-      bedStep(d, true),
-      {
-        title: t('steps.flow'),
-        rows: 'minmax(0,1.1fr) minmax(0,1fr)', cols: '1fr 1fr',
-        areas: '"arr arr" "refs method"',
-        build: function () {
-          return [
-            arrivalsPanel(d, 'arr'),
-            barListPanel(d, 'refs', t('panel.referrals'), d.referralMix,
-                         function (x) { return x; }, t('chart.patients')),
-            methodPanel(d, 'method')
-          ];
-        }
-      }
-    ];
   }
 
   function adminSteps(d) {
@@ -857,6 +948,22 @@
         }
       },
       {
+        title: t('steps.flow'),
+        rows: 'minmax(0,1fr) minmax(0,1fr)', cols: '1fr',
+        areas: '"arr" "proj"',
+        build: function () {
+          return [arrivalsPanel(d, 'arr'), projectionPanel(d, 'proj')];
+        }
+      },
+      {
+        title: t('steps.waits'),
+        rows: 'minmax(0,1fr) minmax(0,1fr)', cols: '1fr 1fr',
+        areas: '"wait wait" "scat method"',
+        build: function () {
+          return [waitsPanel(d, 'wait'), scatterPanel(d, 'scat', true), methodPanel(d, 'method')];
+        }
+      },
+      {
         title: t('steps.casemix'),
         rows: 'minmax(0,1fr) minmax(0,1fr)', cols: '1.25fr 1fr',
         areas: '"refs ages" "heatref gender"',
@@ -883,28 +990,28 @@
       },
       {
         title: t('steps.beds'),
-        rows: 'minmax(0,1.25fr) minmax(0,1fr)', cols: '1fr 1fr',
-        areas: '"board board" "heathz scat"',
+        rows: 'auto minmax(0,1.3fr) minmax(0,1fr)', cols: '1fr',
+        areas: '"kpi" "board" "heathz"',
         build: function () {
-          return [bedBoardPanel(d, 'board'), hourZonePanel(d, 'heathz'),
-                  scatterPanel(d, 'scat', true)];
+          var blk = bedKpis(d);
+          blk.style.gridArea = 'kpi';
+          return [blk, bedBoardPanel(d, 'board'), hourZonePanel(d, 'heathz')];
         }
       },
       {
         title: t('steps.quality'),
         rows: 'minmax(0,1.25fr) minmax(0,1fr)', cols: '1fr 1fr',
-        areas: '"complete flags" "arr arr"',
+        areas: '"complete flags" "cap cap"',
         build: function () {
-          return [completenessPanel(d, 'complete'), flagsPanel(d, 'flags'), arrivalsPanel(d, 'arr')];
+          return [completenessPanel(d, 'complete'), flagsPanel(d, 'flags'),
+                  capacityPanel(d, 'cap')];
         }
       }
     ];
   }
 
   function stepsFor(tab, d) {
-    if (tab === 'admin') return adminSteps(d);
-    if (tab === 'pac') return pacSteps(d);
-    return clinicalSteps(d);
+    return tab === 'admin' ? adminSteps(d) : publicSteps(d);
   }
 
   /* ══════════════════════════════════════════════════════════

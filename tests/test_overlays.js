@@ -42,8 +42,31 @@ const { findChromium } = require('./chromium');
     if (vp.w === 768) await p.screenshot({ path: '/home/user/ed-pac-public-view/tests/shots/ov-help.png' });
     await p.click('#ovHelp .ov-x'); await p.waitForTimeout(150);
 
-    // Table view from a chart
-    await p.evaluate(() => document.querySelector('.panel-tbl').click());
+    // The public tabs must carry no charts at all — the analysis belongs on
+    // the Administrative tab. Assert that, then go there for the table view.
+    const pub = await p.evaluate(() => ({
+      charts: document.querySelectorAll('#content .panel-bd svg').length,
+      zoneCards: document.querySelectorAll('.zone-card').length,
+      seek: !!document.querySelector('.seek-btn')
+    }));
+    if (pub.charts) fails.push(`${vp.w}: public tab renders ${pub.charts} chart(s); it should render none`);
+    if (!pub.zoneCards) fails.push(`${vp.w}: public tab shows no zone cards`);
+    if (!pub.seek) fails.push(`${vp.w}: public tab has no search prompt`);
+
+    // Table view from a chart on the Administrative tab
+    await p.evaluate(() => document.querySelectorAll('.tab')[3].click());
+    await p.waitForTimeout(300);
+    if (await p.evaluate(() => document.getElementById('ovGate').classList.contains('is-open'))) {
+      await p.fill('#gateInput', 'test-code');
+      await p.click('#gateGo');
+      await p.waitForTimeout(500);
+    }
+    const tblBtn = await p.evaluate(() => {
+      const b = document.querySelector('.panel-tbl');
+      if (!b) return false;
+      b.click(); return true;
+    });
+    if (!tblBtn) { fails.push(`${vp.w}: no chart table button on the admin tab`); }
     await p.waitForTimeout(250);
     r = await p.evaluate(() => {
       const c = document.querySelector('#ovTable .ov-card').getBoundingClientRect();
@@ -60,12 +83,11 @@ const { findChromium } = require('./chromium');
     // Language toggle round-trip
     await p.click('#langBtn'); await p.waitForTimeout(400);
     const en = await p.evaluate(() => ({
-      title: document.querySelector('.tab[aria-selected="true"] .tab-name').textContent,
-      narr: document.getElementById('narrText').textContent.slice(0, 40),
+      tabs: [...document.querySelectorAll('.tab-name')].map(n => n.textContent).join(' | '),
       charts: document.querySelectorAll('.panel-bd svg').length
     }));
-    if (!/Emergency/.test(en.title)) fails.push(`${vp.w}: language toggle did not switch tabs to English`);
-    if (!en.charts) fails.push(`${vp.w}: charts disappeared after language switch`);
+    if (!/Emergency/.test(en.tabs)) fails.push(`${vp.w}: language toggle did not switch tabs to English`);
+    if (!en.charts) fails.push(`${vp.w}: charts disappeared after the language switch`);
     if (vp.w === 768) await p.screenshot({ path: '/home/user/ed-pac-public-view/tests/shots/en-wcc-step1.png' });
     await p.close();
   }

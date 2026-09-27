@@ -111,36 +111,52 @@ All optional unless stated. **Project Settings → Script Properties.**
 
 ## The four tabs
 
-| Tab | Scope | Steps |
-|-----|-------|-------|
-| Emergency — Women & Children (WCC) | `Location = ED WCC` | Current status · **Bed management** · Arrivals & waiting times · Patterns & forecast |
-| Emergency — Main Building | `Location = ED BU` | the same four |
-| Patient Assessment Centre — O&G | `Location = PAC WCC` | Current status · **Bed management** · Arrivals & referrals |
-| Administrative (gated) | all three | Overview · Case-mix · **Bed management** · Data quality & method |
+The split between them is deliberate: **charts live on the Administrative tab
+only.** A family waiting in the department needs to know where their relative
+is, how full that zone is and how long the green-zone queue is — not a scatter
+plot. The public tabs carry big numbers, a crisis alert and the queue, in plain
+Malay; every visualisation sits behind the passcode.
 
-### The bed board
+| Tab | Scope | Steps | Content |
+|-----|-------|-------|---------|
+| Emergency — Women & Children (WCC) | `Location = ED WCC` | 2 | Zone status · Guidance |
+| Emergency — Main Building | `Location = ED BU` | 2 | Zone status · Guidance |
+| Patient Assessment Centre — O&G | `Location = PAC WCC` | 1 | Everything on one screen — a single zone does not fill two |
+| Administrative (gated) | all three | 6 | Overview · Arrivals & forecast · Waiting times · Case-mix · Bed management · Data quality & method |
 
-Each clinical tab carries a bed-management step showing every position in that
-unit's establishment; the Administrative tab shows all nine zones across the
-three units at once. Cells are individual beds, shaded by how long the current
-occupant has been in the department; empty beds are drawn as dashed outlines and
-counted, because a free bed is the thing a bed manager is looking for and a
-register only ever lists occupied ones. A black rule marks the edge of funded
-capacity, and the row count turns red when no funded bed is free.
+### What the public tabs show
 
-Green-zone waiting places are excluded from the board: a queue position is not a
-bed, and counting the 50 waiting patients as occupancy would overstate bed demand
-several-fold. They appear as the green-zone queue KPI instead.
+- **A search prompt**, front and centre, since finding a relative is why most
+  people open the page at all.
+- **One card per zone**: how many patients are being cared for, against that
+  zone's normal bed count, with a fill bar and a state badge.
+- **A crisis alert** whenever escalation beds are open, naming how many — the
+  alert notification the specification asks for.
+- **The green zone across the full width**: how many are waiting, and the
+  average time to be called, averaged over the last ten patients called in.
+- **Patients by stage of care** — under treatment, referred, waiting for a ward
+  bed, admitted, waiting to go home.
+- **Guidance in plain Malay**: why the sickest are seen first, what each zone
+  means, what happens while waiting for a ward bed.
 
-**Nothing scrolls.** The shell is a fixed grid of viewport height; where a
-section holds more than fits, it is split into numbered steps reached by the
-pager at the foot of the screen. This is verified automatically at 768×1024,
-800×1280 and 600×960 across every tab and step.
+The strip above the tabs carries the one thing the cards cannot — that turns are
+not given in order of arrival — and opens the full guidance when tapped.
+
+### What the Administrative tab shows
+
+Every form the specification lists: **big numbers** (totals, percentages,
+ratios, modelled cost), **pie charts** (disposition, sex), a **line graph** with
+the **forecast** and its prediction bands, a **scatter plot**, **histograms**
+(waiting times, age bands), **bar graphs** (unit comparison, referral
+disciplines, field completeness, zone occupancy) and three **heatmaps** (the bed
+board, arrival intensity by hour and zone, zone against referral discipline).
+
+**Nothing scrolls**, on any tab, at any step. This is verified automatically at
+768×1024, 800×1280 and 600×960 across every tab and step, with an additional
+check that the public tabs render no charts at all.
 
 `docs/VARIABLE_VISUAL_MAP.md` sets out which of the register's columns each
 visual carries.
-
----
 
 ## The statistical model
 

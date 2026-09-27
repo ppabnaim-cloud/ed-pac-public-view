@@ -452,6 +452,165 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
 .legend-sw.is-line { height: calc(3px * var(--s)); border-radius: 2px }
 .legend-sw.is-band { height: calc(9px * var(--s)); opacity: .3 }
 
+
+/* ── PUBLIC VIEW ─────────────────────────────────────────── */
+/* Tabs 1-3 are read by families, often on a wall screen from a few
+   metres away, so the numbers are large and the language is plain.
+   No charts here: the analysis lives on the Administrative tab. */
+
+.seek {
+  background: linear-gradient(135deg, var(--brand-dk), var(--brand));
+  color: #fff; border-radius: var(--radius);
+  padding: calc(12px * var(--s)) calc(16px * var(--s));
+  display: flex; align-items: center; gap: calc(12px * var(--s));
+  box-shadow: var(--shadow); min-width: 0;
+}
+.seek-copy { flex: 1; min-width: 0 }
+.seek-copy h2 {
+  font-size: calc(16px * var(--s)); font-weight: 800; line-height: 1.2;
+  margin-bottom: calc(2px * var(--s));
+}
+.seek-copy p {
+  font-size: calc(11px * var(--s)); opacity: .86; font-weight: 500;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.seek-btn {
+  flex: none; border: 0; cursor: pointer; font: inherit;
+  background: var(--accent); color: #fff;
+  font-size: calc(13px * var(--s)); font-weight: 800;
+  border-radius: 999px; padding: calc(11px * var(--s)) calc(20px * var(--s));
+  white-space: nowrap; min-height: calc(44px * var(--s));
+  box-shadow: 0 2px 10px rgba(0,0,0,.18);
+}
+.seek-btn:hover { background: #8f4a00 }
+.seek-btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px }
+
+.zone-grid {
+  display: grid; gap: calc(10px * var(--s)); min-height: 0; min-width: 0;
+  /* Columns are set from the zone count in App.html so no card is orphaned. */
+  grid-auto-rows: minmax(calc(104px * var(--s)), 1fr);
+  overflow: hidden;
+}
+.zone-card.is-wide { grid-column: 1 / -1 }
+.zone-card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-left: 6px solid var(--ink-3); border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: calc(12px * var(--s)) calc(14px * var(--s));
+  display: flex; flex-direction: column; justify-content: center;
+  gap: calc(7px * var(--s)); min-width: 0; min-height: 0; overflow: hidden;
+}
+.zone-card.z-rz  { border-left-color: var(--zone-rz) }
+.zone-card.z-yz  { border-left-color: var(--zone-yz) }
+.zone-card.z-gz  { border-left-color: var(--zone-gz) }
+.zone-card.z-ob  { border-left-color: var(--zone-ob) }
+.zone-card.z-ab  { border-left-color: var(--zone-ab) }
+.zone-card.z-pac { border-left-color: var(--zone-pac) }
+.zone-card.is-full { background: #fffafa }
+
+.zc-head { display: flex; align-items: center; gap: calc(7px * var(--s)); min-width: 0 }
+.zc-name {
+  font-size: calc(14px * var(--s)); font-weight: 800; flex: 1; min-width: 0;
+  line-height: 1.2;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.zc-badge {
+  flex: none; font-size: calc(9.5px * var(--s)); font-weight: 800;
+  border-radius: 999px; padding: calc(3px * var(--s)) calc(9px * var(--s));
+  white-space: nowrap;
+}
+.zc-badge.is-ok     { background: #e7f6e9; color: #14691a }
+.zc-badge.is-busy   { background: #fff4e0; color: #8a4b00 }
+.zc-badge.is-full   { background: #fde8e6; color: #a32b1d }
+.zc-badge.is-crisis { background: var(--critical); color: #fff }
+
+.zc-nums { display: flex; align-items: baseline; gap: calc(6px * var(--s)); min-width: 0 }
+.zc-big {
+  font-size: calc(46px * var(--s)); font-weight: 800; line-height: 1;
+  letter-spacing: -.03em; font-variant-numeric: tabular-nums;
+}
+.zc-cap {
+  font-size: calc(12px * var(--s)); color: var(--ink-3); font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.zc-bar { background: #eef2f5; border-radius: 999px; height: calc(7px * var(--s)); overflow: hidden }
+.zc-bar > span { display: block; height: 100%; border-radius: 999px; background: currentColor }
+.zone-card.z-rz  .zc-bar > span { background: var(--zone-rz) }
+.zone-card.z-yz  .zc-bar > span { background: var(--zone-yz) }
+.zone-card.z-gz  .zc-bar > span { background: var(--zone-gz) }
+.zone-card.z-ob  .zc-bar > span { background: var(--zone-ob) }
+.zone-card.z-ab  .zc-bar > span { background: var(--zone-ab) }
+.zone-card.z-pac .zc-bar > span { background: var(--zone-pac) }
+
+.zc-gz {
+  margin-top: calc(3px * var(--s)); padding-top: calc(6px * var(--s));
+  border-top: 1px dashed var(--line);
+}
+.zc-gz-row { display: flex; align-items: baseline; gap: calc(6px * var(--s)) }
+.zone-card.is-wide { flex-direction: row; align-items: center; gap: calc(16px * var(--s)) }
+.zone-card.is-wide .zc-head,
+.zone-card.is-wide .zc-nums,
+.zone-card.is-wide .zc-bar { flex: none }
+.zone-card.is-wide .zc-head { flex-direction: column; align-items: flex-start; min-width: calc(120px * var(--s)) }
+.zone-card.is-wide .zc-bar { display: none }   /* the badge already says it */
+.zone-card.is-wide .zc-gz {
+  flex: 1; min-width: 0; margin-top: 0; padding-top: 0;
+  border-top: 0; border-left: 1px dashed var(--line);
+  padding-left: calc(16px * var(--s));
+  display: flex; align-items: center; gap: calc(14px * var(--s)); flex-wrap: wrap;
+}
+.zone-card.is-wide .zc-gz-wait { margin-top: 0 }
+.zc-gz-n {
+  font-size: calc(38px * var(--s)); font-weight: 800; color: var(--zone-gz);
+  line-height: 1; font-variant-numeric: tabular-nums;
+}
+.zc-gz-l { font-size: calc(12px * var(--s)); font-weight: 700; color: var(--ink-2) }
+.zc-gz-wait { font-size: calc(12px * var(--s)); color: var(--ink-2); margin-top: calc(3px * var(--s)) }
+.zc-gz-wait strong { color: var(--brand-dk) }
+.zc-muted { color: var(--ink-3); font-style: italic }
+
+/* Stage-of-care counts */
+.stages {
+  display: grid; gap: calc(8px * var(--s)); padding: 0 calc(10px * var(--s)) calc(8px * var(--s));
+  grid-template-columns: repeat(auto-fit, minmax(calc(120px * var(--s)), 1fr));
+}
+.stage {
+  background: var(--surface-2); border: 1px solid var(--line-soft);
+  border-radius: 9px; padding: calc(7px * var(--s)) calc(9px * var(--s)); min-width: 0;
+}
+.stage-n {
+  display: block; font-size: calc(22px * var(--s)); font-weight: 800; line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.stage-l {
+  display: block; font-size: calc(10px * var(--s)); font-weight: 700; color: var(--ink-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Family guidance */
+.guide {
+  height: 100%; overflow: hidden; padding: 0 calc(10px * var(--s)) calc(8px * var(--s));
+  display: grid; gap: calc(7px * var(--s)); align-content: start;
+  grid-template-columns: repeat(auto-fit, minmax(calc(280px * var(--s)), 1fr));
+}
+.guide-row { display: flex; gap: calc(8px * var(--s)); min-width: 0 }
+.guide-ic { font-size: calc(17px * var(--s)); flex: none; line-height: 1.2 }
+.guide-row strong { font-size: calc(11.5px * var(--s)); font-weight: 800; display: block }
+.guide-row p {
+  font-size: calc(10.5px * var(--s)); color: var(--ink-2); line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+@media (max-width: 700px) {
+  .zone-card.is-wide { flex-direction: column; align-items: stretch }
+  .zone-card.is-wide .zc-gz {
+    border-left: 0; border-top: 1px dashed var(--line);
+    padding-left: 0; padding-top: calc(7px * var(--s)); margin-top: calc(3px * var(--s));
+  }
+  .zc-big { font-size: calc(34px * var(--s)) }
+  .guide { grid-template-columns: 1fr }
+}
+
 /* ── STATES ──────────────────────────────────────────────── */
 .state {
   display: flex; flex-direction: column; align-items: center; justify-content: center;

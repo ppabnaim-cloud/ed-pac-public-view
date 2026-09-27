@@ -26,7 +26,7 @@
  * The "ED/PAC Register" menu can generate a fresh register and a demonstration
  * scenario. Those items CLEAR Sheet1 — run them on a copy, never on live data.
  *
- * Built 2026-09-27 14:07 UTC
+ * Built 2026-09-27 23:50 UTC
  * ============================================================================
  */
 
@@ -2561,6 +2561,165 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
 .legend-sw.is-line { height: calc(3px * var(--s)); border-radius: 2px }
 .legend-sw.is-band { height: calc(9px * var(--s)); opacity: .3 }
 
+
+/* ── PUBLIC VIEW ─────────────────────────────────────────── */
+/* Tabs 1-3 are read by families, often on a wall screen from a few
+   metres away, so the numbers are large and the language is plain.
+   No charts here: the analysis lives on the Administrative tab. */
+
+.seek {
+  background: linear-gradient(135deg, var(--brand-dk), var(--brand));
+  color: #fff; border-radius: var(--radius);
+  padding: calc(12px * var(--s)) calc(16px * var(--s));
+  display: flex; align-items: center; gap: calc(12px * var(--s));
+  box-shadow: var(--shadow); min-width: 0;
+}
+.seek-copy { flex: 1; min-width: 0 }
+.seek-copy h2 {
+  font-size: calc(16px * var(--s)); font-weight: 800; line-height: 1.2;
+  margin-bottom: calc(2px * var(--s));
+}
+.seek-copy p {
+  font-size: calc(11px * var(--s)); opacity: .86; font-weight: 500;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.seek-btn {
+  flex: none; border: 0; cursor: pointer; font: inherit;
+  background: var(--accent); color: #fff;
+  font-size: calc(13px * var(--s)); font-weight: 800;
+  border-radius: 999px; padding: calc(11px * var(--s)) calc(20px * var(--s));
+  white-space: nowrap; min-height: calc(44px * var(--s));
+  box-shadow: 0 2px 10px rgba(0,0,0,.18);
+}
+.seek-btn:hover { background: #8f4a00 }
+.seek-btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px }
+
+.zone-grid {
+  display: grid; gap: calc(10px * var(--s)); min-height: 0; min-width: 0;
+  /* Columns are set from the zone count in App.html so no card is orphaned. */
+  grid-auto-rows: minmax(calc(104px * var(--s)), 1fr);
+  overflow: hidden;
+}
+.zone-card.is-wide { grid-column: 1 / -1 }
+.zone-card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-left: 6px solid var(--ink-3); border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: calc(12px * var(--s)) calc(14px * var(--s));
+  display: flex; flex-direction: column; justify-content: center;
+  gap: calc(7px * var(--s)); min-width: 0; min-height: 0; overflow: hidden;
+}
+.zone-card.z-rz  { border-left-color: var(--zone-rz) }
+.zone-card.z-yz  { border-left-color: var(--zone-yz) }
+.zone-card.z-gz  { border-left-color: var(--zone-gz) }
+.zone-card.z-ob  { border-left-color: var(--zone-ob) }
+.zone-card.z-ab  { border-left-color: var(--zone-ab) }
+.zone-card.z-pac { border-left-color: var(--zone-pac) }
+.zone-card.is-full { background: #fffafa }
+
+.zc-head { display: flex; align-items: center; gap: calc(7px * var(--s)); min-width: 0 }
+.zc-name {
+  font-size: calc(14px * var(--s)); font-weight: 800; flex: 1; min-width: 0;
+  line-height: 1.2;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.zc-badge {
+  flex: none; font-size: calc(9.5px * var(--s)); font-weight: 800;
+  border-radius: 999px; padding: calc(3px * var(--s)) calc(9px * var(--s));
+  white-space: nowrap;
+}
+.zc-badge.is-ok     { background: #e7f6e9; color: #14691a }
+.zc-badge.is-busy   { background: #fff4e0; color: #8a4b00 }
+.zc-badge.is-full   { background: #fde8e6; color: #a32b1d }
+.zc-badge.is-crisis { background: var(--critical); color: #fff }
+
+.zc-nums { display: flex; align-items: baseline; gap: calc(6px * var(--s)); min-width: 0 }
+.zc-big {
+  font-size: calc(46px * var(--s)); font-weight: 800; line-height: 1;
+  letter-spacing: -.03em; font-variant-numeric: tabular-nums;
+}
+.zc-cap {
+  font-size: calc(12px * var(--s)); color: var(--ink-3); font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.zc-bar { background: #eef2f5; border-radius: 999px; height: calc(7px * var(--s)); overflow: hidden }
+.zc-bar > span { display: block; height: 100%; border-radius: 999px; background: currentColor }
+.zone-card.z-rz  .zc-bar > span { background: var(--zone-rz) }
+.zone-card.z-yz  .zc-bar > span { background: var(--zone-yz) }
+.zone-card.z-gz  .zc-bar > span { background: var(--zone-gz) }
+.zone-card.z-ob  .zc-bar > span { background: var(--zone-ob) }
+.zone-card.z-ab  .zc-bar > span { background: var(--zone-ab) }
+.zone-card.z-pac .zc-bar > span { background: var(--zone-pac) }
+
+.zc-gz {
+  margin-top: calc(3px * var(--s)); padding-top: calc(6px * var(--s));
+  border-top: 1px dashed var(--line);
+}
+.zc-gz-row { display: flex; align-items: baseline; gap: calc(6px * var(--s)) }
+.zone-card.is-wide { flex-direction: row; align-items: center; gap: calc(16px * var(--s)) }
+.zone-card.is-wide .zc-head,
+.zone-card.is-wide .zc-nums,
+.zone-card.is-wide .zc-bar { flex: none }
+.zone-card.is-wide .zc-head { flex-direction: column; align-items: flex-start; min-width: calc(120px * var(--s)) }
+.zone-card.is-wide .zc-bar { display: none }   /* the badge already says it */
+.zone-card.is-wide .zc-gz {
+  flex: 1; min-width: 0; margin-top: 0; padding-top: 0;
+  border-top: 0; border-left: 1px dashed var(--line);
+  padding-left: calc(16px * var(--s));
+  display: flex; align-items: center; gap: calc(14px * var(--s)); flex-wrap: wrap;
+}
+.zone-card.is-wide .zc-gz-wait { margin-top: 0 }
+.zc-gz-n {
+  font-size: calc(38px * var(--s)); font-weight: 800; color: var(--zone-gz);
+  line-height: 1; font-variant-numeric: tabular-nums;
+}
+.zc-gz-l { font-size: calc(12px * var(--s)); font-weight: 700; color: var(--ink-2) }
+.zc-gz-wait { font-size: calc(12px * var(--s)); color: var(--ink-2); margin-top: calc(3px * var(--s)) }
+.zc-gz-wait strong { color: var(--brand-dk) }
+.zc-muted { color: var(--ink-3); font-style: italic }
+
+/* Stage-of-care counts */
+.stages {
+  display: grid; gap: calc(8px * var(--s)); padding: 0 calc(10px * var(--s)) calc(8px * var(--s));
+  grid-template-columns: repeat(auto-fit, minmax(calc(120px * var(--s)), 1fr));
+}
+.stage {
+  background: var(--surface-2); border: 1px solid var(--line-soft);
+  border-radius: 9px; padding: calc(7px * var(--s)) calc(9px * var(--s)); min-width: 0;
+}
+.stage-n {
+  display: block; font-size: calc(22px * var(--s)); font-weight: 800; line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.stage-l {
+  display: block; font-size: calc(10px * var(--s)); font-weight: 700; color: var(--ink-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Family guidance */
+.guide {
+  height: 100%; overflow: hidden; padding: 0 calc(10px * var(--s)) calc(8px * var(--s));
+  display: grid; gap: calc(7px * var(--s)); align-content: start;
+  grid-template-columns: repeat(auto-fit, minmax(calc(280px * var(--s)), 1fr));
+}
+.guide-row { display: flex; gap: calc(8px * var(--s)); min-width: 0 }
+.guide-ic { font-size: calc(17px * var(--s)); flex: none; line-height: 1.2 }
+.guide-row strong { font-size: calc(11.5px * var(--s)); font-weight: 800; display: block }
+.guide-row p {
+  font-size: calc(10.5px * var(--s)); color: var(--ink-2); line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+@media (max-width: 700px) {
+  .zone-card.is-wide { flex-direction: column; align-items: stretch }
+  .zone-card.is-wide .zc-gz {
+    border-left: 0; border-top: 1px dashed var(--line);
+    padding-left: 0; padding-top: calc(7px * var(--s)); margin-top: calc(3px * var(--s));
+  }
+  .zc-big { font-size: calc(34px * var(--s)) }
+  .guide { grid-template-columns: 1fr }
+}
+
 /* ── STATES ──────────────────────────────────────────────── */
 .state {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -2746,6 +2905,43 @@ var I18N = {
     errTitle:    'Maklumat tidak dapat dipaparkan',
     errBody:     'Sistem tidak dapat dihubungi. Sila cuba semula sebentar lagi, atau tanya di kaunter jururawat.',
 
+    /* public view — tabs 1 to 3 */
+    public: {
+      seekSub:     'Masukkan nombor kad pengenalan, nombor passport atau nombor MRN pesakit.',
+      tapTitle:    'Pesakit paling kritikal dirawat dahulu.',
+      tapBody:     'Giliran bukan mengikut masa sampai. Ketik di sini untuk panduan lengkap.',
+      stepNow:     'Status zon sekarang',
+      stepGuide:   'Panduan untuk keluarga',
+      beds:        'katil',
+      rooms:       'bilik doktor',
+      crisisBeds:  'katil tambahan',
+      waitingNow:  'sedang menunggu',
+      avgWait:     'Purata masa dipanggil:',
+      avgWaitNone: 'Purata masa belum dapat dikira',
+      state: { ok: 'Ada ruang', busy: 'Sibuk', full: 'Penuh', crisis: 'Katil tambahan dibuka' },
+      crisisTitle: 'Jabatan sangat sibuk.',
+      crisisBody:  function (n) {
+        return 'Kami telah membuka ' + n + ' katil tambahan supaya semua pesakit dapat dirawat. ' +
+               'Kami memohon maaf atas sebarang kelewatan.';
+      },
+      stageTitle:  'Pesakit mengikut peringkat rawatan',
+      stageSub:    'Jumlah pesakit di jabatan ini sekarang',
+      guideTitle:  'Perkara yang perlu anda tahu',
+      guide: [
+        { icon: '🚑', title: 'Pesakit paling kritikal didahulukan',
+          body: 'Giliran bukan mengikut masa sampai. Pesakit yang paling tenat akan dirawat dahulu. Ini bermakna orang yang datang kemudian mungkin dipanggil lebih awal.' },
+        { icon: '🟥', title: 'Zon Merah & Zon Kuning',
+          body: 'Pesakit di zon ini dirawat serta-merta tanpa nombor giliran kerana keadaan mereka lebih serius.' },
+        { icon: '🟩', title: 'Zon Hijau',
+          body: 'Pesakit menerima nombor giliran dan menunggu di ruang tunggu sebelum dipanggil masuk ke bilik doktor.' },
+        { icon: '🛏️', title: 'Menunggu katil wad',
+          body: 'Selepas doktor pakar memutuskan pesakit perlu masuk wad, pesakit menunggu katil kosong di wad. Masa menunggu bergantung pada katil yang ada.' },
+        { icon: '🏠', title: 'Selepas dibenarkan pulang',
+          body: 'Nama pesakit kekal dalam sistem selama 24 jam supaya keluarga masih boleh menyemak status.' },
+        { icon: '💬', title: 'Perlu bantuan segera?',
+          body: 'Sila ke kaunter jururawat. Jangan tunggu di luar jika keadaan pesakit bertambah teruk.' }
+      ]
+    },
     /* tabs */
     tabs: {
       wcc:   { name: 'Kecemasan — Wanita & Kanak-Kanak', sub: 'WCC' },
@@ -2757,7 +2953,8 @@ var I18N = {
     /* step titles */
     steps: {
       now:       'Keadaan sekarang',
-      flow:      'Kemasukan & masa menunggu',
+      flow:      'Kemasukan & ramalan',
+      waits:     'Masa menunggu',
       pattern:   'Pola & ramalan',
       overview:  'Gambaran keseluruhan',
       casemix:   'Campuran kes & rujukan',
@@ -2940,6 +3137,7 @@ var I18N = {
       modelHW:      'Model: Holt–Winters tambahan, kitaran 24 jam, selang ramalan Poisson.',
       accuracy:     function (mae, rmse) { return 'Ketepatan dalam-sampel satu jam ke hadapan: MAE ' + mae + ', RMSE ' + rmse + '.'; },
       staleForecast:'Rekod kemasukan terkini belum lengkap, jadi ramalan ini adalah anggaran kasar.',
+      partialExcluded:'Jam yang belum tamat tidak dipaparkan kerana belum lengkap.',
       notConfigured:'Belum ditetapkan',
       costModelled: 'Anggaran: kos seunit × kehadiran',
       noDeathField: 'Medan tiada dalam daftar',
@@ -2994,6 +3192,43 @@ var I18N = {
     errTitle:    'This information cannot be shown',
     errBody:     'The system could not be reached. Please try again shortly, or ask at the nursing counter.',
 
+    /* public view — tabs 1 to 3 */
+    public: {
+      seekSub:     "Enter the patient's IC number, passport number or MRN.",
+      tapTitle:    'The most seriously ill are treated first.',
+      tapBody:     'Turns are not given in order of arrival. Tap here for the full guidance.',
+      stepNow:     'Zone status now',
+      stepGuide:   'Guidance for families',
+      beds:        'beds',
+      rooms:       'consultation rooms',
+      crisisBeds:  'extra beds',
+      waitingNow:  'waiting now',
+      avgWait:     'Average time to be called:',
+      avgWaitNone: 'Average not yet available',
+      state: { ok: 'Space available', busy: 'Busy', full: 'Full', crisis: 'Extra beds open' },
+      crisisTitle: 'The department is very busy.',
+      crisisBody:  function (n) {
+        return 'We have opened ' + n + ' extra beds so that everyone can be treated. ' +
+               'We apologise for any delay.';
+      },
+      stageTitle:  'Patients by stage of care',
+      stageSub:    'Everyone in this department right now',
+      guideTitle:  'What you need to know',
+      guide: [
+        { icon: '🚑', title: 'The most seriously ill are seen first',
+          body: 'Turns are not given in order of arrival. The sickest patients are treated first, so someone who arrived after you may be called before you.' },
+        { icon: '🟥', title: 'Red and Yellow Zones',
+          body: 'Patients here are treated immediately, without a queue number, because their condition is more serious.' },
+        { icon: '🟩', title: 'Green Zone',
+          body: 'Patients are given a queue number and wait in the waiting area until they are called into a consultation room.' },
+        { icon: '🛏️', title: 'Waiting for a ward bed',
+          body: 'Once a specialist decides a patient needs admission, they wait for a bed to become free on the ward. How long depends on bed availability.' },
+        { icon: '🏠', title: 'After discharge',
+          body: 'The patient stays listed for 24 hours so family can still check their status.' },
+        { icon: '💬', title: 'Need help now?',
+          body: 'Please go to the nursing counter. Do not wait outside if the patient becomes worse.' }
+      ]
+    },
     tabs: {
       wcc:   { name: 'Emergency — Women & Children', sub: 'WCC' },
       bu:    { name: 'Emergency — Main Building',    sub: 'Main Building' },
@@ -3002,7 +3237,8 @@ var I18N = {
     },
 
     steps: {
-      now: 'Current status', flow: 'Arrivals & waiting times', pattern: 'Patterns & forecast',
+      now: 'Current status', flow: 'Arrivals & forecast', waits: 'Waiting times',
+      pattern: 'Patterns & forecast',
       overview: 'Whole-service overview', casemix: 'Case-mix & referrals',
       beds: 'Bed management', quality: 'Data quality & method'
     },
@@ -3153,6 +3389,7 @@ var I18N = {
       modelHW: 'Model: additive Holt–Winters, 24-hour seasonal period, Poisson prediction intervals.',
       accuracy: function (mae, rmse) { return 'In-sample one-hour-ahead accuracy: MAE ' + mae + ', RMSE ' + rmse + '.'; },
       staleForecast: 'The most recent arrival records are incomplete, so this forecast is a rough estimate.',
+      partialExcluded: 'The hour in progress is not plotted, as it is not yet complete.',
       notConfigured: 'Not configured',
       costModelled: 'Modelled: unit cost × attendances',
       noDeathField: 'Field absent from the register',
@@ -4332,8 +4569,12 @@ var Charts = (function () {
     var crisis = (data.kpi && data.kpi.crisisBeds > 0);
     strip.className = 'narr' + (crisis ? ' is-crisis' : '');
     icon.textContent = crisis ? '⚠️' : 'ℹ️';
+
+    // The overlay keeps the full narrative; the strip itself carries only the
+    // line the cards do not, so nothing is said twice on one screen.
     S.narrativeHtml = narrativeHtml(data);
-    txtEl.innerHTML = S.narrativeHtml;
+    txtEl.innerHTML = '<strong>' + esc(t('public.tapTitle')) + '</strong> ' +
+                      esc(t('public.tapBody'));
   }
 
   /* ── Help overlay: the full narrative plus the reviewed illustrations. ── */
@@ -4485,16 +4726,25 @@ var Charts = (function () {
 
   function arrivalsPanel(d, area) {
     var fc = (d.forecast && d.forecast.available) ? d.forecast.points : [];
+
+    // Plot complete hours only. The hour in progress holds a few minutes of
+    // arrivals, so drawing it alongside full hours makes the line dive to the
+    // floor and reads as a collapse in attendances that has not happened.
+    var series = d.arrivals.series.filter(function (p) { return !p.partial; });
+    var droppedPartial = series.length < d.arrivals.series.length;
+
     var notes = [];
     if (d.forecast && d.forecast.available) {
       notes.push(d.forecast.model === 'holtWintersAdditive' ? t('note.modelHW') : t('note.modelDamped'));
       if (d.forecast.stale) notes.push(t('note.staleForecast'));
     }
+    if (droppedPartial) notes.push(t('note.partialExcluded'));
+
     return panel({
       area: area, title: t('panel.arrivals'),
-      sub: d.arrivals.series.length + ' ' + t('chart.hour').toLowerCase(),
+      sub: series.length + ' ' + t('chart.hour').toLowerCase(),
       chart: {
-        type: 'forecastLine', observed: d.arrivals.series, forecast: fc,
+        type: 'forecastLine', observed: series, forecast: fc,
         t: t('chart'), aria: t('panel.arrivals')
       },
       legend: [
@@ -4506,7 +4756,7 @@ var Charts = (function () {
       table: {
         caption: t('panel.arrivals'),
         head: [t('chart.hour'), t('chart.arrivals'), t('chart.projected'), t('chart.pi80')],
-        body: d.arrivals.series.map(function (p) {
+        body: series.map(function (p) {
           return [Charts.pad2(p.hour) + ':00', p.count, '', ''];
         }).concat(fc.map(function (p) {
           return [Charts.pad2(p.hour) + ':00', '', Charts.num(p.yhat, 1),
@@ -4875,6 +5125,189 @@ var Charts = (function () {
      STEP DEFINITIONS
      ══════════════════════════════════════════════════════════ */
   /** KPI row summarising the bed establishment for one scope. */
+  /* ══════════════════════════════════════════════════════════
+     PUBLIC VIEW — tabs 1 to 3
+
+     These screens answer the three questions a waiting family
+     actually has: where is my relative, how full is the zone they
+     are in, and how long is the green-zone queue. No charts: the
+     analysis lives on the Administrative tab.
+     ══════════════════════════════════════════════════════════ */
+
+  /** The search prompt, shown inline rather than hidden behind the header. */
+  function searchPrompt(area) {
+    var n = node('div', 'seek');
+    n.style.gridArea = area;
+    n.innerHTML =
+      '<div class="seek-copy">' +
+        '<h2>' + esc(t('search.title')) + '</h2>' +
+        '<p>' + esc(t('public.seekSub')) + '</p>' +
+      '</div>' +
+      '<button class="seek-btn" type="button">' +
+        '<span aria-hidden="true">🔍</span> ' + esc(t('searchBtn')) +
+      '</button>';
+    n.querySelector('.seek-btn').onclick = function () {
+      var b = $('searchBtn'); if (b) b.click();
+    };
+    return n;
+  }
+
+  /**
+   * One card per zone: how many patients are being cared for against the
+   * zone's normal bed count, and whether escalation beds are open.
+   * The green zone also carries the queue length and the average wait,
+   * which is the single most asked question in the waiting area.
+   */
+  function zoneCards(d, area) {
+    var wrap = node('div', 'zone-grid');
+    wrap.style.gridArea = area;
+
+    // Bedded zones first, consultation rooms last: the green-zone card spans
+    // the full width and reads as the summary line it is.
+    var zones = d.occupancy.filter(function (z) { return z.capacity > 0; })
+      .sort(function (a, b) { return (a.isRoomZone ? 1 : 0) - (b.isRoomZone ? 1 : 0); });
+
+    var bedded = zones.filter(function (z) { return !z.isRoomZone; }).length;
+    var cols = bedded >= 5 ? 3 : bedded >= 3 ? 2 : 1;
+    wrap.style.gridTemplateColumns = 'repeat(' + cols + ', minmax(0, 1fr))';
+
+    // One row of cards should not swell to fill a tall screen.
+    var rows = Math.ceil(bedded / cols) + (zones.length - bedded);
+    if (rows <= 1) {
+      wrap.style.maxHeight = 'calc(210px * var(--s))';
+      wrap.style.alignSelf = 'start';
+    }
+    wrap.innerHTML = zones.map(function (z) {
+      var total = z.funded + z.crisis;
+      var isRoom = z.isRoomZone;
+      var full = z.crisis > 0 || total >= z.capacity;
+      var pct = z.capacity > 0 ? Math.min(100, Math.round(total / z.capacity * 100)) : 0;
+
+      var state = z.crisis > 0 ? 'crisis' : (total >= z.capacity ? 'full' : (pct >= 70 ? 'busy' : 'ok'));
+      var stateText = t('public.state.' + state);
+
+      var badge = z.crisis > 0
+        ? '<span class="zc-badge is-crisis">⚠ ' + z.crisis + ' ' + esc(t('public.crisisBeds')) + '</span>'
+        : '<span class="zc-badge is-' + state + '">' + esc(stateText) + '</span>';
+
+      var extra = '';
+      if (isRoom) {
+        extra = '<div class="zc-gz">' +
+          '<div class="zc-gz-row"><span class="zc-gz-n">' + z.waiting + '</span>' +
+            '<span class="zc-gz-l">' + esc(t('public.waitingNow')) + '</span></div>' +
+          (d.kpi.gzAverageWaitMin
+            ? '<div class="zc-gz-wait">⏱ ' + esc(t('public.avgWait')) + ' <strong>' +
+              esc(fmtMin(d.kpi.gzAverageWaitMin)) + '</strong></div>'
+            : '<div class="zc-gz-wait zc-muted">' + esc(t('public.avgWaitNone')) + '</div>') +
+          '</div>';
+      }
+
+      return '<div class="zone-card z-' + z.zone + (full ? ' is-full' : '') +
+             (isRoom ? ' is-wide' : '') + '">' +
+        '<div class="zc-head">' +
+          '<span class="zc-name">' + esc(zoneName(z.zone)) + '</span>' + badge +
+        '</div>' +
+        '<div class="zc-nums">' +
+          '<span class="zc-big">' + total + '</span>' +
+          '<span class="zc-cap">/ ' + z.capacity + ' ' +
+            esc(isRoom ? t('public.rooms') : t('public.beds')) + '</span>' +
+        '</div>' +
+        '<div class="zc-bar"><span style="width:' + pct + '%"></span></div>' +
+        extra +
+      '</div>';
+    }).join('');
+    return wrap;
+  }
+
+  /** The crisis alert the specification asks for, in plain Malay. */
+  function crisisBanner(d, area) {
+    var k = d.kpi;
+    if (!k.crisisBeds) return null;
+    return bannerPanel({
+      area: area, tone: 'critical', icon: '⚠️',
+      html: '<strong>' + esc(t('public.crisisTitle')) + '</strong> ' +
+            esc(tf('public.crisisBody', k.crisisBeds))
+    });
+  }
+
+  /** Plain-language guidance: what the zones mean and what happens next. */
+  function guidePanel(d, area) {
+    var rows = t('public.guide');
+    var html = '<div class="guide">' + rows.map(function (g) {
+      return '<div class="guide-row"><span class="guide-ic" aria-hidden="true">' + esc(g.icon) +
+             '</span><div><strong>' + esc(g.title) + '</strong><p>' + esc(g.body) + '</p></div></div>';
+    }).join('') + '</div>';
+    var p = panel({ area: area, title: t('public.guideTitle'), html: html });
+    return p;
+  }
+
+  /** Where each patient stands: how many are at each stage of care. */
+  function stagePanel(d, area) {
+    var k = d.kpi;
+    var stages = [
+      { key: 'ongoingtreatment', n: d.statusMix.reduce(function (a, x) {
+          return a + (x.key === 'ongoingtreatment' ? x.count : 0); }, 0) },
+      { key: 'referred',  n: k.referred },
+      { key: 'preadmit',  n: k.preadmit },
+      { key: 'admitted',  n: k.admitted },
+      { key: 'discharge', n: k.discharge }
+    ].filter(function (x) { return x.n > 0; });
+
+    var html = '<div class="stages">' + stages.map(function (x) {
+      return '<div class="stage"><span class="stage-n">' + x.n + '</span>' +
+             '<span class="stage-l">' + esc(statusName(x.key)) + '</span></div>';
+    }).join('') + '</div>';
+    return panel({ area: area, title: t('public.stageTitle'), sub: t('public.stageSub'), html: html });
+  }
+
+  function publicSteps(d) {
+    var hasCrisis = d.kpi.crisisBeds > 0;
+    var zoneCount = d.occupancy.filter(function (z) { return z.capacity > 0; }).length;
+
+    // A unit with a single zone - PAC - has too little to justify a second
+    // screen, so it gets everything at once rather than a half-empty one.
+    if (zoneCount <= 1) {
+      return [{
+        title: t('public.stepNow'),
+        rows: (hasCrisis ? 'auto auto auto auto minmax(0,1fr)' : 'auto auto auto minmax(0,1fr)'),
+        cols: '1fr',
+        areas: (hasCrisis
+          ? '"seek" "alert" "zones" "stage" "guide"'
+          : '"seek" "zones" "stage" "guide"'),
+        build: function () {
+          var out = [searchPrompt('seek')];
+          if (hasCrisis) out.push(crisisBanner(d, 'alert'));
+          out.push(zoneCards(d, 'zones'), stagePanel(d, 'stage'), guidePanel(d, 'guide'));
+          return out;
+        }
+      }];
+    }
+
+    return [
+      {
+        title: t('public.stepNow'),
+        rows: hasCrisis ? 'auto auto minmax(0,1fr) auto' : 'auto minmax(0,1fr) auto',
+        cols: '1fr',
+        areas: hasCrisis ? '"seek" "alert" "zones" "stage"' : '"seek" "zones" "stage"',
+        build: function () {
+          var out = [searchPrompt('seek')];
+          if (hasCrisis) out.push(crisisBanner(d, 'alert'));
+          out.push(zoneCards(d, 'zones'), stagePanel(d, 'stage'));
+          return out;
+        }
+      },
+      {
+        title: t('public.stepGuide'),
+        rows: 'minmax(0,1fr)', cols: '1fr',
+        areas: '"guide"',
+        build: function () { return [guidePanel(d, 'guide')]; }
+      }
+    ];
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     ADMINISTRATIVE VIEW — every visualisation lives here
+     ══════════════════════════════════════════════════════════ */
   function bedKpis(d) {
     var b = d.bedBoard, tot = b.totals;
     return kpiBlock([
@@ -4891,111 +5324,6 @@ var Charts = (function () {
         tone: tot.crisisOccupied > 0 ? 'critical' : 'ok',
         sub: t('chart.crisisBed') + ' ' + tot.crisisOccupied + ' / ' + tot.crisisPlaces }
     ], 4);
-  }
-
-  function bedStep(d, withProjection) {
-    return {
-      title: t('steps.beds'),
-      rows: 'auto minmax(0,1fr)',
-      cols: withProjection ? '1.5fr 1fr' : '1fr',
-      areas: withProjection ? '"kpi kpi" "board proj"' : '"kpi" "board"',
-      build: function () {
-        var blk = bedKpis(d);
-        blk.style.gridArea = 'kpi';
-        var out = [blk, bedBoardPanel(d, 'board')];
-        if (withProjection) out.push(projectionPanel(d, 'proj'));
-        return out;
-      }
-    };
-  }
-
-  function clinicalSteps(d) {
-    var k = d.kpi;
-    var loadTone = k.crisisBeds > 0 ? 'critical' : (k.loadPct >= 100 ? 'serious' : k.loadPct >= 80 ? 'warn' : 'ok');
-    return [
-      {
-        title: t('steps.now'),
-        rows: 'auto minmax(0,1fr)', cols: '1fr',
-        areas: '"kpi" "cap"',
-        build: function () {
-          var tiles = [
-            { label: t('kpi.census'), value: fmtInt(k.census),
-              sub: k.attendances + ' ' + t('kpi.attendances').toLowerCase() },
-            { label: t('kpi.load'), value: fmtPct(k.loadPct), tone: loadTone,
-              sub: (k.fundedOccupied + k.crisisBeds) + ' / ' + k.capacity },
-            { label: t('kpi.crisis'), value: fmtInt(k.crisisBeds),
-              tone: k.crisisBeds > 0 ? 'critical' : 'ok',
-              sub: k.freeFundedBeds + ' ' + t('kpi.freeBeds').toLowerCase() },
-            { label: t('kpi.gzQueue'), value: fmtInt(k.gzQueue),
-              sub: k.gzAverageWaitMin
-                     ? t('kpi.gzAvg') + ' ' + fmtMin(k.gzAverageWaitMin)
-                     : k.gzRooms + ' / ' + k.gzRoomCapacity + ' ' + zoneName('gz') }
-          ];
-          var blk = kpiBlock(tiles, 4);
-          blk.style.gridArea = 'kpi';
-          return [blk, capacityPanel(d, 'cap')];
-        }
-      },
-      bedStep(d, true),
-      {
-        title: t('steps.flow'),
-        rows: 'minmax(0,1.15fr) minmax(0,1fr)', cols: '1.35fr 1fr',
-        areas: '"arr arr" "wait status"',
-        build: function () {
-          return [arrivalsPanel(d, 'arr'), waitsPanel(d, 'wait'), statusPanel(d, 'status')];
-        }
-      },
-      {
-        title: t('steps.pattern'),
-        rows: 'minmax(0,1.1fr) minmax(0,1fr)', cols: '1fr 1fr',
-        areas: '"heat heat" "scat method"',
-        build: function () {
-          return [hourZonePanel(d, 'heat'), scatterPanel(d, 'scat', false), methodPanel(d, 'method')];
-        }
-      }
-    ];
-  }
-
-  function pacSteps(d) {
-    var k = d.kpi;
-    return [
-      {
-        title: t('steps.now'),
-        rows: 'auto minmax(0,1fr) minmax(0,1.1fr)', cols: '1fr 1fr',
-        areas: '"kpi kpi" "cap cap" "status ages"',
-        build: function () {
-          var tiles = [
-            { label: t('kpi.census'), value: fmtInt(k.census),
-              sub: k.attendances + ' ' + t('kpi.attendances').toLowerCase() },
-            { label: t('kpi.load'), value: fmtPct(k.loadPct),
-              tone: k.crisisBeds > 0 ? 'critical' : 'ok',
-              sub: (k.fundedOccupied + k.crisisBeds) + ' / ' + k.capacity },
-            { label: t('kpi.crisis'), value: fmtInt(k.crisisBeds),
-              tone: k.crisisBeds > 0 ? 'critical' : 'ok',
-              sub: k.freeFundedBeds + ' ' + t('kpi.freeBeds').toLowerCase() },
-            { label: t('kpi.preadmit'), value: fmtInt(k.preadmit),
-              sub: t('kpi.referred') + ' ' + k.referred }
-          ];
-          var blk = kpiBlock(tiles, 4);
-          blk.style.gridArea = 'kpi';
-          return [blk, capacityPanel(d, 'cap'), statusPanel(d, 'status'), ageBandPanel(d, 'ages')];
-        }
-      },
-      bedStep(d, true),
-      {
-        title: t('steps.flow'),
-        rows: 'minmax(0,1.1fr) minmax(0,1fr)', cols: '1fr 1fr',
-        areas: '"arr arr" "refs method"',
-        build: function () {
-          return [
-            arrivalsPanel(d, 'arr'),
-            barListPanel(d, 'refs', t('panel.referrals'), d.referralMix,
-                         function (x) { return x; }, t('chart.patients')),
-            methodPanel(d, 'method')
-          ];
-        }
-      }
-    ];
   }
 
   function adminSteps(d) {
@@ -5032,6 +5360,22 @@ var Charts = (function () {
         }
       },
       {
+        title: t('steps.flow'),
+        rows: 'minmax(0,1fr) minmax(0,1fr)', cols: '1fr',
+        areas: '"arr" "proj"',
+        build: function () {
+          return [arrivalsPanel(d, 'arr'), projectionPanel(d, 'proj')];
+        }
+      },
+      {
+        title: t('steps.waits'),
+        rows: 'minmax(0,1fr) minmax(0,1fr)', cols: '1fr 1fr',
+        areas: '"wait wait" "scat method"',
+        build: function () {
+          return [waitsPanel(d, 'wait'), scatterPanel(d, 'scat', true), methodPanel(d, 'method')];
+        }
+      },
+      {
         title: t('steps.casemix'),
         rows: 'minmax(0,1fr) minmax(0,1fr)', cols: '1.25fr 1fr',
         areas: '"refs ages" "heatref gender"',
@@ -5058,28 +5402,28 @@ var Charts = (function () {
       },
       {
         title: t('steps.beds'),
-        rows: 'minmax(0,1.25fr) minmax(0,1fr)', cols: '1fr 1fr',
-        areas: '"board board" "heathz scat"',
+        rows: 'auto minmax(0,1.3fr) minmax(0,1fr)', cols: '1fr',
+        areas: '"kpi" "board" "heathz"',
         build: function () {
-          return [bedBoardPanel(d, 'board'), hourZonePanel(d, 'heathz'),
-                  scatterPanel(d, 'scat', true)];
+          var blk = bedKpis(d);
+          blk.style.gridArea = 'kpi';
+          return [blk, bedBoardPanel(d, 'board'), hourZonePanel(d, 'heathz')];
         }
       },
       {
         title: t('steps.quality'),
         rows: 'minmax(0,1.25fr) minmax(0,1fr)', cols: '1fr 1fr',
-        areas: '"complete flags" "arr arr"',
+        areas: '"complete flags" "cap cap"',
         build: function () {
-          return [completenessPanel(d, 'complete'), flagsPanel(d, 'flags'), arrivalsPanel(d, 'arr')];
+          return [completenessPanel(d, 'complete'), flagsPanel(d, 'flags'),
+                  capacityPanel(d, 'cap')];
         }
       }
     ];
   }
 
   function stepsFor(tab, d) {
-    if (tab === 'admin') return adminSteps(d);
-    if (tab === 'pac') return pacSteps(d);
-    return clinicalSteps(d);
+    return tab === 'admin' ? adminSteps(d) : publicSteps(d);
   }
 
   /* ══════════════════════════════════════════════════════════

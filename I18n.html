@@ -30,6 +30,43 @@ var I18N = {
     errTitle:    'Maklumat tidak dapat dipaparkan',
     errBody:     'Sistem tidak dapat dihubungi. Sila cuba semula sebentar lagi, atau tanya di kaunter jururawat.',
 
+    /* public view — tabs 1 to 3 */
+    public: {
+      seekSub:     'Masukkan nombor kad pengenalan, nombor passport atau nombor MRN pesakit.',
+      tapTitle:    'Pesakit paling kritikal dirawat dahulu.',
+      tapBody:     'Giliran bukan mengikut masa sampai. Ketik di sini untuk panduan lengkap.',
+      stepNow:     'Status zon sekarang',
+      stepGuide:   'Panduan untuk keluarga',
+      beds:        'katil',
+      rooms:       'bilik doktor',
+      crisisBeds:  'katil tambahan',
+      waitingNow:  'sedang menunggu',
+      avgWait:     'Purata masa dipanggil:',
+      avgWaitNone: 'Purata masa belum dapat dikira',
+      state: { ok: 'Ada ruang', busy: 'Sibuk', full: 'Penuh', crisis: 'Katil tambahan dibuka' },
+      crisisTitle: 'Jabatan sangat sibuk.',
+      crisisBody:  function (n) {
+        return 'Kami telah membuka ' + n + ' katil tambahan supaya semua pesakit dapat dirawat. ' +
+               'Kami memohon maaf atas sebarang kelewatan.';
+      },
+      stageTitle:  'Pesakit mengikut peringkat rawatan',
+      stageSub:    'Jumlah pesakit di jabatan ini sekarang',
+      guideTitle:  'Perkara yang perlu anda tahu',
+      guide: [
+        { icon: '🚑', title: 'Pesakit paling kritikal didahulukan',
+          body: 'Giliran bukan mengikut masa sampai. Pesakit yang paling tenat akan dirawat dahulu. Ini bermakna orang yang datang kemudian mungkin dipanggil lebih awal.' },
+        { icon: '🟥', title: 'Zon Merah & Zon Kuning',
+          body: 'Pesakit di zon ini dirawat serta-merta tanpa nombor giliran kerana keadaan mereka lebih serius.' },
+        { icon: '🟩', title: 'Zon Hijau',
+          body: 'Pesakit menerima nombor giliran dan menunggu di ruang tunggu sebelum dipanggil masuk ke bilik doktor.' },
+        { icon: '🛏️', title: 'Menunggu katil wad',
+          body: 'Selepas doktor pakar memutuskan pesakit perlu masuk wad, pesakit menunggu katil kosong di wad. Masa menunggu bergantung pada katil yang ada.' },
+        { icon: '🏠', title: 'Selepas dibenarkan pulang',
+          body: 'Nama pesakit kekal dalam sistem selama 24 jam supaya keluarga masih boleh menyemak status.' },
+        { icon: '💬', title: 'Perlu bantuan segera?',
+          body: 'Sila ke kaunter jururawat. Jangan tunggu di luar jika keadaan pesakit bertambah teruk.' }
+      ]
+    },
     /* tabs */
     tabs: {
       wcc:   { name: 'Kecemasan — Wanita & Kanak-Kanak', sub: 'WCC' },
@@ -41,7 +78,8 @@ var I18N = {
     /* step titles */
     steps: {
       now:       'Keadaan sekarang',
-      flow:      'Kemasukan & masa menunggu',
+      flow:      'Kemasukan & ramalan',
+      waits:     'Masa menunggu',
       pattern:   'Pola & ramalan',
       overview:  'Gambaran keseluruhan',
       casemix:   'Campuran kes & rujukan',
@@ -224,6 +262,7 @@ var I18N = {
       modelHW:      'Model: Holt–Winters tambahan, kitaran 24 jam, selang ramalan Poisson.',
       accuracy:     function (mae, rmse) { return 'Ketepatan dalam-sampel satu jam ke hadapan: MAE ' + mae + ', RMSE ' + rmse + '.'; },
       staleForecast:'Rekod kemasukan terkini belum lengkap, jadi ramalan ini adalah anggaran kasar.',
+      partialExcluded:'Jam yang belum tamat tidak dipaparkan kerana belum lengkap.',
       notConfigured:'Belum ditetapkan',
       costModelled: 'Anggaran: kos seunit × kehadiran',
       noDeathField: 'Medan tiada dalam daftar',
@@ -278,6 +317,43 @@ var I18N = {
     errTitle:    'This information cannot be shown',
     errBody:     'The system could not be reached. Please try again shortly, or ask at the nursing counter.',
 
+    /* public view — tabs 1 to 3 */
+    public: {
+      seekSub:     "Enter the patient's IC number, passport number or MRN.",
+      tapTitle:    'The most seriously ill are treated first.',
+      tapBody:     'Turns are not given in order of arrival. Tap here for the full guidance.',
+      stepNow:     'Zone status now',
+      stepGuide:   'Guidance for families',
+      beds:        'beds',
+      rooms:       'consultation rooms',
+      crisisBeds:  'extra beds',
+      waitingNow:  'waiting now',
+      avgWait:     'Average time to be called:',
+      avgWaitNone: 'Average not yet available',
+      state: { ok: 'Space available', busy: 'Busy', full: 'Full', crisis: 'Extra beds open' },
+      crisisTitle: 'The department is very busy.',
+      crisisBody:  function (n) {
+        return 'We have opened ' + n + ' extra beds so that everyone can be treated. ' +
+               'We apologise for any delay.';
+      },
+      stageTitle:  'Patients by stage of care',
+      stageSub:    'Everyone in this department right now',
+      guideTitle:  'What you need to know',
+      guide: [
+        { icon: '🚑', title: 'The most seriously ill are seen first',
+          body: 'Turns are not given in order of arrival. The sickest patients are treated first, so someone who arrived after you may be called before you.' },
+        { icon: '🟥', title: 'Red and Yellow Zones',
+          body: 'Patients here are treated immediately, without a queue number, because their condition is more serious.' },
+        { icon: '🟩', title: 'Green Zone',
+          body: 'Patients are given a queue number and wait in the waiting area until they are called into a consultation room.' },
+        { icon: '🛏️', title: 'Waiting for a ward bed',
+          body: 'Once a specialist decides a patient needs admission, they wait for a bed to become free on the ward. How long depends on bed availability.' },
+        { icon: '🏠', title: 'After discharge',
+          body: 'The patient stays listed for 24 hours so family can still check their status.' },
+        { icon: '💬', title: 'Need help now?',
+          body: 'Please go to the nursing counter. Do not wait outside if the patient becomes worse.' }
+      ]
+    },
     tabs: {
       wcc:   { name: 'Emergency — Women & Children', sub: 'WCC' },
       bu:    { name: 'Emergency — Main Building',    sub: 'Main Building' },
@@ -286,7 +362,8 @@ var I18N = {
     },
 
     steps: {
-      now: 'Current status', flow: 'Arrivals & waiting times', pattern: 'Patterns & forecast',
+      now: 'Current status', flow: 'Arrivals & forecast', waits: 'Waiting times',
+      pattern: 'Patterns & forecast',
       overview: 'Whole-service overview', casemix: 'Case-mix & referrals',
       beds: 'Bed management', quality: 'Data quality & method'
     },
@@ -437,6 +514,7 @@ var I18N = {
       modelHW: 'Model: additive Holt–Winters, 24-hour seasonal period, Poisson prediction intervals.',
       accuracy: function (mae, rmse) { return 'In-sample one-hour-ahead accuracy: MAE ' + mae + ', RMSE ' + rmse + '.'; },
       staleForecast: 'The most recent arrival records are incomplete, so this forecast is a rough estimate.',
+      partialExcluded: 'The hour in progress is not plotted, as it is not yet complete.',
       notConfigured: 'Not configured',
       costModelled: 'Modelled: unit cost × attendances',
       noDeathField: 'Field absent from the register',

@@ -52,49 +52,64 @@
 
 ## 2. Tab and step architecture
 
-Hard constraint: **every screen fits a 10-inch tablet in portrait (768 × 1024 CSS px) with no page scroll.** The shell is a fixed `100vh` grid — header 56 px, tab bar 48 px, step bar 44 px, content the remainder. Where a section holds more than fits, it is split into numbered **steps** reached by a pager, never by scrolling.
+Hard constraint: **every screen fits a 10-inch tablet in portrait (768 × 1024 CSS px) with no page scroll.** The shell is a fixed `100vh` grid — header 52 px, narrative strip 40 px, tab bar 48 px, step bar 44 px, content the remainder. Where a section holds more than fits, it is split into numbered **steps** reached by a pager, never by scrolling.
+
+**The division of labour is deliberate and absolute:**
+
+| | Tabs 1–3 (public) | Tab 4 (Administrative) |
+|---|---|---|
+| Audience | Families in the waiting area | Department staff |
+| Question answered | Where is my relative, how full is their zone, how long is the green-zone queue | How is the service performing |
+| Charts | **None** | **All of them** |
+| Access | Open | Passcode gated |
+
+A family in a waiting room does not need a scatter plot. Every chart, distribution, forecast and matrix therefore lives on the Administrative tab; the public tabs carry big numbers, a crisis alert and the queue, in plain Malay.
+
+### Tabs 1–3 — public view
 
 | Tab | Scope filter | Steps |
 |-----|-------------|-------|
-| **A — Emergency Department, Women & Children Centre** | `Location = ED WCC` | 4 |
-| **B — Emergency Department, Main Building** | `Location = ED BU` | 4 |
-| **C — Patient Assessment Centre, O&G** | `Location = PAC WCC` | 3 |
-| **D — Administrative** | All locations (passcode-gated) | 4 |
+| **A — Emergency Department, Women & Children Centre** | `Location = ED WCC` | 2 |
+| **B — Emergency Department, Main Building** | `Location = ED BU` | 2 |
+| **C — Patient Assessment Centre, O&G** | `Location = PAC WCC` | 1 |
 
-### Tab A / B — clinical, per site
+PAC has a single zone, so a second screen would be half empty; it carries everything at once instead.
 
-| Step | Panels | Visual type | Variables |
-|------|--------|-------------|-----------|
-| 1 — Current status | 4 KPI tiles | **Big numbers** | census; load %; crisis beds; GZ queue length |
-| | Zone occupancy | **Stacked bar** (funded + crisis overflow vs capacity) | Bed code (10), Zone (9) |
-| 2 — Bed management | 4 KPI tiles | **Big numbers** | total places; in use %; free normal beds; escalation open |
-| | Bed board | **Heatmap**, one cell per bed position | Bed code (10), Triage (2), Status (12) |
-| | Projected demand | **Line with 80 % band** | census, arrivals forecast |
-| 3 — Flow & waiting | Arrivals by hour | **Line graph** with forecast | Triage (2) |
-| | Waiting-time distribution | **Histogram**, 60-min bins | elapsed time since triage |
-| | Disposition mix | **Pie / donut** | Status (12) |
-| 4 — Patterns & forecast | Arrival intensity | **Heatmap**, hour × zone | Triage (2) × Zone (9) |
-| | Age vs waiting time | **Scatter plot**, coloured by zone | Age (7) × TWT (19) × Zone (9) |
-| | Next 4 hours | **Forecast** with 80 % / 95 % band | arrivalsPerHour |
+| Step | Panels | Form | Variables |
+|------|--------|------|-----------|
+| 1 — Zone status now | Patient search prompt | Call to action | 3, 5, 6 via the search overlay |
+| | Crisis alert (when escalation beds are open) | Conditional banner | Bed code (10) |
+| | **One card per zone** — patients being cared for against the zone's normal bed count, a state badge, and a fill bar | **Big numbers** | Bed code (10), Zone (9) |
+| | Green-zone card (full width) — queue length and average time to be called | **Big numbers** | Queue No. (14), Called into GZ (15), Triage (2) |
+| | Patients by stage of care | **Big numbers** | Status (12) |
+| 2 — Guidance for families | Why the sickest are seen first, what each zone means, what happens while waiting for a ward bed | Plain-language text | — |
 
-### Tab C — PAC (n = 15 in extract, so deliberately leaner)
+The narrative strip above the tabs carries the one message the cards do not — that turns are not given in order of arrival — and opens the full guidance when tapped.
 
-| Step | Panels | Visual type | Variables |
-|------|--------|-------------|-----------|
-| 1 | 4 KPI tiles + zone occupancy + disposition + age bands | **Big numbers, bar, pie, histogram** | 7, 10, 12 |
-| 2 | Bed board + projected demand | **Heatmap, line with band** | 10, 2, 12 |
-| 3 | Arrivals & forecast + referral discipline + method | **Line, bar, text** | 2, 13 |
+### Tab 4 — Administrative (gated)
 
-### Tab D — Administrative
+Every visual the specification asks for lives here.
 
-| Step | Panels | Visual type | Variables |
-|------|--------|-------------|-----------|
-| 1 — Overview | 6 KPI tiles; unit comparison | **Big numbers** (attendances, admitted, deaths, admission %, median TWT, modelled cost) + **grouped bar** | 1, 12, 19 |
-| 2 — Case-mix | Referral discipline; age bands; gender; zone × discipline | **Bar, histogram, pie, heatmap** | 13, 7, 8, 9 |
-| 3 — Bed management | Bed board across all three units; zone × hour intensity; age vs dwell | **Heatmap, heatmap, scatter** | 10, 9, 2, 7 |
-| 4 — Data quality & method | Field completeness; integrity flags; model specification | **Bar + text** | all |
-
----
+| Step | Panels | Form | Variables |
+|------|--------|------|-----------|
+| 1 — Overview | Attendances, admitted, deaths, referral rate, median time in department, modelled cost | **Big numbers** (total, percentage, ratio, cost) | 1, 12, 19 |
+| | Comparison across the three units | **Grouped bar** | 1, 12 |
+| | Disposition mix | **Pie / donut** | 12 |
+| 2 — Arrivals & forecast | Arrivals per hour with the projection and its 80 % / 95 % bands | **Line graph + forecast** | 2 |
+| | Projected patients in the department | **Line with band** | 2, 19, 10 |
+| 3 — Waiting times | Time already spent in the department | **Histogram** | 2, 17, 21 |
+| | Age against time in department, coloured by unit | **Scatter plot** | 7, 2, 1 |
+| | Model specification and in-sample accuracy | Text | — |
+| 4 — Case-mix | Referrals by discipline | **Bar graph** | 13 |
+| | Age groups | **Histogram** | 7 |
+| | Zone against referral discipline | **Heatmap** | 9 × 13 |
+| | Sex | **Pie / donut** | 8 |
+| 5 — Bed management | Places, occupancy, free beds, escalation open | **Big numbers** | 10 |
+| | Bed board — every bed position, shaded by its occupant's dwell time | **Heatmap** | 10, 2, 12 |
+| | Arrival intensity by hour and zone | **Heatmap** | 2 × 9 |
+| 6 — Data quality & method | Field completeness | **Bar graph** | all |
+| | Integrity flags and step-down candidates | Text | all |
+| | Zone occupancy against establishment | **Stacked bar** | 10, 9 |
 
 ## 3. Heatmap specification
 

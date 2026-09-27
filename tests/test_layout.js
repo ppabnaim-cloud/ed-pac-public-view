@@ -11,7 +11,7 @@ const VIEWPORTS = [
   { name: 'Android10in-portrait-800x1280', width: 800, height: 1280 },
   { name: 'small-tablet-600x960',      width: 600,  height: 960 }
 ];
-const TABS = { wcc: 4, bu: 4, pac: 3, admin: 4 };
+const TABS = { wcc: 2, bu: 2, pac: 1, admin: 6 };
 
 (async () => {
   const browser = await chromium.launch({ executablePath: findChromium() });
@@ -79,10 +79,13 @@ const TABS = { wcc: 4, bu: 4, pac: 3, admin: 4 };
             }
           });
           document.querySelectorAll('.panel').forEach(() => res.panels++);
+          // A panel body is satisfied by a chart OR by rendered HTML content;
+          // several public panels are deliberately plain markup, not SVG.
           document.querySelectorAll('.panel-bd').forEach(bd => {
-            const svg = bd.querySelector('svg');
-            if (svg) { res.charts++; }
-            else if (!bd.querySelector('.kpis') && !bd.querySelector('div[style]')) {
+            if (bd.querySelector('svg')) { res.charts++; return; }
+            const hasContent = bd.children.length > 0 &&
+                               (bd.textContent || '').trim().length > 0;
+            if (!hasContent) {
               res.emptyCharts.push(bd.parentElement.querySelector('h2')?.textContent || '?');
             }
           });
