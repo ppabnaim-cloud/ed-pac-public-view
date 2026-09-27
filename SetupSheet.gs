@@ -36,26 +36,11 @@ var HEADERS = [
 ];
 
 /**
- * The bed establishment. `funded` is normal capacity; `crisisTo` is the highest
- * numbered escalation bed. Green zones hold consultation rooms plus a waiting
- * area, and carry no escalation beds.
- *
- * Yellow zone, main building: 16 funded beds, escalation beds 17-50. The
- * specification's worked example begins its escalation list at buyz18 and omits
- * buyz17; the arithmetic of the full-capacity scenario (16 + 34 = 50 yellow-zone
- * patients) confirms 17 is an escalation bed, so it is generated as buyz17crisis.
+ * The bed establishment lives in Code.gs as ESTABLISHMENT, so the register
+ * generator, the capacity figures and the bed board cannot drift apart. All
+ * .gs files in an Apps Script project share one global scope, so it is
+ * referenced directly here.
  */
-var ESTABLISHMENT = [
-  { location: 'ED WCC',  zone: 'rz',  prefix: 'wccrz',  funded: 4,  crisisTo: 10, unit: 'bed' },
-  { location: 'ED WCC',  zone: 'yz',  prefix: 'wccyz',  funded: 4,  crisisTo: 12, unit: 'bed' },
-  { location: 'ED WCC',  zone: 'ob',  prefix: 'wccob',  funded: 8,  crisisTo: 10, unit: 'bed' },
-  { location: 'ED WCC',  zone: 'ab',  prefix: 'wccab',  funded: 4,  crisisTo: 4,  unit: 'sofa' },
-  { location: 'ED WCC',  zone: 'gz',  prefix: 'wccgz',  funded: 2,  crisisTo: 2,  unit: 'consultation room', waiting: 50 },
-  { location: 'ED BU',   zone: 'rz',  prefix: 'burz',   funded: 6,  crisisTo: 12, unit: 'bed' },
-  { location: 'ED BU',   zone: 'yz',  prefix: 'buyz',   funded: 16, crisisTo: 50, unit: 'bed' },
-  { location: 'ED BU',   zone: 'gz',  prefix: 'bugz',   funded: 2,  crisisTo: 2,  unit: 'consultation room', waiting: 50 },
-  { location: 'PAC WCC', zone: 'pac', prefix: 'wccpac', funded: 8,  crisisTo: 15, unit: 'bed' }
-];
 
 function pad2_(n) { return ('0' + n).slice(-2); }
 

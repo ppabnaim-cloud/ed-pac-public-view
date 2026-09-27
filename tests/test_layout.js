@@ -11,7 +11,7 @@ const VIEWPORTS = [
   { name: 'Android10in-portrait-800x1280', width: 800, height: 1280 },
   { name: 'small-tablet-600x960',      width: 600,  height: 960 }
 ];
-const TABS = { wcc: 3, bu: 3, pac: 2, admin: 4 };
+const TABS = { wcc: 4, bu: 4, pac: 3, admin: 4 };
 
 (async () => {
   const browser = await chromium.launch({ executablePath: findChromium() });

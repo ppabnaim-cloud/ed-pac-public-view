@@ -38,16 +38,43 @@ var COL = {
 };
 
 /**
- * Funded (normal) capacity per location and zone.
+ * The bed establishment — the single source of truth for capacity, shared with
+ * SetupSheet.gs (which generates the register) and with the bed board.
+ *
+ *   funded    normal capacity; the denominator for occupancy
+ *   crisisTo  highest numbered escalation bed, so escalation = crisisTo - funded
+ *   waiting   places in the waiting area; a queue position, never a bed
+ *
  * Beds coded '...crisis' in the register are escalation capacity over and above
- * these numbers and are counted separately, never folded into the denominator.
- * Override any value with a Script Property, e.g. CAP_ED_BU_yz = 17.
+ * `funded`, counted separately and never folded into the denominator.
+ * Override a funded figure with a Script Property, e.g. CAP_ED_BU_yz = 17.
+ *
+ * Yellow zone, main building: 16 funded, escalation 17-50. The departmental
+ * specification begins its escalation list at buyz18 and omits 17; the
+ * arithmetic of the full-capacity scenario (16 + 34 = 50 yellow-zone patients)
+ * settles it as an escalation bed.
  */
-var CAPACITY = {
-  'ED WCC':  { rz: 4, yz: 4, ob: 8, ab: 4, gz: 2 },
-  'ED BU':   { rz: 6, yz: 16, gz: 2 },
-  'PAC WCC': { pac: 8 }
-};
+var ESTABLISHMENT = [
+  { location: 'ED WCC',  zone: 'rz',  prefix: 'wccrz',  funded: 4,  crisisTo: 10, unit: 'bed' },
+  { location: 'ED WCC',  zone: 'yz',  prefix: 'wccyz',  funded: 4,  crisisTo: 12, unit: 'bed' },
+  { location: 'ED WCC',  zone: 'ob',  prefix: 'wccob',  funded: 8,  crisisTo: 10, unit: 'bed' },
+  { location: 'ED WCC',  zone: 'ab',  prefix: 'wccab',  funded: 4,  crisisTo: 4,  unit: 'sofa' },
+  { location: 'ED WCC',  zone: 'gz',  prefix: 'wccgz',  funded: 2,  crisisTo: 2,  unit: 'room', waiting: 50 },
+  { location: 'ED BU',   zone: 'rz',  prefix: 'burz',   funded: 6,  crisisTo: 12, unit: 'bed' },
+  { location: 'ED BU',   zone: 'yz',  prefix: 'buyz',   funded: 16, crisisTo: 50, unit: 'bed' },
+  { location: 'ED BU',   zone: 'gz',  prefix: 'bugz',   funded: 2,  crisisTo: 2,  unit: 'room', waiting: 50 },
+  { location: 'PAC WCC', zone: 'pac', prefix: 'wccpac', funded: 8,  crisisTo: 15, unit: 'bed' }
+];
+
+/** Establishment row for a location and zone, or null. */
+function establishmentFor_(location, zone) {
+  for (var i = 0; i < ESTABLISHMENT.length; i++) {
+    if (ESTABLISHMENT[i].location === location && ESTABLISHMENT[i].zone === zone) {
+      return ESTABLISHMENT[i];
+    }
+  }
+  return null;
+}
 
 // Zones whose 'beds' are in fact consultation rooms, and which run a queue.
 var ROOM_ZONES = { gz: true };
@@ -66,26 +93,6 @@ var SCOPES = {
   bu:    { locations: ['ED BU'] },
   pac:   { locations: ['PAC WCC'] },
   admin: { locations: ['ED WCC', 'ED BU', 'PAC WCC'] }
-};
-
-// Malaysian IC digits 7-8 → state of registration at birth.
-var IC_STATE = {
-  '01':'JHR','21':'JHR','22':'JHR','23':'JHR','24':'JHR',
-  '02':'KDH','25':'KDH','26':'KDH','27':'KDH',
-  '03':'KTN','28':'KTN','29':'KTN',
-  '04':'MLK','30':'MLK',
-  '05':'NSN','31':'NSN','59':'NSN',
-  '06':'PHG','32':'PHG','33':'PHG',
-  '07':'PNG','34':'PNG','35':'PNG',
-  '08':'PRK','36':'PRK','37':'PRK','38':'PRK','39':'PRK',
-  '09':'PLS','40':'PLS',
-  '10':'SGR','41':'SGR','42':'SGR','43':'SGR','44':'SGR',
-  '11':'TRG','45':'TRG','46':'TRG',
-  '12':'SBH','47':'SBH','48':'SBH','49':'SBH',
-  '13':'SWK','50':'SWK','51':'SWK','52':'SWK','53':'SWK',
-  '14':'KUL','54':'KUL','55':'KUL','56':'KUL','57':'KUL',
-  '15':'LBN','58':'LBN',
-  '16':'PJY'
 };
 
 var AGE_BANDS = [
@@ -200,7 +207,14 @@ function capacityFor_(location, zone) {
   if (override !== null && override !== '' && !isNaN(parseInt(override, 10))) {
     return parseInt(override, 10);
   }
-  return (CAPACITY[location] && CAPACITY[location][zone]) || 0;
+  var e = establishmentFor_(location, zone);
+  return e ? e.funded : 0;
+}
+
+/** Escalation places configured for a zone (not how many are in use). */
+function crisisCapacityFor_(location, zone) {
+  var e = establishmentFor_(location, zone);
+  return e ? Math.max(0, e.crisisTo - e.funded) : 0;
 }
 
 /** Normalises the raw sheet into typed records, once per request. */
@@ -631,8 +645,11 @@ function occupancyFor_(recs, locations, refTime) {
   }
   // Seed every configured zone so an empty zone still renders a bar.
   for (var li = 0; li < locations.length; li++) {
-    var cfg = CAPACITY[locations[li]] || {};
-    for (var z in cfg) { if (cfg.hasOwnProperty(z)) ensure(locations[li], z); }
+    for (var ei = 0; ei < ESTABLISHMENT.length; ei++) {
+      if (ESTABLISHMENT[ei].location === locations[li]) {
+        ensure(locations[li], ESTABLISHMENT[ei].zone);
+      }
+    }
   }
 
   for (var i = 0; i < recs.length; i++) {
@@ -765,12 +782,6 @@ function elapsedMinutes_(rec, refTime) {
   return (mins >= 0 && mins < 72 * 60) ? mins : null;
 }
 
-function icState_(ic) {
-  var m = String(ic || '').match(/^\d{6}-(\d{2})-\d{4}$/);
-  if (!m) return null;
-  return IC_STATE[m[1]] || null;
-}
-
 function ageBand_(age) {
   if (age === null || age === undefined || isNaN(age)) return null;
   for (var i = 0; i < AGE_BANDS.length; i++) {
@@ -780,6 +791,91 @@ function ageBand_(age) {
 }
 
 function pct_(num, den) { return den > 0 ? Math.round((num / den) * 1000) / 10 : null; }
+
+/**
+ * Bed board: every bed position in the establishment, whether it is occupied,
+ * and how long its occupant has been in the department.
+ *
+ * This is the operational view of bed management. It enumerates beds that do
+ * NOT appear in the register as well as those that do, because an empty bed is
+ * exactly what a bed manager is looking for, and a register only ever lists
+ * occupied ones. Green-zone waiting places are excluded: a queue position is
+ * not a bed, and mixing the two would misstate capacity.
+ */
+function bedBoard_(recs, locations, refTime) {
+  // Index the occupants by bed code. Admitted patients have moved to the ward
+  // and so release their bed, per occupiesBed_.
+  var byCode = {};
+  for (var i = 0; i < recs.length; i++) {
+    var r = recs[i];
+    if (locations.indexOf(r.location) < 0) continue;
+    if (!countsInCensus_(r, refTime) || !occupiesBed_(r)) continue;
+    if (!r.bed.valid || r.bed.waiting) continue;
+    var code = r.bedRaw.toLowerCase();
+    // Two records on one bed is a data error, not a fuller bed; keep the
+    // longer-standing occupant and count the clash for the quality panel.
+    var existing = byCode[code];
+    if (!existing || (r.triage && existing.triage && r.triage < existing.triage)) {
+      byCode[code] = r;
+    }
+  }
+
+  var rows = [], maxBeds = 0, maxDwell = 0;
+  var totals = { places: 0, occupied: 0, empty: 0, crisisPlaces: 0, crisisOccupied: 0 };
+
+  for (var e = 0; e < ESTABLISHMENT.length; e++) {
+    var est = ESTABLISHMENT[e];
+    if (locations.indexOf(est.location) < 0) continue;
+
+    var funded = capacityFor_(est.location, est.zone);
+    var crisisPlaces = crisisCapacityFor_(est.location, est.zone);
+    var beds = [];
+
+    for (var n = 1; n <= funded + crisisPlaces; n++) {
+      var isCrisis = n > funded;
+      var code = est.prefix + ('0' + n).slice(-2) + (isCrisis ? 'crisis' : '');
+      var occ = byCode[code] || null;
+      var dwell = occ ? elapsedMinutes_(occ, refTime) : null;
+      if (dwell !== null && dwell > maxDwell) maxDwell = dwell;
+
+      beds.push({
+        n: n, code: code, crisis: isCrisis,
+        occupied: !!occ,
+        dwellMin: dwell === null ? null : Math.round(dwell),
+        status: occ ? occ.status : null,
+        referredTo: occ ? occ.referredTo : ''
+      });
+
+      totals.places++;
+      if (isCrisis) totals.crisisPlaces++;
+      if (occ) { totals.occupied++; if (isCrisis) totals.crisisOccupied++; }
+      else totals.empty++;
+    }
+
+    if (beds.length > maxBeds) maxBeds = beds.length;
+    rows.push({
+      location: est.location, zone: est.zone, unit: est.unit,
+      funded: funded, crisisPlaces: crisisPlaces,
+      occupiedFunded: beds.filter(function (b) { return b.occupied && !b.crisis; }).length,
+      occupiedCrisis: beds.filter(function (b) { return b.occupied && b.crisis; }).length,
+      emptyFunded: beds.filter(function (b) { return !b.occupied && !b.crisis; }).length,
+      beds: beds
+    });
+  }
+
+  var order = ['rz', 'yz', 'ob', 'ab', 'gz', 'pac'];
+  rows.sort(function (a, b) {
+    if (a.location !== b.location) return a.location < b.location ? -1 : 1;
+    return order.indexOf(a.zone) - order.indexOf(b.zone);
+  });
+
+  return {
+    rows: rows, maxBeds: maxBeds,
+    maxDwellMin: Math.round(maxDwell),
+    totals: totals,
+    occupancyPct: totals.places > 0 ? Math.round((totals.occupied / totals.places) * 1000) / 10 : null
+  };
+}
 
 /** Builds the full payload for one scope. */
 function buildScope_(scopeKey, recs, refInfo) {
@@ -933,7 +1029,7 @@ function buildScope_(scopeKey, recs, refInfo) {
 
     ageSummary: summarise_(scoped.map(function (r) { return r.age; })),
     heatmaps: { hourZone: hmHourZone, zoneReferral: hmZoneRef },
-    stateMap: tally_(scoped.map(function (r) { return icState_(r.ic); })),
+    bedBoard: bedBoard_(recs, locs, refTime),
     scatter: scatter,
     narrative: null
   };

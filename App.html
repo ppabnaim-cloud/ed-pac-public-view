@@ -458,9 +458,12 @@
     notes.push((S.lang === 'ms' ? 'Sekarang ' : 'Now ') + j.current +
                ' (' + j.beddedNow + ' ' + t('chart.funded').toLowerCase() +
                ', ' + j.waitingNow + ' ' + t('chart.queueShort') + ').');
-    notes.push((S.lang === 'ms' ? 'Tempoh rawatan rata-rata ' : 'Mean length of stay ') +
-               j.meanLosHours + (S.lang === 'ms' ? ' jam.' : ' h.'));
-    if (j.losIsDefault) notes.push(t('note.losDefault'));
+    if (j.losIsDefault) {
+      notes.push(t('note.losDefault'));
+    } else {
+      notes.push((S.lang === 'ms' ? 'Tempoh rawatan rata-rata ' : 'Mean length of stay ') +
+                 j.meanLosHours + (S.lang === 'ms' ? ' jam.' : ' h.'));
+    }
     if (j.crisisBedsImplied > 0) {
       notes.push((S.lang === 'ms' ? 'Dijangka perlu ' : 'Projected need: ') +
                  j.crisisBedsImplied + (S.lang === 'ms' ? ' katil krisis.' : ' escalation beds.'));
@@ -575,21 +578,51 @@
     });
   }
 
-  function statePanel(d, area) {
-    var counts = {};
-    d.stateMap.forEach(function (s) { counts[s.key] = s.count; });
+  function bedBoardPanel(d, area) {
+    var b = d.bedBoard;
+    if (!b || !b.rows.length) {
+      return panel({ area: area, title: t('panel.bedBoard'),
+        html: '<div class="state"><span class="state-icon">◦</span><span>—</span></div>' });
+    }
+    var dwellFmt = axisMinFmt(b.maxDwellMin || 0);
+    var showLocation = b.rows.some(function (r) { return r.location !== b.rows[0].location; });
+
     return panel({
-      area: area, title: t('panel.stateMap'), sub: t('note.icProxy'),
+      area: area, title: t('panel.bedBoard'),
+      sub: tf('heat.bedSummary', {
+        occupied: b.totals.occupied, places: b.totals.places,
+        pct: Charts.num(b.occupancyPct, 1), empty: b.totals.empty,
+        crisisOccupied: b.totals.crisisOccupied, crisisPlaces: b.totals.crisisPlaces
+      }),
       chart: {
-        type: 'cartogram', counts: counts, unit: t('heat.unitPatients'),
-        stateName: function (k) { return t('states.' + k) || k; },
-        aria: t('panel.stateMap')
+        type: 'bedBoard', board: b,
+        rowLabel: function (r) {
+          var zn = zoneShort(r.zone), un = unitShort(r.location);
+          if (!showLocation || zn === un) return zn;
+          return un + ' ' + zn;
+        },
+        zoneName: zoneName,
+        statusName: statusName,
+        fmtDwell: dwellFmt,
+        t: {
+          bed: t('chart.bed'), zone: t('chart.zone'), free: t('chart.free'),
+          crisisBed: t('chart.crisisBed'), dwell: t('chart.dwell'),
+          dwellUnit: t('chart.dwellUnit'), status: t('field.status'),
+          referredTo: t('field.referredTo')
+        },
+        aria: t('panel.bedBoard')
       },
-      note: t('heat.stateNote'),
+      note: t('heat.bedNote'),
       table: {
-        caption: t('panel.stateMap'),
-        head: [t('panel.stateMap'), t('heat.unitPatients')],
-        body: d.stateMap.map(function (s) { return [t('states.' + s.key) || s.key, s.count]; })
+        caption: t('panel.bedBoard'),
+        head: [t('chart.zone'), t('chart.legendCapacity'), t('chart.legendCrisis'),
+               t('chart.occupied'), t('kpi.freeBeds')],
+        body: b.rows.map(function (r) {
+          var zn = zoneName(r.zone), un = unitShort(r.location);
+          return [zn === un ? zn : un + ' ' + zn, r.funded, r.crisisPlaces,
+                  (r.occupiedFunded + r.occupiedCrisis), r.emptyFunded];
+        }).concat([[t('chart.places'), b.totals.places - b.totals.crisisPlaces,
+                    b.totals.crisisPlaces, b.totals.occupied, b.totals.empty]])
       }
     });
   }
@@ -666,14 +699,49 @@
   /* ══════════════════════════════════════════════════════════
      STEP DEFINITIONS
      ══════════════════════════════════════════════════════════ */
+  /** KPI row summarising the bed establishment for one scope. */
+  function bedKpis(d) {
+    var b = d.bedBoard, tot = b.totals;
+    return kpiBlock([
+      { label: t('chart.places'), value: fmtInt(tot.places),
+        sub: (tot.places - tot.crisisPlaces) + ' ' + t('chart.legendFunded').toLowerCase() +
+             ' + ' + tot.crisisPlaces + ' ' + t('chart.crisisBed').toLowerCase() },
+      { label: t('chart.occupied'), value: fmtPct(b.occupancyPct),
+        tone: b.occupancyPct >= 95 ? 'critical' : b.occupancyPct >= 80 ? 'warn' : 'ok',
+        sub: tot.occupied + ' / ' + tot.places },
+      { label: t('kpi.freeBeds'), value: fmtInt(tot.empty),
+        tone: tot.empty === 0 ? 'critical' : tot.empty <= 2 ? 'warn' : 'ok',
+        sub: t('chart.free') },
+      { label: t('kpi.crisis'), value: fmtInt(tot.crisisOccupied),
+        tone: tot.crisisOccupied > 0 ? 'critical' : 'ok',
+        sub: t('chart.crisisBed') + ' ' + tot.crisisOccupied + ' / ' + tot.crisisPlaces }
+    ], 4);
+  }
+
+  function bedStep(d, withProjection) {
+    return {
+      title: t('steps.beds'),
+      rows: 'auto minmax(0,1fr)',
+      cols: withProjection ? '1.5fr 1fr' : '1fr',
+      areas: withProjection ? '"kpi kpi" "board proj"' : '"kpi" "board"',
+      build: function () {
+        var blk = bedKpis(d);
+        blk.style.gridArea = 'kpi';
+        var out = [blk, bedBoardPanel(d, 'board')];
+        if (withProjection) out.push(projectionPanel(d, 'proj'));
+        return out;
+      }
+    };
+  }
+
   function clinicalSteps(d) {
     var k = d.kpi;
     var loadTone = k.crisisBeds > 0 ? 'critical' : (k.loadPct >= 100 ? 'serious' : k.loadPct >= 80 ? 'warn' : 'ok');
     return [
       {
         title: t('steps.now'),
-        rows: 'auto minmax(0,1fr) minmax(0,1.1fr)', cols: '1fr',
-        areas: '"kpi" "cap" "proj"',
+        rows: 'auto minmax(0,1fr)', cols: '1fr',
+        areas: '"kpi" "cap"',
         build: function () {
           var tiles = [
             { label: t('kpi.census'), value: fmtInt(k.census),
@@ -690,9 +758,10 @@
           ];
           var blk = kpiBlock(tiles, 4);
           blk.style.gridArea = 'kpi';
-          return [blk, capacityPanel(d, 'cap'), projectionPanel(d, 'proj')];
+          return [blk, capacityPanel(d, 'cap')];
         }
       },
+      bedStep(d, true),
       {
         title: t('steps.flow'),
         rows: 'minmax(0,1.15fr) minmax(0,1fr)', cols: '1.35fr 1fr',
@@ -737,6 +806,7 @@
           return [blk, capacityPanel(d, 'cap'), statusPanel(d, 'status'), ageBandPanel(d, 'ages')];
         }
       },
+      bedStep(d, true),
       {
         title: t('steps.flow'),
         rows: 'minmax(0,1.1fr) minmax(0,1fr)', cols: '1fr 1fr',
@@ -812,11 +882,12 @@
         }
       },
       {
-        title: t('steps.geo'),
-        rows: 'minmax(0,1.2fr) minmax(0,1fr)', cols: '1fr 1fr',
-        areas: '"map map" "heathz scat"',
+        title: t('steps.beds'),
+        rows: 'minmax(0,1.25fr) minmax(0,1fr)', cols: '1fr 1fr',
+        areas: '"board board" "heathz scat"',
         build: function () {
-          return [statePanel(d, 'map'), hourZonePanel(d, 'heathz'), scatterPanel(d, 'scat', true)];
+          return [bedBoardPanel(d, 'board'), hourZonePanel(d, 'heathz'),
+                  scatterPanel(d, 'scat', true)];
         }
       },
       {

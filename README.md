@@ -68,7 +68,7 @@ All optional unless stated. **Project Settings → Script Properties.**
 | `ADMIN_EMAILS` | Comma-separated allow-list. Stronger than the passcode, but only works when the deployment executes as the accessing user. |
 | `CSV_URL` | Published-CSV fallback, used when the script is not bound to a spreadsheet. |
 | `UNIT_COST_PER_ATTENDANCE` | Enables the modelled-cost tile. Left unset, the tile says so rather than inventing a figure. |
-| `CAP_ED_BU_yz` (and similar) | Overrides a funded capacity, e.g. `CAP_ED_WCC_rz`. |
+| `CAP_ED_BU_yz` (and similar) | Overrides a funded capacity, e.g. `CAP_ED_WCC_rz`. The establishment (funded and escalation counts per zone) lives in `ESTABLISHMENT` at the top of `Code.gs` and is shared with the register generator. |
 | `GEMINI_API_KEY` | Enables illustration generation. |
 | `GEMINI_IMAGE_MODEL` | Defaults to `gemini-2.5-flash-image`. **Confirm the current identifier against Google's documentation before relying on it** — these change. |
 | `ILLUSTRATION_FOLDER` | Drive folder for generated images; created automatically if absent. |
@@ -80,10 +80,24 @@ All optional unless stated. **Project Settings → Script Properties.**
 
 | Tab | Scope | Steps |
 |-----|-------|-------|
-| Emergency — Women & Children (WCC) | `Location = ED WCC` | Current status · Arrivals & waiting times · Patterns & forecast |
-| Emergency — Main Building | `Location = ED BU` | the same three |
-| Patient Assessment Centre — O&G | `Location = PAC WCC` | Current status · Arrivals & referrals |
-| Administrative (gated) | all three | Overview · Case-mix · Geography & forecast · Data quality & method |
+| Emergency — Women & Children (WCC) | `Location = ED WCC` | Current status · **Bed management** · Arrivals & waiting times · Patterns & forecast |
+| Emergency — Main Building | `Location = ED BU` | the same four |
+| Patient Assessment Centre — O&G | `Location = PAC WCC` | Current status · **Bed management** · Arrivals & referrals |
+| Administrative (gated) | all three | Overview · Case-mix · **Bed management** · Data quality & method |
+
+### The bed board
+
+Each clinical tab carries a bed-management step showing every position in that
+unit's establishment; the Administrative tab shows all nine zones across the
+three units at once. Cells are individual beds, shaded by how long the current
+occupant has been in the department; empty beds are drawn as dashed outlines and
+counted, because a free bed is the thing a bed manager is looking for and a
+register only ever lists occupied ones. A black rule marks the edge of funded
+capacity, and the row count turns red when no funded bed is free.
+
+Green-zone waiting places are excluded from the board: a queue position is not a
+bed, and counting the 50 waiting patients as occupancy would overstate bed demand
+several-fold. They appear as the green-zone queue KPI instead.
 
 **Nothing scrolls.** The shell is a fixed grid of viewport height; where a
 section holds more than fits, it is split into numbered steps reached by the
@@ -158,6 +172,12 @@ a sample, and is rate-limited per user. IC and MRN are both partially masked in
 the results. Together these stop the endpoint being usable to enumerate the
 register.
 
+**No geographic map.** An earlier draft plotted patients onto a Malaysian state
+cartogram derived from IC digits 7–8. Those digits encode state of registration
+*at birth*, not where a patient lives, so the map invited exactly the reading it
+could not support. It has been removed in favour of the bed board. A genuine
+catchment map needs a residential district or postcode in the register.
+
 **The Administrative tab's passcode is a soft gate.** A shared code on an
 anonymous URL is weaker than proper authentication. For anything beyond
 convenience, deploy the administrative view separately with *Execute as: user
@@ -182,7 +202,7 @@ These are reported honestly in the app rather than filled with proxies.
 |-----|--------|-----|
 | **No mortality field** | The deaths and case-fatality tiles read "not configured". The code already counts `death` / `deceased` / `bid` in `Status` and will display them the moment they appear. | Add those values to the Status dropdown, or a separate outcome column. |
 | **No cost feed** | The cost tile reads "not configured" unless `UNIT_COST_PER_ATTENDANCE` is set, and is then labelled as modelled. | An agreed unit cost, or a real costing feed. |
-| **No address or district** | The Malaysia map is built from IC digits 7–8, which give *state of registration at birth*, not residence. The caveat is printed in the panel. | Add a residential district or postcode column. |
+| **No address or district** | No catchment map is possible, so none is shown. | Add a residential district or postcode column. |
 | **No discharge timestamp in the original 20-column layout** | Total waiting time could only be computed for admitted patients. | The generated register adds **column 21, `Discharge Date/Time`**, and the dashboard uses it when present. Existing 20-column sheets keep working. |
 | **`Called into GZ Room` sparsely populated** | Green-zone waiting time is suppressed below 10 observations rather than shown as a misleading average. | Record the call-in time routinely. |
 | **`BWT` / `TWT` populated only for the admitted subset** | Waiting-time medians describe admitted patients. The public histogram therefore uses *time elapsed since triage*, which exists for everyone. | — |

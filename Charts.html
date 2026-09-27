@@ -651,71 +651,146 @@ var Charts = (function () {
   }
 
   /* ══════════════════════════════════════════════════════════
-     MALAYSIA TILE CARTOGRAM — states laid out roughly
-     geographically. A tile grid rather than an outline map:
-     at the ~300px this panel gets, real coastlines would be
-     unreadable, and every state needs the same clickable area.
+     BED BOARD — every bed position in the establishment, shaded by
+     how long its current occupant has been in the department.
+
+     A heatmap rather than a table because the question a bed manager
+     asks is spatial: where are the free beds, and where are the
+     patients who have been waiting longest. Empty beds are drawn, not
+     omitted - an empty bed is the thing being looked for, and a
+     register only ever lists occupied ones.
      ══════════════════════════════════════════════════════════ */
-  var MY_TILES = [
-    { k: 'PLS', c: 0, r: 0 }, { k: 'KDH', c: 0, r: 1 }, { k: 'PNG', c: 0, r: 2 },
-    { k: 'PRK', c: 1, r: 2 }, { k: 'KTN', c: 2, r: 1 }, { k: 'TRG', c: 3, r: 1 },
-    { k: 'PHG', c: 2, r: 2 }, { k: 'SGR', c: 1, r: 3 }, { k: 'KUL', c: 2, r: 3 },
-    { k: 'PJY', c: 3, r: 3 }, { k: 'NSN', c: 1, r: 4 }, { k: 'MLK', c: 2, r: 4 },
-    { k: 'JHR', c: 2, r: 5 }, { k: 'LBN', c: 5, r: 1 }, { k: 'SBH', c: 6, r: 1 },
-    { k: 'SWK', c: 5, r: 3 }
-  ];
-
-  function cartogram(el, spec) {
-    var counts = spec.counts || {};
+  function bedBoard(el, spec) {
+    var board = spec.board;
+    if (!board || !board.rows.length) {
+      return empty(el, spec.emptyMsg || 'No bed establishment configured');
+    }
     var sc = scale();
-    var legendH = Math.round(15 * sc);
-    var f = frame(el, { t: Math.round(4 * sc), r: Math.round(4 * sc),
-                        b: legendH + Math.round(4 * sc), l: Math.round(4 * sc) });
+    var fsRow = Math.round(8.5 * sc), fsNum = Math.round(8.5 * sc);
+    var boxW = Math.max(120, Math.round(el.clientWidth));
 
-    var cols = 7, rowsN = 6;
-    var cell = Math.min(f.iw / cols, f.ih / rowsN);
-    var offX = f.p.l + (f.iw - cell * cols) / 2;
-    var offY = f.p.t + (f.ih - cell * rowsN) / 2;
+    var rowTexts = board.rows.map(function (r) { return spec.rowLabel(r); });
+    var labelW = Math.min(Math.round(boxW * 0.24),
+      Math.ceil(widestW(rowTexts, fsRow, 700)) + Math.round(7 * sc));
+    var countTexts = board.rows.map(function (r) {
+      return (r.occupiedFunded + r.occupiedCrisis) + '/' + (r.funded + r.crisisPlaces);
+    });
+    var countW = Math.ceil(widestW(countTexts, fsNum, 800)) + Math.round(9 * sc);
 
-    var max = 0;
-    MY_TILES.forEach(function (t) { max = Math.max(max, counts[t.k] || 0); });
+    var axisH = Math.round(11 * sc);
+    var legendH = Math.round(16 * sc);
+    var f = frame(el, { t: axisH, r: countW, b: legendH + Math.round(3 * sc), l: labelW });
 
-    var s = open(f, spec.aria);
-    MY_TILES.forEach(function (t) {
-      var v = counts[t.k] || 0;
-      var x = offX + t.c * cell, y = offY + t.r * cell;
-      s += tag('rect', {
-        x: x + 1.5, y: y + 1.5, width: cell - 3, height: cell - 3, rx: 3,
-        fill: seqColour(v, max), stroke: v ? 'none' : AXIS,
-        'stroke-width': v ? 0 : 1, 'stroke-dasharray': v ? null : '2 2',
-        'data-tip': tip([[spec.stateName(t.k)], [spec.unit, String(v)]])
-      });
-      s += txt(x + cell / 2, y + cell / 2 + Math.round(1 * sc), t.k, {
-        'text-anchor': 'middle', 'font-size': Math.round(Math.min(8.5, cell / 4.4)),
-        'font-weight': 800, fill: v ? inkOn(v, max) : INK3
-      });
-      if (v > 0 && cell > Math.round(30 * sc)) {
-        s += txt(x + cell / 2, y + cell / 2 + Math.round(10 * sc), String(v), {
-          'text-anchor': 'middle', 'font-size': Math.round(Math.min(8, cell / 5)),
-          'font-weight': 700, fill: inkOn(v, max), 'fill-opacity': 0.85
+    var cols = Math.max(1, board.maxBeds);
+    var gapY = Math.max(1, Math.round(2 * sc));
+    var rh = Math.min(Math.round((board.rows.length <= 6 ? 54 : 34) * sc),
+                      Math.floor((f.ih - gapY * (board.rows.length - 1)) / board.rows.length));
+    rh = Math.max(6, rh);
+    // Keep cells roughly bed-shaped. A board of five rows in a wide panel
+    // would otherwise stretch each bed into a long slab.
+    var cw = Math.min(f.iw / cols, rh * 1.8);
+    var usedH = rh * board.rows.length + gapY * (board.rows.length - 1);
+    var offY = f.p.t + Math.max(0, Math.round((f.ih - usedH) / 2));
+
+    var maxD = Math.max(1, board.maxDwellMin);
+    var s2 = open(f, spec.aria);
+
+    // Bed-number axis: every tenth position, so 50 columns stay readable.
+    // Anchored just above the first row, which is vertically centred.
+    var tickEvery = cols > 30 ? 10 : cols > 12 ? 5 : cols > 6 ? 2 : 1;
+    var axisY = Math.max(Math.round(8 * sc), offY - Math.round(3 * sc));
+    for (var c = tickEvery; c <= cols; c += tickEvery) {
+      s2 += txt(f.p.l + (c - 0.5) * cw, axisY, String(c),
+                { 'text-anchor': 'middle', 'font-size': Math.round(7.5 * sc), fill: INK3 });
+    }
+
+    board.rows.forEach(function (row, ri) {
+      var y = offY + ri * (rh + gapY);
+      var mid = y + rh / 2;
+
+      s2 += txt(f.p.l - Math.round(5 * sc), mid + 3,
+                fitText(spec.rowLabel(row), labelW - Math.round(6 * sc), fsRow, 700),
+                { 'text-anchor': 'end', 'font-size': fsRow, 'font-weight': 700, fill: INK2 });
+
+      row.beds.forEach(function (bed, bi) {
+        var x = f.p.l + bi * cw;
+        var w = Math.max(1, cw - 1.5);
+        var h = Math.max(3, rh - 1.5);
+        var tipRows = [
+          [spec.t.bed, bed.code],
+          [spec.t.zone, spec.zoneName(row.zone) + ' · ' + row.location]
+        ];
+        if (bed.occupied) {
+          tipRows.push([spec.t.dwell, spec.fmtDwell(bed.dwellMin)]);
+          tipRows.push([spec.t.status, spec.statusName(bed.status)]);
+          if (bed.referredTo) tipRows.push([spec.t.referredTo, bed.referredTo]);
+        } else {
+          tipRows.push([spec.t.free]);
+        }
+        if (bed.crisis) tipRows.push([spec.t.crisisBed]);
+
+        s2 += tag('rect', {
+          x: x, y: y, width: w, height: h, rx: 2,
+          fill: bed.occupied ? seqColour(bed.dwellMin, maxD) : '#ffffff',
+          stroke: bed.occupied ? 'none' : AXIS,
+          'stroke-width': bed.occupied ? 0 : 1,
+          'stroke-dasharray': bed.occupied ? null : '2 2',
+          'data-tip': tip(tipRows)
         });
+        if (bed.crisis && bed.occupied) {
+          s2 += tag('rect', { x: x, y: y, width: w, height: h, rx: 2,
+                              fill: 'url(#bbhatch)', 'pointer-events': 'none' });
+        }
+      });
+
+      // Where funded capacity ends and escalation begins, for this row.
+      if (row.crisisPlaces > 0) {
+        var bx = f.p.l + row.funded * cw;
+        s2 += tag('line', { x1: bx, y1: y - 1, x2: bx, y2: y + rh + 1,
+                            stroke: INK, 'stroke-width': 1.5 });
       }
+
+      s2 += txt(f.p.l + cw * cols + Math.round(5 * sc), mid + 3,
+                (row.occupiedFunded + row.occupiedCrisis) + '/' + (row.funded + row.crisisPlaces),
+                { 'font-size': fsNum, 'font-weight': 800,
+                  fill: row.emptyFunded === 0 ? STATUS.critical : INK,
+                  'font-family': 'IBM Plex Mono, monospace' });
     });
 
-    var lw = Math.min(f.iw, Math.round(120 * sc));
-    var lx = f.p.l, ly = f.h - legendH + Math.round(2 * sc);
+    // Scale legend: the ramp, its range, and its unit.
+    var lw = Math.min(Math.round(f.iw * 0.45), Math.round(110 * sc));
+    var lx = f.p.l, ly = f.h - legendH + Math.round(3 * sc);
     var swW = lw / SEQ.length;
-    for (var i = 0; i < SEQ.length; i++) {
-      s += tag('rect', { x: lx + i * swW, y: ly, width: swW - 1,
-                         height: Math.round(6 * sc), fill: SEQ[i] });
+    for (var k = 0; k < SEQ.length; k++) {
+      s2 += tag('rect', { x: lx + k * swW, y: ly, width: swW - 1,
+                          height: Math.round(6 * sc), fill: SEQ[k] });
     }
-    s += txt(lx, ly + Math.round(14 * sc), '0', { 'font-size': Math.round(8 * sc), fill: INK3 });
-    s += txt(lx + lw, ly + Math.round(14 * sc), String(max),
-             { 'text-anchor': 'end', 'font-size': Math.round(8 * sc), fill: INK3 });
-    s += txt(lx + lw + Math.round(8 * sc), ly + Math.round(6 * sc), spec.unit,
-             { 'font-size': Math.round(8.5 * sc), 'font-weight': 700, fill: INK2 });
-    s += '</svg>';
-    el.innerHTML = s;
+    s2 += txt(lx, ly + Math.round(14 * sc), '0',
+              { 'font-size': Math.round(7.5 * sc), fill: INK3 });
+    s2 += txt(lx + lw, ly + Math.round(14 * sc), spec.fmtDwell(maxD),
+              { 'text-anchor': 'end', 'font-size': Math.round(7.5 * sc), fill: INK3 });
+    s2 += txt(lx + lw + Math.round(7 * sc), ly + Math.round(6 * sc), spec.t.dwellUnit,
+              { 'font-size': Math.round(8 * sc), 'font-weight': 700, fill: INK2 });
+
+    // Keys for the two states colour alone cannot carry.
+    var kx = lx + lw + Math.round(10 * sc) + Math.ceil(textW(spec.t.dwellUnit, Math.round(8 * sc), 700));
+    var sq = Math.round(7 * sc);
+    s2 += tag('rect', { x: kx, y: ly, width: sq, height: sq, rx: 1.5,
+                        fill: '#ffffff', stroke: AXIS, 'stroke-width': 1, 'stroke-dasharray': '2 2' });
+    s2 += txt(kx + sq + Math.round(3 * sc), ly + Math.round(6.5 * sc), spec.t.free,
+              { 'font-size': Math.round(8 * sc), 'font-weight': 700, fill: INK2 });
+
+    var kx2 = kx + sq + Math.round(6 * sc) + Math.ceil(textW(spec.t.free, Math.round(8 * sc), 700));
+    s2 += tag('rect', { x: kx2, y: ly, width: sq, height: sq, rx: 1.5, fill: SEQ[3] });
+    s2 += tag('rect', { x: kx2, y: ly, width: sq, height: sq, rx: 1.5, fill: 'url(#bbhatch)' });
+    s2 += txt(kx2 + sq + Math.round(3 * sc), ly + Math.round(6.5 * sc), spec.t.crisisBed,
+              { 'font-size': Math.round(8 * sc), 'font-weight': 700, fill: INK2 });
+
+    s2 += '<defs><pattern id="bbhatch" width="5" height="5" patternTransform="rotate(45)" ' +
+          'patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="5" stroke="' +
+          SURFACE + '" stroke-width="1.8"/></pattern></defs>';
+    s2 += '</svg>';
+    el.innerHTML = s2;
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -854,7 +929,7 @@ var Charts = (function () {
   var RENDERERS = {
     capacityBars: capacityBars, donut: donut, forecastLine: forecastLine,
     histogram: histogram, scatter: scatter, groupedBars: groupedBars,
-    heatmap: heatmap, cartogram: cartogram, completeness: completeness,
+    heatmap: heatmap, bedBoard: bedBoard, completeness: completeness,
     projection: projection
   };
 

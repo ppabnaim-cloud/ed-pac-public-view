@@ -15,12 +15,12 @@
 | 2 | Triage Date/Time | Datetime | 217/217 | Arrival clock — the time axis for everything | Line graph, heatmap rows, forecast input, wait derivations |
 | 3 | Full Name | Free text | 217/217 | Search key only (never plotted) | Search overlay, masked to `N. Surname` |
 | 4 | Initial | Free text | 217/217 | Not used — redundant with (3) | — |
-| 5 | IC / Passport | Identifier | 217/217 | Search key; digits 7–8 give state-of-registration | Search (masked); Malaysia tile cartogram |
+| 5 | IC / Passport | Identifier | 217/217 | Search key only | Search overlay (masked) |
 | 6 | MRN | Identifier | 217/217 | Search key | Search overlay (partially masked) |
 | 7 | Age | Continuous (1–85) | 217/217 | Case-mix | Age histogram; scatter Y-partner; age-band bar |
 | 8 | Gender | Categorical (2) | 217/217 | Case-mix | Gender pie; PAC data-quality check |
 | 9 | Zone Code | Categorical (6) | 217/217 | Acuity proxy (`rz`>`yz`>`gz`; `ob`,`ab`,`pac` functional) | Capacity bars, heatmap columns, scatter colour |
-| 10 | Bed / Position Code | Structured string | 217/217 | **Capacity state.** `<loc><zone><NN>` = funded bed; `…crisis` = overflow bed; `<loc>gz-waiting` = queue, not a bed | Occupancy/crisis bars, crisis KPI, GZ queue KPI |
+| 10 | Bed / Position Code | Structured string | 217/217 | **Capacity state.** `<loc><zone><NN>` = funded bed; `…crisis` = overflow bed; `<loc>gz-waiting` = queue, not a bed | Occupancy/crisis bars, crisis KPI, GZ queue KPI, **bed board** |
 | 11 | Current Zone | Categorical (6) | 217/217 | Duplicates (9) in this extract | Cross-check flag only |
 | 12 | Status | Categorical (4 seen) | 217/217 | Disposition | Status pie, admission/referral rate KPIs |
 | 13 | Referred To | Categorical (9) | 71/217 (33%) | Referral demand by discipline | Referral bar; zone × discipline heatmap |
@@ -42,9 +42,10 @@
 | `admissionRate %` | (`preadmit` + `admitted`) ÷ attendances | Big number |
 | `referralRate %` | `referred` ÷ attendances | Big number |
 | `arrivalsPerHour` | Count of records grouped by `HOUR(Triage)` | Line graph, forecast input |
-| `stateOfRegistration` | IC digits 7–8 → Malaysian state | Tile cartogram |
 | `ageBand` | 0–4, 5–12, 13–17, 18–29, 30–44, 45–59, 60–74, 75+ | Bar/histogram |
 | `meanLOS` | Mean of TWT (hours) | Census projection |
+| `bedBoard` | Every position in the establishment, occupied or not, with its occupant's dwell time | Bed board heatmap |
+| `dwellMin` | Minutes from triage to now (or to admission) for the bed's occupant | Bed board cell shade |
 | `modelledCost` | attendances × configurable unit cost (**off unless configured**) | Big number |
 
 ---
@@ -55,22 +56,24 @@ Hard constraint: **every screen fits a 10-inch tablet in portrait (768 × 1024 C
 
 | Tab | Scope filter | Steps |
 |-----|-------------|-------|
-| **A — Emergency Department, Women & Children Centre** | `Location = ED WCC` | 3 |
-| **B — Emergency Department, Main Building** | `Location = ED BU` | 3 |
-| **C — Patient Assessment Centre, O&G** | `Location = PAC WCC` | 2 |
+| **A — Emergency Department, Women & Children Centre** | `Location = ED WCC` | 4 |
+| **B — Emergency Department, Main Building** | `Location = ED BU` | 4 |
+| **C — Patient Assessment Centre, O&G** | `Location = PAC WCC` | 3 |
 | **D — Administrative** | All locations (passcode-gated) | 4 |
 
 ### Tab A / B — clinical, per site
 
 | Step | Panels | Visual type | Variables |
 |------|--------|-------------|-----------|
-| 1 — Current status | 4 KPI tiles | **Big numbers** | census; occupancy %; crisis beds; GZ queue length |
+| 1 — Current status | 4 KPI tiles | **Big numbers** | census; load %; crisis beds; GZ queue length |
 | | Zone occupancy | **Stacked bar** (funded + crisis overflow vs capacity) | Bed code (10), Zone (9) |
-| | Crisis banner | Conditional alert | crisisBeds > 0 |
-| 2 — Flow & waiting | Arrivals by hour | **Line graph**, 2 series (arrivals, cumulative) | Triage (2) |
-| | Waiting-time distribution | **Histogram**, 60-min bins | TWT (19) |
+| 2 — Bed management | 4 KPI tiles | **Big numbers** | total places; in use %; free normal beds; escalation open |
+| | Bed board | **Heatmap**, one cell per bed position | Bed code (10), Triage (2), Status (12) |
+| | Projected demand | **Line with 80 % band** | census, arrivals forecast |
+| 3 — Flow & waiting | Arrivals by hour | **Line graph** with forecast | Triage (2) |
+| | Waiting-time distribution | **Histogram**, 60-min bins | elapsed time since triage |
 | | Disposition mix | **Pie / donut** | Status (12) |
-| 3 — Patterns & forecast | Arrival intensity | **Heatmap**, hour × zone | Triage (2) × Zone (9) |
+| 4 — Patterns & forecast | Arrival intensity | **Heatmap**, hour × zone | Triage (2) × Zone (9) |
 | | Age vs waiting time | **Scatter plot**, coloured by zone | Age (7) × TWT (19) × Zone (9) |
 | | Next 4 hours | **Forecast** with 80 % / 95 % band | arrivalsPerHour |
 
@@ -78,8 +81,9 @@ Hard constraint: **every screen fits a 10-inch tablet in portrait (768 × 1024 C
 
 | Step | Panels | Visual type | Variables |
 |------|--------|-------------|-----------|
-| 1 | 4 KPI tiles + zone occupancy + disposition | **Big numbers, bar, pie** | 10, 12 |
-| 2 | Age bands + referral discipline + forecast + data-quality flags | **Histogram, bar, forecast** | 7, 13, 2, 8 |
+| 1 | 4 KPI tiles + zone occupancy + disposition + age bands | **Big numbers, bar, pie, histogram** | 7, 10, 12 |
+| 2 | Bed board + projected demand | **Heatmap, line with band** | 10, 2, 12 |
+| 3 | Arrivals & forecast + referral discipline + method | **Line, bar, text** | 2, 13 |
 
 ### Tab D — Administrative
 
@@ -87,24 +91,55 @@ Hard constraint: **every screen fits a 10-inch tablet in portrait (768 × 1024 C
 |------|--------|-------------|-----------|
 | 1 — Overview | 6 KPI tiles; unit comparison | **Big numbers** (attendances, admitted, deaths, admission %, median TWT, modelled cost) + **grouped bar** | 1, 12, 19 |
 | 2 — Case-mix | Referral discipline; age bands; gender; zone × discipline | **Bar, histogram, pie, heatmap** | 13, 7, 8, 9 |
-| 3 — Geography & forecast | Malaysia state tiles; zone × hour intensity; hospital-wide forecast | **Cartogram heatmap, heatmap, forecast** | 5, 9, 2 |
+| 3 — Bed management | Bed board across all three units; zone × hour intensity; age vs dwell | **Heatmap, heatmap, scatter** | 10, 9, 2, 7 |
 | 4 — Data quality & method | Field completeness; integrity flags; model specification | **Bar + text** | all |
 
 ---
 
 ## 3. Heatmap specification
 
-Three heatmaps, all sequential single-hue (light → dark teal), all carrying the same three legend elements the brief requires: **scale**, **unit**, and **a sentence stating what dark versus bright means**.
+Three heatmaps, all sequential single-hue (light → dark blue), all carrying the
+three legend elements the brief requires: **scale**, **unit**, and **a sentence
+stating what dark versus bright means**.
 
 | Heatmap | Rows × Columns | Cell value | Unit | Legend sentence |
 |---------|---------------|-----------|------|-----------------|
-| Arrival intensity | Hour of day × Zone | Count of arrivals | patients per hour per zone | "Darker cells carry more arrivals; brighter cells carry fewer. The darkest cell is the busiest hour-and-zone combination of the day." |
-| Zone × discipline | Zone × Referral discipline | Count of referrals | referrals | "Darker cells are more frequent referral routes; brighter cells are rarer ones." |
-| Malaysia states | Geographic tile grid, 16 states/territories | Patients registered to that state | patients | "Darker states contribute more patients to this department today; brighter states contribute fewer; unshaded states contributed none." |
+| **Bed board** | Zone × bed position | Hours the occupant has been in the department | hours in department | "Each cell is one bed. Dark = longest in that bed; bright = just arrived; white dashed = empty. The black rule marks normal capacity." |
+| Arrival intensity | Hour of day × Zone | Count of arrivals | patients per hour per zone | "Darker cells carry more arrivals in that hour and zone; brighter cells carry fewer." |
+| Zone × discipline | Zone × Referral discipline | Count of referrals | referrals | "Darker cells are frequently used referral routes; brighter cells are rare." |
 
-The Malaysia visual is a **geographically-arranged tile cartogram**, not a true outline map — this keeps it legible in a ~300 px tablet panel. It is derived from **IC digits 7–8, which encode state of registration at birth, not current residence**. It is therefore labelled as an origin proxy, and the caveat is printed inside the panel. A genuine catchment map needs a residential address, district or postcode field, which the register does not currently hold.
+### The bed board
 
----
+The primary bed-management visual, present on all three clinical tabs (scoped
+to that unit) and on the Administrative tab (all nine zones across the three
+units at once).
+
+It enumerates **every position in the establishment**, not only those appearing
+in the register. This matters: a register lists occupied beds, but the question
+a bed manager asks is where the *free* ones are. Empty beds are therefore drawn
+as white cells with a dashed outline, and counted.
+
+Each row is a zone. Cells run left to right in bed order. A black rule marks
+where funded capacity ends, so escalation beds are the cells to its right; those
+cells also carry the same diagonal hatch used for escalation capacity elsewhere
+in the dashboard, so colour is never the only cue. The count at the right of
+each row turns red when no *funded* bed is free, which is the moment escalation
+becomes unavoidable.
+
+Shading is the occupant's dwell time — minutes from triage to now, or to
+admission where that has happened. A dark cluster is a zone where patients have
+been held a long time, which is what bed management needs to see; a row of pale
+cells is a zone that has just turned over.
+
+Green-zone waiting places are deliberately **excluded**: a queue position is not
+a bed, and counting the 50 waiting patients as occupancy would overstate bed
+demand several-fold. They appear instead as the green-zone queue KPI and on the
+capacity bars.
+
+**Not derivable:** a true geographic catchment map. The register holds no
+residential address, district or postcode. An earlier draft approximated it from
+IC digits 7–8, but those encode state of registration *at birth*, not where the
+patient lives, so it was removed rather than left to be misread.
 
 ## 4. Forecast specification
 
@@ -166,5 +201,5 @@ Stated plainly rather than substituted with a proxy:
 |-----------|--------|--------------------------|
 | **Deaths** | Not present. The dashboard counts `death` / `deceased` / `bid` in `Status` and will display the tile the moment those values appear; until then it reports 0 with the gap noted. | A `death`/`bid` value in `Status`, or a separate outcome column |
 | **Cost** | Not present. Rendered only if a unit cost is configured in Script Properties, and then labelled "modelled — unit cost × attendances, not actual billing". | Actual costing feed, or an agreed unit cost per attendance/zone |
-| **Malaysia catchment map** | Approximated from IC state of registration, with the caveat printed in-panel. | Residential district, postcode or state |
+| **Geographic catchment map** | Removed. IC digits 7–8 give state of registration at birth, not residence, so the map would have been read as something it was not. The bed board occupies that panel instead. | Residential district, postcode or state |
 | **Case-fatality / mortality rate** | Blocked by the deaths gap above. | as above |

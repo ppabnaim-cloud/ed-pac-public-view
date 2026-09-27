@@ -45,7 +45,7 @@ var I18N = {
       pattern:   'Pola & ramalan',
       overview:  'Gambaran keseluruhan',
       casemix:   'Campuran kes & rujukan',
-      geo:       'Geografi & ramalan',
+      beds:      'Pengurusan katil',
       quality:   'Kualiti data & kaedah'
     },
 
@@ -106,7 +106,7 @@ var I18N = {
       ageBands:     'Kumpulan umur',
       gender:       'Jantina',
       heatZoneRef:  'Zon berbanding disiplin rujukan',
-      stateMap:     'Negeri pendaftaran pesakit',
+      bedBoard:     'Papan katil — semua zon',
       completeness: 'Kelengkapan data',
       flags:        'Isu kualiti data',
       method:       'Kaedah statistik',
@@ -124,16 +124,24 @@ var I18N = {
       observed: 'Direkodkan', forecastLbl: 'Ramalan',
       axisAge: 'Umur (tahun)',
       legendFunded: 'Katil biasa', legendCrisis: 'Katil krisis (tambahan)',
-      legendCapacity: 'Kapasiti biasa'
+      legendCapacity: 'Kapasiti biasa',
+      bed: 'Katil', free: 'Kosong', crisisBed: 'Katil krisis',
+      dwell: 'Sudah di jabatan', dwellUnit: 'jam di jabatan',
+      occupied: 'Digunakan', places: 'Jumlah tempat'
     },
 
     /* heatmap legends — scale, unit, and what dark versus bright means */
     heat: {
       unitPatients:  'pesakit',
       unitReferrals: 'rujukan',
+      bedNote:       'Setiap petak = satu katil. Unit: jam di jabatan, 0 hingga yang terlama. Gelap = sudah lama di katil itu; cerah = baru masuk; putih putus-putus = kosong. Garisan hitam = had kapasiti biasa.',
       hourZoneNote:  'Unit: bilangan pesakit, skala 0 hingga nilai tertinggi. Petak gelap = ramai masuk pada jam dan zon itu; petak cerah = sedikit.',
       zoneRefNote:   'Unit: bilangan rujukan, skala 0 hingga nilai tertinggi. Petak gelap = laluan rujukan kerap; petak cerah = jarang.',
-      stateNote:     'Unit: bilangan pesakit, skala 0 hingga nilai tertinggi. Negeri gelap = menyumbang lebih ramai; cerah = sedikit; petak putus-putus = tiada. Sumber: digit 7–8 kad pengenalan (negeri pendaftaran lahir, bukan tempat tinggal).'
+      bedSummary:    function (p) {
+        return p.occupied + ' daripada ' + p.places + ' tempat digunakan (' + p.pct + '%). ' +
+               p.empty + ' katil kosong. ' + p.crisisOccupied + ' daripada ' +
+               p.crisisPlaces + ' katil krisis dibuka.';
+      }
     },
 
     /* narrative — the plain-language line for families */
@@ -246,13 +254,6 @@ var I18N = {
       admit: 'Masa masuk wad', bwt: 'BWT', twt: 'TWT', gzwt: 'GZWT'
     },
 
-    states: {
-      JHR: 'Johor', KDH: 'Kedah', KTN: 'Kelantan', MLK: 'Melaka', NSN: 'Negeri Sembilan',
-      PHG: 'Pahang', PNG: 'Pulau Pinang', PRK: 'Perak', PLS: 'Perlis', SGR: 'Selangor',
-      TRG: 'Terengganu', SBH: 'Sabah', SWK: 'Sarawak', KUL: 'Kuala Lumpur',
-      LBN: 'Labuan', PJY: 'Putrajaya'
-    },
-
     footer: 'Data dikemas kini setiap 5 minit. Untuk pertanyaan segera, sila ke kaunter jururawat.',
     credit: 'Dibangunkan oleh Dr Naim AI Team, HTPN'
   },
@@ -287,7 +288,7 @@ var I18N = {
     steps: {
       now: 'Current status', flow: 'Arrivals & waiting times', pattern: 'Patterns & forecast',
       overview: 'Whole-service overview', casemix: 'Case-mix & referrals',
-      geo: 'Geography & forecast', quality: 'Data quality & method'
+      beds: 'Bed management', quality: 'Data quality & method'
     },
 
     zone: {
@@ -329,7 +330,7 @@ var I18N = {
       forecastCard: 'Next four hours', unitCompare: 'Comparison across units',
       referrals: 'Referrals by discipline', ageBands: 'Age groups', gender: 'Sex',
       heatZoneRef: 'Zone against referral discipline',
-      stateMap: 'Patients by state of registration',
+      bedBoard: 'Bed board — all zones',
       completeness: 'Field completeness', flags: 'Data quality issues',
       method: 'Statistical method', projection: 'Projected patient numbers'
     },
@@ -344,14 +345,22 @@ var I18N = {
       observed: 'Recorded', forecastLbl: 'Forecast',
       axisAge: 'Age (years)',
       legendFunded: 'Normal beds', legendCrisis: 'Escalation beds',
-      legendCapacity: 'Normal capacity'
+      legendCapacity: 'Normal capacity',
+      bed: 'Bed', free: 'Free', crisisBed: 'Escalation bed',
+      dwell: 'In department', dwellUnit: 'hours in department',
+      occupied: 'In use', places: 'Total places'
     },
 
     heat: {
       unitPatients: 'patients', unitReferrals: 'referrals',
+      bedNote: 'Each cell is one bed. Unit: hours in the department, 0 to the longest. Dark = longest in that bed; bright = just arrived; white dashed = empty. The black rule marks normal capacity.',
       hourZoneNote: 'Unit: patients, scale 0 to the highest value. Darker cells carry more arrivals in that hour and zone; brighter cells carry fewer.',
       zoneRefNote: 'Unit: referrals, scale 0 to the highest value. Darker cells are frequently used referral routes; brighter cells are rare.',
-      stateNote: 'Unit: patients, scale 0 to the highest value. Darker states contribute more; brighter fewer; dashed tiles none. Source: IC digits 7–8 (state of registration at birth, not residence).'
+      bedSummary: function (p) {
+        return p.occupied + ' of ' + p.places + ' places in use (' + p.pct + '%). ' +
+               p.empty + ' beds free. ' + p.crisisOccupied + ' of ' +
+               p.crisisPlaces + ' escalation beds open.';
+      }
     },
 
     narr: {
@@ -456,13 +465,6 @@ var I18N = {
       bedCode: 'Bed code', status: 'Status', referredTo: 'Referred to',
       queueNo: 'Queue no.', calledGZ: 'Called into room', preadmit: 'Pre-admission',
       admit: 'Admission time', bwt: 'BWT', twt: 'TWT', gzwt: 'GZWT'
-    },
-
-    states: {
-      JHR: 'Johor', KDH: 'Kedah', KTN: 'Kelantan', MLK: 'Melaka', NSN: 'Negeri Sembilan',
-      PHG: 'Pahang', PNG: 'Penang', PRK: 'Perak', PLS: 'Perlis', SGR: 'Selangor',
-      TRG: 'Terengganu', SBH: 'Sabah', SWK: 'Sarawak', KUL: 'Kuala Lumpur',
-      LBN: 'Labuan', PJY: 'Putrajaya'
     },
 
     footer: 'Data refreshes every 5 minutes. For urgent enquiries please go to the nursing counter.',
