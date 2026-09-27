@@ -1,0 +1,482 @@
+<style>
+/* ============================================================
+   ED / PAC DASHBOARD — LAYOUT AND DESIGN TOKENS
+
+   Light mode only, deliberately. This page runs on dedicated
+   tablets and wall screens in brightly lit waiting areas, and
+   the data palette below was validated against a white chart
+   surface. Shipping a dark variant would mean shipping colours
+   that have not cleared the same colour-vision gates, so the
+   page pins itself to light rather than letting an operating
+   system setting produce an unvalidated rendering.
+
+   Nothing on any screen scrolls: the shell is a fixed grid of
+   viewport height, and sections that hold more than fits are
+   split into numbered steps reached by the pager.
+   ============================================================ */
+
+:root {
+  color-scheme: light;
+
+  /* Surfaces and ink */
+  --page:      #eef2f5;
+  --surface:   #ffffff;
+  --surface-2: #f6f9fa;
+  --ink:       #14202a;
+  --ink-2:     #4a5763;
+  --ink-3:     #77848f;
+  --line:      #d7dee4;
+  --line-soft: #e8edf1;
+
+  /* Brand chrome — identity only, never a data encoding */
+  --brand:     #0a7c82;
+  --brand-dk:  #055257;
+  --brand-lt:  #e0f5f6;
+  --accent:    #b35c00;
+
+  /* Triage zone identity. Red / yellow / green are a patient-safety
+     convention and are not ours to re-map; observation, asthma and PAC
+     are functional areas and take validated categorical slots.
+     Passes the adjacent pairlist on a white surface. Yellow and PAC sit
+     below 3:1 against the surface, so every zone mark carries a visible
+     text label — colour never works alone here. */
+  --zone-rz:  #c0392b;
+  --zone-yz:  #e08b00;
+  --zone-gz:  #1a7c4a;
+  --zone-ob:  #2a78d6;
+  --zone-ab:  #4a3aa7;
+  --zone-pac: #e87ba4;
+
+  /* Categorical slots for everything that is not a zone, in fixed order */
+  --cat-1: #2a78d6;  --cat-2: #eb6834;  --cat-3: #1baf7a;  --cat-4: #eda100;
+  --cat-5: #e87ba4;  --cat-6: #008300;  --cat-7: #4a3aa7;  --cat-8: #e34948;
+
+  /* Sequential ramp for heatmaps — one hue, light to dark */
+  --seq-1: #cde2fb; --seq-2: #9ec5f4; --seq-3: #6da7ec; --seq-4: #3987e5;
+  --seq-5: #256abf; --seq-6: #184f95; --seq-7: #0d366b;
+  --seq-0: #f4f7fa;              /* exactly zero — reads as empty, not low */
+
+  /* Status — always shipped with an icon and a word */
+  --ok:       #0ca30c;
+  --warn:     #fab219;
+  --serious:  #ec835a;
+  --critical: #d03b3b;
+
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(20,32,42,.06), 0 4px 14px rgba(20,32,42,.05);
+
+  /* Set by JS from the viewport so a 1024px-tall tablet and a 1280px-tall
+     one both fill their screen without overflowing it. */
+  --s: 1;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;                /* the no-scroll guarantee */
+  background: var(--page);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--ink);
+  font-size: calc(14px * var(--s));
+  line-height: 1.35;
+  overscroll-behavior: none;
+}
+
+.mono { font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace; }
+
+/* Narrow screens shed the optional header furniture rather than overflow. */
+@media (max-width: 880px) { #demoChip { display: none } }
+@media (max-width: 720px) {
+  #searchBtnLabel, #langLabel { display: none }
+  .hdr-btn { padding: calc(6px * var(--s)) calc(10px * var(--s)) }
+}
+@media (max-width: 620px) { #stampPrefix { display: none } }
+
+/* ── SHELL ───────────────────────────────────────────────── */
+#app {
+  height: 100vh;
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  /* minmax(0,1fr), not the implicit `auto`: an auto track resolves to the
+     widest item's max-content, which let the header stretch the shell past
+     the viewport and put the whole page into horizontal overflow. */
+  grid-template-columns: minmax(0, 1fr);
+  /* Rows are named and children pinned to them. With implicit placement,
+     hiding the narrative strip (as the administrative tab does) shifted every
+     later child up one row, handing the 1fr track to the pager and collapsing
+     the content area to auto height. */
+  grid-template-areas: "hdr" "narr" "tabs" "content" "pager";
+  overflow: hidden;
+}
+#app > * { min-width: 0; }
+.hdr     { grid-area: hdr }
+.narr    { grid-area: narr }
+.tabs    { grid-area: tabs }
+.content { grid-area: content }
+.pager   { grid-area: pager }
+
+/* ── HEADER ──────────────────────────────────────────────── */
+.hdr {
+  background: linear-gradient(135deg, var(--brand-dk), var(--brand));
+  color: #fff;
+  display: flex; align-items: center; gap: calc(10px * var(--s));
+  padding: 0 calc(14px * var(--s));
+  height: calc(52px * var(--s));
+  box-shadow: 0 1px 6px rgba(5,82,87,.28);
+  overflow: hidden;
+}
+.hdr-chip, .hdr-btn { flex: 0 0 auto; }
+.hdr-id { min-width: 0; flex: 1; }
+.hdr-id h1 {
+  font-size: calc(14px * var(--s)); font-weight: 800; letter-spacing: -.01em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hdr-id p {
+  font-size: calc(10.5px * var(--s)); opacity: .82; font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hdr-chip {
+  display: inline-flex; align-items: center; gap: calc(5px * var(--s));
+  background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.28);
+  border-radius: 999px; padding: calc(4px * var(--s)) calc(10px * var(--s));
+  font-size: calc(10.5px * var(--s)); font-weight: 700; white-space: nowrap;
+  color: #fff;
+}
+.hdr-btn {
+  display: inline-flex; align-items: center; gap: calc(5px * var(--s));
+  background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.3);
+  color: #fff; font: inherit; font-size: calc(11px * var(--s)); font-weight: 700;
+  border-radius: 999px; padding: calc(6px * var(--s)) calc(12px * var(--s));
+  cursor: pointer; white-space: nowrap;
+  min-height: calc(32px * var(--s));
+}
+.hdr-btn:hover { background: rgba(255,255,255,.26); }
+.hdr-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.dot {
+  width: calc(7px * var(--s)); height: calc(7px * var(--s)); border-radius: 50%;
+  background: #6ee7a0; flex: none;
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .45 } }
+@media (prefers-reduced-motion: reduce) { .dot { animation: none } }
+
+/* ── NARRATIVE STRIP — the plain-language line for families ─ */
+.narr {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  padding: calc(7px * var(--s)) calc(14px * var(--s));
+  display: flex; align-items: center; gap: calc(9px * var(--s));
+  min-height: calc(40px * var(--s));
+  overflow: hidden;
+}
+.narr-icon { font-size: calc(17px * var(--s)); flex: none; line-height: 1; }
+.narr-text {
+  font-size: calc(12px * var(--s)); color: var(--ink-2); font-weight: 500;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.narr-text strong { color: var(--ink); font-weight: 800; }
+.narr-more { font-size: calc(17px * var(--s)); color: var(--ink-3); flex: none; font-weight: 800 }
+button.narr {
+  width: 100%; text-align: left; font: inherit; border: 0;
+  border-bottom: 1px solid var(--line); cursor: pointer;
+}
+button.narr:hover { background: var(--surface-2) }
+button.narr:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px }
+.help-fig { margin-bottom: calc(12px * var(--s)) }
+.help-fig img {
+  width: 100%; height: auto; display: block;
+  border-radius: var(--radius); border: 1px solid var(--line);
+}
+.help-fig figcaption {
+  font-size: calc(11px * var(--s)); font-weight: 700; color: var(--ink-2);
+  padding-top: calc(5px * var(--s));
+}
+.narr.is-crisis { background: #fdf0ee; border-bottom-color: #f3c4bd; }
+.narr.is-crisis .narr-text strong { color: var(--critical); }
+
+/* ── TABS ────────────────────────────────────────────────── */
+.tabs {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  background: var(--surface); border-bottom: 1px solid var(--line);
+  height: calc(48px * var(--s));
+}
+.tab {
+  border: 0; background: none; font: inherit; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: calc(1px * var(--s)); padding: calc(4px * var(--s)) calc(3px * var(--s));
+  color: var(--ink-3); border-bottom: 3px solid transparent; min-width: 0;
+}
+.tab-name {
+  font-size: calc(11px * var(--s)); font-weight: 700; line-height: 1.15;
+  text-align: center; overflow: hidden; text-overflow: ellipsis;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.tab-sub { font-size: calc(9px * var(--s)); font-weight: 600; opacity: .85; }
+.tab[aria-selected="true"] {
+  color: var(--brand-dk); border-bottom-color: var(--brand);
+  background: var(--brand-lt);
+}
+.tab:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+
+/* ── CONTENT ─────────────────────────────────────────────── */
+.content {
+  min-height: 0; overflow: hidden; position: relative;
+  padding: calc(10px * var(--s));
+}
+.step { height: 100%; min-height: 0; display: none; }
+.step.is-active { display: grid; gap: calc(9px * var(--s)); min-width: 0; }
+.step.is-active > * { min-width: 0; min-height: 0; }
+
+/* ── PANELS ──────────────────────────────────────────────── */
+.panel {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  display: flex; flex-direction: column; min-height: 0; min-width: 0;
+  overflow: hidden;
+}
+.panel-hd {
+  display: flex; align-items: baseline; gap: calc(7px * var(--s));
+  padding: calc(7px * var(--s)) calc(10px * var(--s)) calc(3px * var(--s));
+  flex: none;
+}
+.panel-hd h2 {
+  font-size: calc(11.5px * var(--s)); font-weight: 800; color: var(--ink);
+  letter-spacing: -.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.panel-hd .sub {
+  font-size: calc(9.5px * var(--s)); color: var(--ink-3); font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;
+}
+.panel-tbl {
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2);
+  border-radius: 5px; font: inherit; font-size: calc(9px * var(--s)); font-weight: 700;
+  padding: calc(2px * var(--s)) calc(6px * var(--s)); cursor: pointer; flex: none;
+  min-height: calc(20px * var(--s));
+}
+.panel-tbl:hover { background: var(--brand-lt); color: var(--brand-dk); }
+.panel-bd { flex: 1; min-height: 0; position: relative; }
+.panel-bd > svg { display: block; width: 100%; height: 100%; }
+.panel-note {
+  flex: none; padding: calc(2px * var(--s)) calc(10px * var(--s)) calc(6px * var(--s));
+  font-size: calc(9px * var(--s)); color: var(--ink-3); line-height: 1.3;
+  /* Capped at three lines: the heatmap legend sentences are long, and without
+     a ceiling they collapse the plot area they are meant to describe. The
+     full wording stays available in the table view. */
+  max-height: calc(9px * var(--s) * 1.3 * 3 + 8px * var(--s));
+  overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+}
+.panel-bd { min-height: calc(90px * var(--s)); }
+
+/* ── KPI TILES ───────────────────────────────────────────── */
+.kpis { display: grid; gap: calc(8px * var(--s)); min-height: 0; min-width: 0; }
+@media (max-width: 700px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) !important }
+}
+.kpi {
+  background: var(--surface); border: 1px solid var(--line);
+  border-left: 4px solid var(--brand); border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: calc(7px * var(--s)) calc(9px * var(--s));
+  display: flex; flex-direction: column; justify-content: center;
+  min-width: 0; min-height: 0; overflow: hidden;
+}
+.kpi-label {
+  font-size: calc(9.5px * var(--s)); font-weight: 700; color: var(--ink-3);
+  text-transform: uppercase; letter-spacing: .04em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.kpi-val {
+  font-size: calc(27px * var(--s)); font-weight: 800; line-height: 1.05;
+  letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.kpi-val .unit { font-size: calc(13px * var(--s)); font-weight: 700; color: var(--ink-3); }
+.kpi-sub {
+  font-size: calc(9.5px * var(--s)); color: var(--ink-3); font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.kpi.t-ok       { border-left-color: var(--ok) }
+.kpi.t-warn     { border-left-color: var(--warn) }
+.kpi.t-serious  { border-left-color: var(--serious) }
+.kpi.t-critical { border-left-color: var(--critical) }
+.kpi.t-critical .kpi-val { color: var(--critical) }
+.kpi-flag {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: calc(9px * var(--s)); font-weight: 800;
+}
+.kpi-na { font-size: calc(13px * var(--s)); font-weight: 700; color: var(--ink-3); }
+
+/* ── STEP PAGER ──────────────────────────────────────────── */
+.pager {
+  display: flex; align-items: center; gap: calc(8px * var(--s));
+  background: var(--surface); border-top: 1px solid var(--line);
+  padding: 0 calc(12px * var(--s)); height: calc(44px * var(--s));
+}
+.pager-btn {
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+  border-radius: 8px; font: inherit; font-size: calc(11px * var(--s)); font-weight: 700;
+  padding: calc(6px * var(--s)) calc(12px * var(--s)); cursor: pointer;
+  min-height: calc(32px * var(--s)); min-width: calc(44px * var(--s));
+}
+.pager-btn:hover:not(:disabled) { background: var(--brand-lt); border-color: var(--brand); color: var(--brand-dk) }
+.pager-btn:disabled { opacity: .35; cursor: default }
+.pager-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px }
+.pager-mid { flex: 1; min-width: 0; text-align: center }
+.pager-title {
+  font-size: calc(11.5px * var(--s)); font-weight: 800; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pager-dots { display: flex; gap: calc(5px * var(--s)); justify-content: center; margin-top: 3px }
+.pager-dot {
+  width: calc(18px * var(--s)); height: calc(4px * var(--s)); border-radius: 2px;
+  background: var(--line); border: 0; padding: 0; cursor: pointer;
+}
+.pager-dot[aria-current="true"] { background: var(--brand) }
+
+/* ── OVERLAYS (search, table view, admin gate) ───────────── */
+.ov {
+  position: fixed; inset: 0; z-index: 90; display: none;
+  background: rgba(15,28,36,.55);
+  align-items: center; justify-content: center; padding: calc(16px * var(--s));
+}
+.ov.is-open { display: flex }
+.ov-card {
+  background: var(--surface); border-radius: calc(14px * var(--s));
+  width: 100%; max-width: calc(560px * var(--s));
+  max-height: calc(100% - 8px); display: flex; flex-direction: column;
+  overflow: hidden; box-shadow: 0 18px 48px rgba(15,28,36,.32);
+}
+.ov-card.is-wide { max-width: calc(760px * var(--s)) }
+.ov-hd {
+  display: flex; align-items: center; gap: calc(8px * var(--s));
+  padding: calc(12px * var(--s)) calc(14px * var(--s));
+  border-bottom: 1px solid var(--line); flex: none;
+}
+.ov-hd h2 { font-size: calc(14px * var(--s)); font-weight: 800; flex: 1; min-width: 0 }
+.ov-x {
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2);
+  width: calc(32px * var(--s)); height: calc(32px * var(--s)); border-radius: 8px;
+  font-size: calc(15px * var(--s)); cursor: pointer; flex: none; line-height: 1;
+}
+.ov-x:hover { background: #fdf0ee; color: var(--critical); border-color: #f3c4bd }
+.ov-bd { padding: calc(14px * var(--s)); overflow: auto; min-height: 0; flex: 1 }
+.ov-ft {
+  padding: calc(10px * var(--s)) calc(14px * var(--s));
+  border-top: 1px solid var(--line); flex: none;
+  display: flex; align-items: center; gap: calc(8px * var(--s));
+  font-size: calc(10px * var(--s)); color: var(--ink-3);
+}
+
+.field {
+  display: flex; gap: calc(8px * var(--s)); align-items: stretch;
+}
+.field input {
+  flex: 1; min-width: 0; font: inherit; font-size: calc(14px * var(--s));
+  padding: calc(11px * var(--s)) calc(12px * var(--s));
+  border: 1.5px solid var(--line); border-radius: 9px; color: var(--ink);
+  background: var(--surface);
+}
+.field input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-lt) }
+.btn-go {
+  border: 0; background: var(--brand); color: #fff; font: inherit;
+  font-size: calc(13px * var(--s)); font-weight: 800; border-radius: 9px;
+  padding: 0 calc(18px * var(--s)); cursor: pointer; white-space: nowrap;
+  min-height: calc(44px * var(--s));
+}
+.btn-go:hover { background: var(--brand-dk) }
+.hint { font-size: calc(10.5px * var(--s)); color: var(--ink-3); margin-top: calc(8px * var(--s)); line-height: 1.4 }
+
+/* Patient result card */
+.res {
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: calc(11px * var(--s)); margin-bottom: calc(9px * var(--s));
+  background: var(--surface-2);
+}
+.res-hd { display: flex; align-items: center; gap: calc(8px * var(--s)); flex-wrap: wrap; margin-bottom: calc(8px * var(--s)) }
+.res-name { font-size: calc(14px * var(--s)); font-weight: 800 }
+.res-id { font-size: calc(10px * var(--s)); color: var(--ink-3) }
+.res-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(calc(110px * var(--s)), 1fr)); gap: calc(8px * var(--s)) }
+.res-k { font-size: calc(9px * var(--s)); text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); font-weight: 700 }
+.res-v { font-size: calc(11.5px * var(--s)); font-weight: 700 }
+.chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: calc(3px * var(--s)) calc(9px * var(--s)); border-radius: 999px;
+  font-size: calc(10px * var(--s)); font-weight: 800; white-space: nowrap;
+}
+.queue {
+  margin-top: calc(9px * var(--s)); border-radius: 9px;
+  background: var(--brand-lt); border: 1px solid #b8dfe1;
+  padding: calc(10px * var(--s)); display: flex; align-items: center; gap: calc(11px * var(--s));
+}
+.queue-n { font-size: calc(26px * var(--s)); font-weight: 800; color: var(--brand-dk); line-height: 1; font-variant-numeric: tabular-nums }
+.queue-t { font-size: calc(10.5px * var(--s)); color: var(--ink-2); font-weight: 600 }
+
+/* Data table (the accessibility relief for every chart) */
+table.dt { width: 100%; border-collapse: collapse; font-size: calc(11px * var(--s)) }
+table.dt caption { text-align: left; font-size: calc(10px * var(--s)); color: var(--ink-3); padding-bottom: calc(6px * var(--s)) }
+table.dt th, table.dt td {
+  border-bottom: 1px solid var(--line-soft); padding: calc(5px * var(--s)) calc(7px * var(--s));
+  text-align: right; font-variant-numeric: tabular-nums;
+}
+table.dt th:first-child, table.dt td:first-child { text-align: left; font-variant-numeric: normal }
+table.dt thead th { background: var(--surface-2); font-weight: 800; color: var(--ink-2); position: sticky; top: 0 }
+table.dt tbody tr:hover { background: var(--brand-lt) }
+
+/* ── CHART TOOLTIP ───────────────────────────────────────── */
+#tip {
+  position: fixed; z-index: 120; pointer-events: none; display: none;
+  background: #14202a; color: #fff; border-radius: 7px;
+  padding: calc(6px * var(--s)) calc(9px * var(--s));
+  font-size: calc(10.5px * var(--s)); font-weight: 600; line-height: 1.4;
+  box-shadow: 0 5px 18px rgba(0,0,0,.3); max-width: calc(240px * var(--s));
+}
+#tip .tip-k { color: #9fb2c0; font-weight: 700 }
+#tip b { font-variant-numeric: tabular-nums }
+
+/* ── LEGEND (HTML, beneath a chart) ──────────────────────── */
+.legend {
+  display: flex; flex-wrap: wrap; gap: calc(3px * var(--s)) calc(9px * var(--s));
+  padding: calc(3px * var(--s)) calc(10px * var(--s)) calc(6px * var(--s));
+  flex: none;
+}
+.legend-item { display: inline-flex; align-items: center; gap: calc(4px * var(--s)); font-size: calc(9.5px * var(--s)); font-weight: 700; color: var(--ink-2) }
+.legend-sw { width: calc(9px * var(--s)); height: calc(9px * var(--s)); border-radius: 2px; flex: none }
+.legend-sw.is-line { height: calc(3px * var(--s)); border-radius: 2px }
+.legend-sw.is-band { height: calc(9px * var(--s)); opacity: .3 }
+
+/* ── STATES ──────────────────────────────────────────────── */
+.state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100%; gap: calc(7px * var(--s)); text-align: center;
+  padding: calc(12px * var(--s)); color: var(--ink-3); font-size: calc(10.5px * var(--s));
+  font-weight: 600; line-height: 1.4;
+}
+.state-icon { font-size: calc(21px * var(--s)); opacity: .6 }
+.spin {
+  width: calc(26px * var(--s)); height: calc(26px * var(--s));
+  border: 3px solid var(--brand-lt); border-top-color: var(--brand);
+  border-radius: 50%; animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg) } }
+.banner {
+  display: flex; align-items: center; gap: calc(9px * var(--s));
+  border-radius: var(--radius); padding: calc(9px * var(--s)) calc(11px * var(--s));
+  font-size: calc(11px * var(--s)); font-weight: 700; line-height: 1.35;
+}
+.banner.is-critical { background: #fdf0ee; border: 1px solid #f3c4bd; color: #8c261a }
+.banner.is-warn { background: #fff8e8; border: 1px solid #f0dcae; color: #7a5200 }
+.banner.is-info { background: var(--brand-lt); border: 1px solid #b8dfe1; color: var(--brand-dk) }
+
+.sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+</style>

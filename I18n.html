@@ -1,0 +1,472 @@
+<script>
+/* ============================================================
+   BILINGUAL STRINGS — Bahasa Malaysia (default) and English.
+
+   Malay is the default because the primary readers are families
+   waiting in the department. The public wording is deliberately
+   plain: short sentences, no clinical abbreviations, and no
+   number presented without saying what it counts.
+   ============================================================ */
+var I18N = {
+
+  ms: {
+    /* chrome */
+    appTitle:    'Jabatan Kecemasan & PAC',
+    appSub:      'Hospital Tengku Permaisuri Norashikin, Kajang',
+    demoTag:     'DEMO',
+    demoNote:    'Data rekaan',
+    langLabel:   'English',
+    langFlag:    '🇬🇧',
+    searchBtn:   'Cari pesakit',
+    updated:     'Dikemas kini',
+    snapshot:    'Rekod pada',
+    loading:     'Sedang memuatkan…',
+    retry:       'Cuba semula',
+    prev:        'Sebelum',
+    next:        'Seterusnya',
+    stepOf:      function (a, b) { return 'Langkah ' + a + ' daripada ' + b; },
+    tableView:   'Jadual',
+    closeLbl:    'Tutup',
+    errTitle:    'Maklumat tidak dapat dipaparkan',
+    errBody:     'Sistem tidak dapat dihubungi. Sila cuba semula sebentar lagi, atau tanya di kaunter jururawat.',
+
+    /* tabs */
+    tabs: {
+      wcc:   { name: 'Kecemasan — Wanita & Kanak-Kanak', sub: 'WCC' },
+      bu:    { name: 'Kecemasan — Bangunan Utama',        sub: 'Bangunan Utama' },
+      pac:   { name: 'Pusat Penilaian Pesakit — O&G',     sub: 'Ibu Mengandung' },
+      admin: { name: 'Pentadbiran',                       sub: 'Staf sahaja' }
+    },
+
+    /* step titles */
+    steps: {
+      now:       'Keadaan sekarang',
+      flow:      'Kemasukan & masa menunggu',
+      pattern:   'Pola & ramalan',
+      overview:  'Gambaran keseluruhan',
+      casemix:   'Campuran kes & rujukan',
+      geo:       'Geografi & ramalan',
+      quality:   'Kualiti data & kaedah'
+    },
+
+    /* zones */
+    zone: {
+      rz: 'Zon Merah', yz: 'Zon Kuning', gz: 'Zon Hijau',
+      ob: 'Bilik Pemerhatian', ab: 'Bilik Asma', pac: 'PAC'
+    },
+    zoneShort: { rz: 'MERAH', yz: 'KUNING', gz: 'HIJAU', ob: 'OBS', ab: 'ASMA', pac: 'PAC' },
+
+    /* statuses */
+    status: {
+      ongoingtreatment: 'Sedang dirawat',
+      referred:         'Dirujuk kepada pakar',
+      preadmit:         'Menunggu katil wad',
+      admitted:         'Sudah masuk wad',
+      discharge:        'Menunggu untuk pulang',
+      discharged:       'Menunggu untuk pulang'
+    },
+
+    /* units */
+    units: { 'ED WCC': 'Kecemasan WCC', 'ED BU': 'Kecemasan Bangunan Utama', 'PAC WCC': 'PAC (O&G)' },
+    unitsShort: { 'ED WCC': 'WCC', 'ED BU': 'Bgn Utama', 'PAC WCC': 'PAC' },
+
+    /* KPI labels */
+    kpi: {
+      census:      'Pesakit dalam jabatan',
+      load:        'Beban katil',
+      crisis:      'Katil krisis dibuka',
+      gzQueue:     'Menunggu di Zon Hijau',
+      gzAvg:       'Purata masa dipanggil',
+      medianWait:  'Masa dalam jabatan',
+      preadmit:    'Menunggu katil wad',
+      referred:    'Dirujuk kepada pakar',
+      attendances: 'Jumlah kehadiran',
+      admitted:    'Masuk wad',
+      deaths:      'Kematian',
+      admitRate:   'Kadar kemasukan wad',
+      referRate:   'Kadar rujukan',
+      medianTwt:   'Masa rawatan penuh',
+      medianBwt:   'Menunggu katil wad',
+      cost:        'Anggaran kos',
+      freeBeds:    'Katil biasa kosong'
+    },
+
+    /* panel titles */
+    panel: {
+      capacity:     'Katil dan bilik setiap zon',
+      capacitySub:  'Bar penuh = katil biasa penuh. Garisan hitam = kapasiti biasa.',
+      statusMix:    'Status pesakit',
+      arrivals:     'Kemasukan setiap jam & ramalan',
+      waitDist:     'Berapa lama pesakit sudah menunggu',
+      heatHourZone: 'Kesibukan mengikut jam dan zon',
+      scatter:      'Umur berbanding masa dalam jabatan',
+      forecastCard: 'Ramalan 4 jam akan datang',
+      unitCompare:  'Perbandingan antara unit',
+      referrals:    'Rujukan mengikut disiplin',
+      ageBands:     'Kumpulan umur',
+      gender:       'Jantina',
+      heatZoneRef:  'Zon berbanding disiplin rujukan',
+      stateMap:     'Negeri pendaftaran pesakit',
+      completeness: 'Kelengkapan data',
+      flags:        'Isu kualiti data',
+      method:       'Kaedah statistik',
+      projection:   'Unjuran bilangan pesakit'
+    },
+
+    /* chart chrome */
+    chart: {
+      hour: 'Jam', arrivals: 'Kemasukan', projected: 'Ramalan',
+      pi80: 'Selang 80%', pi95: 'Selang 95%', partialHour: 'Jam belum tamat',
+      zone: 'Zon', funded: 'Katil biasa', crisis: 'Katil krisis', queueShort: 'menunggu',
+      range: 'Julat', patients: 'Pesakit', median: 'Pertengahan:',
+      group: 'Kumpulan', age: 'Umur', years: 'tahun', elapsed: 'Dalam jabatan',
+      unit: 'Unit', row: 'Baris', col: 'Lajur', populated: 'Ada data',
+      observed: 'Direkodkan', forecastLbl: 'Ramalan',
+      axisAge: 'Umur (tahun)',
+      legendFunded: 'Katil biasa', legendCrisis: 'Katil krisis (tambahan)',
+      legendCapacity: 'Kapasiti biasa'
+    },
+
+    /* heatmap legends — scale, unit, and what dark versus bright means */
+    heat: {
+      unitPatients:  'pesakit',
+      unitReferrals: 'rujukan',
+      hourZoneNote:  'Unit: bilangan pesakit, skala 0 hingga nilai tertinggi. Petak gelap = ramai masuk pada jam dan zon itu; petak cerah = sedikit.',
+      zoneRefNote:   'Unit: bilangan rujukan, skala 0 hingga nilai tertinggi. Petak gelap = laluan rujukan kerap; petak cerah = jarang.',
+      stateNote:     'Unit: bilangan pesakit, skala 0 hingga nilai tertinggi. Negeri gelap = menyumbang lebih ramai; cerah = sedikit; petak putus-putus = tiada. Sumber: digit 7–8 kad pengenalan (negeri pendaftaran lahir, bukan tempat tinggal).'
+    },
+
+    /* narrative — the plain-language line for families */
+    narr: {
+      narrCapacity: function (p) {
+        var m = {
+          normal: 'Jabatan beroperasi seperti biasa.',
+          busy:   'Jabatan agak sibuk sekarang.',
+          full:   'Semua katil biasa sudah penuh.',
+          crisis: 'Jabatan sedang <strong>sangat sibuk</strong>.'
+        };
+        var t = m[p.state] || m.normal;
+        if (p.pct !== null && p.capacity > 0) {
+          t += ' Kami sedang merawat <strong>' + p.beds + ' pesakit</strong> di ruang yang biasanya untuk ' + p.capacity + ' katil.';
+        }
+        return t;
+      },
+      narrCrisis: function (p) {
+        return 'Kami telah membuka <strong>' + p.crisis + ' katil tambahan</strong> supaya semua pesakit dapat dirawat.';
+      },
+      narrZonesFull: function (p) { return 'Zon penuh: ' + p.zones.join(', ') + '.'; },
+      narrGzQueue: function (p) {
+        var t = '<strong>' + p.queue + ' orang</strong> sedang menunggu di ruang tunggu Zon Hijau (' + p.rooms + ' bilik doktor dibuka).';
+        if (p.avgMin) t += ' Purata masa menunggu untuk dipanggil kira-kira ' + p.avgMin + ' minit.';
+        return t;
+      },
+      narrPreadmit: function (p) {
+        return '<strong>' + p.n + ' pesakit</strong> sudah diputuskan untuk masuk wad dan sedang menunggu katil.';
+      },
+      narrForecast: function (p) {
+        var m = { rising: 'Kami menjangka kemasukan meningkat', falling: 'Kami menjangka kemasukan berkurangan', steady: 'Kami menjangka kemasukan kekal sama' };
+        var t = (m[p.dir] || m.steady) + ' pada jam ' + ('0' + p.hour).slice(-2) + ':00, kira-kira ' + p.next + ' pesakit.';
+        if (p.stale) t += ' (Anggaran sahaja — rekod kemasukan terkini belum lengkap.)';
+        return t;
+      },
+      narrReassure: function () {
+        return 'Pesakit yang paling kritikal dirawat terlebih dahulu, bukan mengikut giliran sampai. Terima kasih atas kesabaran anda.';
+      }
+    },
+
+    /* search */
+    search: {
+      title:      'Semak status ahli keluarga anda',
+      placeholder:'No. kad pengenalan, no. passport, atau MRN',
+      hint:       'Masukkan sekurang-kurangnya 6 angka daripada nombor kad pengenalan (atau nombor MRN penuh). Untuk carian nama, masukkan nama pertama dan nama keluarga. Nombor kad pengenalan dipaparkan separa tersembunyi untuk melindungi privasi pesakit.',
+      minChars:   function (n) { return 'Sila masukkan sekurang-kurangnya ' + n + ' aksara.'; },
+      none:       'Tiada rekod dijumpai. Sila pastikan nombor yang dimasukkan betul, atau tanya di kaunter jururawat.',
+      tooMany:    function (n) { return 'Carian anda terlalu umum (' + n + ' rekod sepadan). Sila masukkan nombor kad pengenalan atau MRN yang lebih lengkap.'; },
+      rateLimit:  'Terlalu banyak carian dibuat. Sila tunggu beberapa minit.',
+      error:      'Ralat sistem. Sila cuba sebentar lagi.',
+      resultsFor: 'Keputusan carian',
+      fields: {
+        location: 'Lokasi', zone: 'Zon', status: 'Status', triage: 'Masa tiba',
+        referredTo: 'Dirujuk kepada', preadmit: 'Diputuskan masuk wad',
+        admitted: 'Masuk wad pada', elapsed: 'Sudah di jabatan', bwt: 'Menunggu katil',
+        twt: 'Jumlah masa', queueNo: 'Nombor giliran anda',
+        calledIn: 'Dipanggil masuk pada', crisisBed: 'Katil tambahan',
+        waitingArea: 'Di ruang tunggu'
+      },
+      queueWait: 'Sedang menunggu panggilan masuk ke bilik doktor'
+    },
+
+    /* admin gate */
+    admin: {
+      gateTitle:  'Papan pemuka pentadbiran',
+      gateBody:   'Bahagian ini untuk kegunaan staf. Sila masukkan kod akses.',
+      passcode:   'Kod akses',
+      enter:      'Masuk',
+      badCode:    function (n) { return 'Kod tidak sah. Tinggal ' + n + ' cubaan.'; },
+      rateLimited:'Terlalu banyak cubaan. Sila tunggu 15 minit.',
+      notConfig:  'Kod akses belum ditetapkan. Sila hubungi pentadbir sistem untuk menetapkan ADMIN_PASSCODE.',
+      unauth:     'Sesi tamat. Sila masukkan kod akses semula.'
+    },
+
+    /* method / notes */
+    note: {
+      suppressed:   function (n) { return 'Tidak dipaparkan — kurang daripada ' + n + ' rekod, terlalu sedikit untuk dipercayai.'; },
+      admittedOnly: 'Pesakit masuk wad sahaja',
+      modelDamped:  'Model: Holt linear terlembap (pelicinan eksponen berganda), selang ramalan Poisson.',
+      modelHW:      'Model: Holt–Winters tambahan, kitaran 24 jam, selang ramalan Poisson.',
+      accuracy:     function (mae, rmse) { return 'Ketepatan dalam-sampel satu jam ke hadapan: MAE ' + mae + ', RMSE ' + rmse + '.'; },
+      staleForecast:'Rekod kemasukan terkini belum lengkap, jadi ramalan ini adalah anggaran kasar.',
+      notConfigured:'Belum ditetapkan',
+      costModelled: 'Anggaran: kos seunit × kehadiran',
+      noDeathField: 'Medan tiada dalam daftar',
+      losDefault:   'Tempoh rawatan lalai 4 jam digunakan — rekod masa tamat terlalu sedikit.',
+      stepDown:     function (n) { return n + ' zon mempunyai katil krisis dibuka sedangkan katil biasa masih kosong — pertimbangkan pemindahan.'; },
+      icProxy:      'Negeri pendaftaran lahir, bukan tempat tinggal.'
+    },
+
+    dq: {
+      badBedCode: 'Kod katil tidak dikenali',
+      zoneMismatch: 'Zon tidak sepadan dengan kod katil',
+      currentZoneMismatch: 'Zon semasa berbeza daripada zon triaj',
+      pacNonFemale: 'Rekod PAC bukan wanita',
+      honorificGenderMismatch: 'Nama (bin/binti) tidak sepadan dengan jantina',
+      admitBeforeTriage: 'Masa masuk wad sebelum triaj',
+      admittedNoAdmitTime: 'Status masuk wad tanpa masa',
+      admittedNoPreadmit: 'Masuk wad tanpa keputusan pra-kemasukan',
+      queueNoOutsideGZ: 'Nombor giliran di luar Zon Hijau',
+      futureTriage: 'Masa triaj pada masa hadapan',
+      duplicateMrn: 'MRN berulang',
+      clean: 'Tiada isu kualiti data dikesan.'
+    },
+
+    field: {
+      triage: 'Masa triaj', age: 'Umur', gender: 'Jantina', zone: 'Zon',
+      bedCode: 'Kod katil', status: 'Status', referredTo: 'Dirujuk kepada',
+      queueNo: 'No. giliran', calledGZ: 'Dipanggil ke bilik', preadmit: 'Pra-kemasukan',
+      admit: 'Masa masuk wad', bwt: 'BWT', twt: 'TWT', gzwt: 'GZWT'
+    },
+
+    states: {
+      JHR: 'Johor', KDH: 'Kedah', KTN: 'Kelantan', MLK: 'Melaka', NSN: 'Negeri Sembilan',
+      PHG: 'Pahang', PNG: 'Pulau Pinang', PRK: 'Perak', PLS: 'Perlis', SGR: 'Selangor',
+      TRG: 'Terengganu', SBH: 'Sabah', SWK: 'Sarawak', KUL: 'Kuala Lumpur',
+      LBN: 'Labuan', PJY: 'Putrajaya'
+    },
+
+    footer: 'Data dikemas kini setiap 5 minit. Untuk pertanyaan segera, sila ke kaunter jururawat.',
+    credit: 'Dibangunkan oleh Dr Naim AI Team, HTPN'
+  },
+
+  en: {
+    appTitle:    'Emergency Department & PAC',
+    appSub:      'Hospital Tengku Permaisuri Norashikin, Kajang',
+    demoTag:     'DEMO',
+    demoNote:    'Synthetic data',
+    langLabel:   'Bahasa Malaysia',
+    langFlag:    '🇲🇾',
+    searchBtn:   'Find a patient',
+    updated:     'Updated',
+    snapshot:    'Records as at',
+    loading:     'Loading…',
+    retry:       'Try again',
+    prev:        'Back',
+    next:        'Next',
+    stepOf:      function (a, b) { return 'Step ' + a + ' of ' + b; },
+    tableView:   'Table',
+    closeLbl:    'Close',
+    errTitle:    'This information cannot be shown',
+    errBody:     'The system could not be reached. Please try again shortly, or ask at the nursing counter.',
+
+    tabs: {
+      wcc:   { name: 'Emergency — Women & Children', sub: 'WCC' },
+      bu:    { name: 'Emergency — Main Building',    sub: 'Main Building' },
+      pac:   { name: 'Patient Assessment Centre — O&G', sub: 'Antenatal' },
+      admin: { name: 'Administrative',               sub: 'Staff only' }
+    },
+
+    steps: {
+      now: 'Current status', flow: 'Arrivals & waiting times', pattern: 'Patterns & forecast',
+      overview: 'Whole-service overview', casemix: 'Case-mix & referrals',
+      geo: 'Geography & forecast', quality: 'Data quality & method'
+    },
+
+    zone: {
+      rz: 'Red Zone', yz: 'Yellow Zone', gz: 'Green Zone',
+      ob: 'Observation Bay', ab: 'Asthma Bay', pac: 'PAC'
+    },
+    zoneShort: { rz: 'RED', yz: 'YELLOW', gz: 'GREEN', ob: 'OBS', ab: 'ASTHMA', pac: 'PAC' },
+
+    status: {
+      ongoingtreatment: 'Under treatment',
+      referred:         'Referred to specialist',
+      preadmit:         'Awaiting a ward bed',
+      admitted:         'Admitted to ward',
+      discharge:        'Waiting to go home',
+      discharged:       'Waiting to go home'
+    },
+
+    units: { 'ED WCC': 'Emergency WCC', 'ED BU': 'Emergency Main Building', 'PAC WCC': 'PAC (O&G)' },
+    unitsShort: { 'ED WCC': 'WCC', 'ED BU': 'Main Bldg', 'PAC WCC': 'PAC' },
+
+    kpi: {
+      census: 'Patients in department', load: 'Load against normal beds',
+      crisis: 'Escalation beds open', gzQueue: 'Waiting in Green Zone',
+      gzAvg: 'Average time to be called', medianWait: 'Time in department (median)',
+      preadmit: 'Awaiting a ward bed', referred: 'Referred to specialist',
+      attendances: 'Total attendances', admitted: 'Admitted', deaths: 'Deaths',
+      admitRate: 'Admission rate', referRate: 'Referral rate',
+      medianTwt: 'Total treatment time', medianBwt: 'Bed wait (median)',
+      cost: 'Modelled cost', freeBeds: 'Normal beds free'
+    },
+
+    panel: {
+      capacity: 'Beds and rooms by zone',
+      capacitySub: 'A full bar means normal beds are full. The black rule marks normal capacity.',
+      statusMix: 'Patient status', arrivals: 'Arrivals per hour & forecast',
+      waitDist: 'How long patients have been waiting',
+      heatHourZone: 'Busyness by hour and zone',
+      scatter: 'Age against time in department',
+      forecastCard: 'Next four hours', unitCompare: 'Comparison across units',
+      referrals: 'Referrals by discipline', ageBands: 'Age groups', gender: 'Sex',
+      heatZoneRef: 'Zone against referral discipline',
+      stateMap: 'Patients by state of registration',
+      completeness: 'Field completeness', flags: 'Data quality issues',
+      method: 'Statistical method', projection: 'Projected patient numbers'
+    },
+
+    chart: {
+      hour: 'Hour', arrivals: 'Arrivals', projected: 'Forecast',
+      pi80: '80% interval', pi95: '95% interval', partialHour: 'Hour not yet complete',
+      zone: 'Zone', funded: 'Normal beds', crisis: 'Escalation beds', queueShort: 'waiting',
+      range: 'Range', patients: 'Patients', median: 'Median:',
+      group: 'Group', age: 'Age', years: 'years', elapsed: 'In department',
+      unit: 'Unit', row: 'Row', col: 'Column', populated: 'Populated',
+      observed: 'Recorded', forecastLbl: 'Forecast',
+      axisAge: 'Age (years)',
+      legendFunded: 'Normal beds', legendCrisis: 'Escalation beds',
+      legendCapacity: 'Normal capacity'
+    },
+
+    heat: {
+      unitPatients: 'patients', unitReferrals: 'referrals',
+      hourZoneNote: 'Unit: patients, scale 0 to the highest value. Darker cells carry more arrivals in that hour and zone; brighter cells carry fewer.',
+      zoneRefNote: 'Unit: referrals, scale 0 to the highest value. Darker cells are frequently used referral routes; brighter cells are rare.',
+      stateNote: 'Unit: patients, scale 0 to the highest value. Darker states contribute more; brighter fewer; dashed tiles none. Source: IC digits 7–8 (state of registration at birth, not residence).'
+    },
+
+    narr: {
+      narrCapacity: function (p) {
+        var m = {
+          normal: 'The department is running normally.',
+          busy:   'The department is busy at the moment.',
+          full:   'All normal beds are now full.',
+          crisis: 'The department is <strong>very busy</strong>.'
+        };
+        var t = m[p.state] || m.normal;
+        if (p.pct !== null && p.capacity > 0) {
+          t += ' We are caring for <strong>' + p.beds + ' patients</strong> in a space normally holding ' + p.capacity + ' beds.';
+        }
+        return t;
+      },
+      narrCrisis: function (p) {
+        return 'We have opened <strong>' + p.crisis + ' extra beds</strong> so that everyone can be treated.';
+      },
+      narrZonesFull: function (p) { return 'Zones full: ' + p.zones.join(', ') + '.'; },
+      narrGzQueue: function (p) {
+        var t = '<strong>' + p.queue + ' people</strong> are waiting in the Green Zone waiting area (' + p.rooms + ' consultation rooms open).';
+        if (p.avgMin) t += ' Average wait to be called is about ' + p.avgMin + ' minutes.';
+        return t;
+      },
+      narrPreadmit: function (p) {
+        return '<strong>' + p.n + ' patients</strong> have been accepted for admission and are waiting for a ward bed.';
+      },
+      narrForecast: function (p) {
+        var m = { rising: 'We expect arrivals to rise', falling: 'We expect arrivals to fall', steady: 'We expect arrivals to stay about the same' };
+        var t = (m[p.dir] || m.steady) + ' at ' + ('0' + p.hour).slice(-2) + ':00, to around ' + p.next + ' patients.';
+        if (p.stale) t += ' (An estimate only — the most recent arrival records are incomplete.)';
+        return t;
+      },
+      narrReassure: function () {
+        return 'The most seriously ill patients are seen first, not in order of arrival. Thank you for your patience.';
+      }
+    },
+
+    search: {
+      title: "Check a family member's status",
+      placeholder: 'IC number, passport number, or MRN',
+      hint: 'Enter at least 6 digits of the IC number (or the full MRN). To search by name, give both a first name and a family name. IC numbers are shown partly masked to protect patient privacy.',
+      minChars: function (n) { return 'Please enter at least ' + n + ' characters.'; },
+      none: 'No record found. Please check the number entered, or ask at the nursing counter.',
+      tooMany: function (n) { return 'That search is too broad (' + n + ' records match). Please enter more of the IC or MRN number.'; },
+      rateLimit: 'Too many searches. Please wait a few minutes.',
+      error: 'System error. Please try again shortly.',
+      resultsFor: 'Search results',
+      fields: {
+        location: 'Location', zone: 'Zone', status: 'Status', triage: 'Arrived',
+        referredTo: 'Referred to', preadmit: 'Accepted for admission',
+        admitted: 'Admitted at', elapsed: 'Time in department', bwt: 'Bed wait',
+        twt: 'Total time', queueNo: 'Your queue number',
+        calledIn: 'Called in at', crisisBed: 'Escalation bed', waitingArea: 'In the waiting area'
+      },
+      queueWait: 'Waiting to be called into a consultation room'
+    },
+
+    admin: {
+      gateTitle: 'Administrative dashboard',
+      gateBody: 'This section is for staff use. Please enter the access code.',
+      passcode: 'Access code', enter: 'Enter',
+      badCode: function (n) { return 'Incorrect code. ' + n + ' attempts remaining.'; },
+      rateLimited: 'Too many attempts. Please wait 15 minutes.',
+      notConfig: 'No access code has been set. Ask the system administrator to set ADMIN_PASSCODE.',
+      unauth: 'Session expired. Please enter the access code again.'
+    },
+
+    note: {
+      suppressed: function (n) { return 'Not shown — fewer than ' + n + ' records, too few to be reliable.'; },
+      admittedOnly: 'Admitted patients only',
+      modelDamped: 'Model: damped Holt linear trend (double exponential smoothing), Poisson prediction intervals.',
+      modelHW: 'Model: additive Holt–Winters, 24-hour seasonal period, Poisson prediction intervals.',
+      accuracy: function (mae, rmse) { return 'In-sample one-hour-ahead accuracy: MAE ' + mae + ', RMSE ' + rmse + '.'; },
+      staleForecast: 'The most recent arrival records are incomplete, so this forecast is a rough estimate.',
+      notConfigured: 'Not configured',
+      costModelled: 'Modelled: unit cost × attendances',
+      noDeathField: 'Field absent from the register',
+      losDefault: 'A default 4-hour length of stay is used — too few completed episodes to estimate one.',
+      stepDown: function (n) { return n + ' zones have escalation beds open while normal beds stand empty — consider stepping down.'; },
+      icProxy: 'State of registration at birth, not current residence.'
+    },
+
+    dq: {
+      badBedCode: 'Unrecognised bed code',
+      zoneMismatch: 'Zone disagrees with the bed code',
+      currentZoneMismatch: 'Current zone differs from triage zone',
+      pacNonFemale: 'PAC record not female',
+      honorificGenderMismatch: 'Name particle (bin/binti) disagrees with sex',
+      admitBeforeTriage: 'Admission recorded before triage',
+      admittedNoAdmitTime: 'Admitted status with no admission time',
+      admittedNoPreadmit: 'Admitted with no pre-admission decision',
+      queueNoOutsideGZ: 'Queue number outside the Green Zone',
+      futureTriage: 'Triage time in the future',
+      duplicateMrn: 'Duplicate MRN',
+      clean: 'No data quality issues detected.'
+    },
+
+    field: {
+      triage: 'Triage time', age: 'Age', gender: 'Sex', zone: 'Zone',
+      bedCode: 'Bed code', status: 'Status', referredTo: 'Referred to',
+      queueNo: 'Queue no.', calledGZ: 'Called into room', preadmit: 'Pre-admission',
+      admit: 'Admission time', bwt: 'BWT', twt: 'TWT', gzwt: 'GZWT'
+    },
+
+    states: {
+      JHR: 'Johor', KDH: 'Kedah', KTN: 'Kelantan', MLK: 'Melaka', NSN: 'Negeri Sembilan',
+      PHG: 'Pahang', PNG: 'Penang', PRK: 'Perak', PLS: 'Perlis', SGR: 'Selangor',
+      TRG: 'Terengganu', SBH: 'Sabah', SWK: 'Sarawak', KUL: 'Kuala Lumpur',
+      LBN: 'Labuan', PJY: 'Putrajaya'
+    },
+
+    footer: 'Data refreshes every 5 minutes. For urgent enquiries please go to the nursing counter.',
+    credit: 'Developed by Dr Naim AI Team, HTPN'
+  }
+};
+</script>

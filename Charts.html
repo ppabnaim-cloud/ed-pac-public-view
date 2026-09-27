@@ -1,0 +1,908 @@
+<script>
+/* ============================================================
+   CHARTS — hand-written inline SVG, no external library.
+
+   Why no chart library: this page must load over a slow hospital
+   connection, render inside an Apps Script iframe, and fit an exact
+   pixel box with no scrollbar. Every chart therefore measures its own
+   container and draws to that box, so nothing can overflow.
+
+   House rules applied throughout:
+     - one value axis per chart, never two
+     - hairline solid grid, one shade off the surface
+     - 2px surface gap between adjacent or stacked fills
+     - >=8px markers with a 2px surface ring where marks overlap
+     - a legend whenever two or more series are present
+     - selective direct labels, never a number on every point
+     - a hover tooltip on every mark, and a table view for every chart
+   ============================================================ */
+var Charts = (function () {
+  'use strict';
+
+  var NS = 'http://www.w3.org/2000/svg';
+  var GRID = '#e8edf1', AXIS = '#d7dee4';
+  var INK = '#14202a', INK2 = '#4a5763', INK3 = '#77848f';
+  var SURFACE = '#ffffff';
+
+  var ZONE = { rz: '#c0392b', yz: '#e08b00', gz: '#1a7c4a',
+               ob: '#2a78d6', ab: '#4a3aa7', pac: '#e87ba4' };
+  var CAT = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100',
+             '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
+  var SEQ = ['#cde2fb', '#9ec5f4', '#6da7ec', '#3987e5', '#256abf', '#184f95', '#0d366b'];
+  var SEQ_ZERO = '#f4f7fa';
+  var STATUS = { ok: '#0ca30c', warn: '#fab219', serious: '#ec835a', critical: '#d03b3b' };
+
+  var _mctx = null;
+  /** Measured width of a label, used to size label gutters. */
+  function textW(str, px, weight) {
+    if (!_mctx) {
+      var c = document.createElement('canvas');
+      _mctx = c.getContext('2d');
+    }
+    if (!_mctx) return String(str).length * px * 0.58;
+    _mctx.font = (weight || 700) + ' ' + px + 'px "Plus Jakarta Sans", system-ui, sans-serif';
+    return _mctx.measureText(String(str)).width;
+  }
+  function widestW(list, px, weight) {
+    var w = 0;
+    for (var i = 0; i < list.length; i++) w = Math.max(w, textW(list[i], px, weight));
+    return w;
+  }
+  /** Truncates to fit a pixel budget, adding an ellipsis. */
+  function fitText(str, budget, px, weight) {
+    str = String(str);
+    if (textW(str, px, weight) <= budget) return str;
+    for (var n = str.length - 1; n > 1; n--) {
+      var cand = str.slice(0, n) + '…';
+      if (textW(cand, px, weight) <= budget) return cand;
+    }
+    return '…';
+  }
+
+  function scale() {
+    var v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--s'));
+    return isNaN(v) ? 1 : v;
+  }
+
+  // ── string helpers ───────────────────────────────────────
+  function esc(s) {
+    return String(s === null || s === undefined ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function num(v, dp) {
+    if (v === null || v === undefined || isNaN(v)) return '—';
+    var f = Math.pow(10, dp || 0);
+    return String(Math.round(v * f) / f);
+  }
+  function attrs(o) {
+    var s = '';
+    for (var k in o) {
+      if (!o.hasOwnProperty(k) || o[k] === null || o[k] === undefined) continue;
+      s += ' ' + k + '="' + esc(o[k]) + '"';
+    }
+    return s;
+  }
+  function tag(name, o, inner) {
+    return '<' + name + attrs(o) + (inner === undefined || inner === null
+      ? '/>' : '>' + inner + '</' + name + '>');
+  }
+  function txt(x, y, s, o) {
+    var a = { x: x, y: y, fill: INK2, 'font-size': 10 };
+    for (var k in (o || {})) if (o.hasOwnProperty(k)) a[k] = o[k];
+    return tag('text', a, esc(s));
+  }
+  /** Tooltip payload, read back by the delegated hover handler. */
+  function tip(rows) {
+    return rows.map(function (r) {
+      return r.length === 1 ? '<span class="tip-k">' + esc(r[0]) + '</span>'
+        : '<span class="tip-k">' + esc(r[0]) + '</span> <b>' + esc(r[1]) + '</b>';
+    }).join('<br>');
+  }
+
+  // ── axis ticks ───────────────────────────────────────────
+  function niceTicks(lo, hi, want) {
+    if (hi <= lo) hi = lo + 1;
+    var span = hi - lo, raw = span / Math.max(1, want);
+    var mag = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10));
+    var norm = raw / mag, step;
+    if (norm <= 1) step = 1; else if (norm <= 2) step = 2;
+    else if (norm <= 2.5) step = 2.5; else if (norm <= 5) step = 5; else step = 10;
+    step *= mag;
+    var start = Math.ceil(lo / step) * step, out = [];
+    for (var v = start; v <= hi + step * 0.001; v += step) {
+      out.push(Math.round(v * 1e6) / 1e6);
+    }
+    return out;
+  }
+
+  // ── frame: measure the box, reserve the plot area ─────────
+  function frame(el, pad) {
+    var w = Math.max(80, Math.round(el.clientWidth));
+    var h = Math.max(60, Math.round(el.clientHeight));
+    var p = { t: 8, r: 8, b: 18, l: 26 };
+    for (var k in (pad || {})) if (pad.hasOwnProperty(k)) p[k] = pad[k];
+    return {
+      w: w, h: h, p: p,
+      iw: Math.max(10, w - p.l - p.r),
+      ih: Math.max(10, h - p.t - p.b)
+    };
+  }
+  function open(f, label) {
+    return '<svg xmlns="' + NS + '" width="' + f.w + '" height="' + f.h +
+      '" viewBox="0 0 ' + f.w + ' ' + f.h + '" role="img"' +
+      (label ? ' aria-label="' + esc(label) + '"' : '') + '>';
+  }
+  function empty(el, msg) {
+    el.innerHTML = '<div class="state"><span class="state-icon">◦</span><span>' +
+      esc(msg) + '</span></div>';
+  }
+
+  // ── grid + value axis (horizontal rules) ─────────────────
+  function yGrid(f, ticks, yOf, fmt) {
+    var s = '';
+    for (var i = 0; i < ticks.length; i++) {
+      var y = yOf(ticks[i]);
+      s += tag('line', { x1: f.p.l, y1: y, x2: f.p.l + f.iw, y2: y,
+                         stroke: GRID, 'stroke-width': 1 });
+      s += txt(f.p.l - 4, y + 3, fmt ? fmt(ticks[i]) : num(ticks[i]),
+               { 'text-anchor': 'end', 'font-size': 9, fill: INK3 });
+    }
+    return s;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     CAPACITY BARS — horizontal, funded and escalation stacked
+     against the funded establishment. One bar per zone.
+     ══════════════════════════════════════════════════════════ */
+  function capacityBars(el, spec) {
+    var rows = spec.rows || [];
+    if (!rows.length) return empty(el, spec.emptyMsg || 'No zones configured');
+    var sc = scale();
+    var fsLabel = Math.round(10 * sc), fsVal = Math.round(10 * sc);
+    var box = Math.max(80, Math.round(el.clientWidth));
+    var labelW = Math.min(Math.round(box * 0.28),
+      Math.ceil(widestW(rows.map(function (r) { return r.label; }), fsLabel, 800)) + Math.round(7 * sc));
+    var valueTexts = rows.map(function (r) { return (r.funded + r.crisis) + '/' + r.capacity; });
+    var hasQueue = rows.some(function (r) { return r.waiting > 0; });
+    if (hasQueue) {
+      rows.forEach(function (r) {
+        if (r.waiting > 0) valueTexts.push('+' + r.waiting + ' ' + spec.t.queueShort);
+      });
+    }
+    var valueW = Math.min(Math.round(box * 0.3),
+      Math.ceil(widestW(valueTexts, fsVal, 800)) + Math.round(8 * sc));
+    var f = frame(el, { t: Math.round(6 * sc), r: valueW, b: Math.round(4 * sc), l: labelW });
+
+    var maxVal = 1;
+    rows.forEach(function (r) { maxVal = Math.max(maxVal, r.capacity, r.funded + r.crisis); });
+
+    var gap = Math.round(7 * sc);
+    var bh = Math.max(9, Math.floor((f.ih - gap * (rows.length - 1)) / rows.length));
+    var bhMax = Math.round(30 * sc);
+    if (bh > bhMax) {
+      bh = bhMax;
+      f.p.t += Math.round((f.ih - (bh * rows.length + gap * (rows.length - 1))) / 2);
+    }
+    var xOf = function (v) { return f.p.l + (v / maxVal) * f.iw; };
+    var s = open(f, spec.aria);
+
+    // Establishment marker: where funded capacity sits on each bar.
+    rows.forEach(function (r, i) {
+      var y = f.p.t + i * (bh + gap);
+      var mid = y + bh / 2;
+      var colour = ZONE[r.zone] || CAT[0];
+
+      // Track
+      s += tag('rect', { x: f.p.l, y: y, width: f.iw, height: bh, rx: 4, fill: '#f2f5f8' });
+
+      var wFunded = Math.max(0, xOf(r.funded) - f.p.l);
+      var wCrisis = Math.max(0, xOf(r.crisis) - f.p.l);
+
+      if (r.funded > 0) {
+        s += tag('rect', {
+          x: f.p.l, y: y, width: wFunded, height: bh, rx: 4, fill: colour,
+          'data-tip': tip([[spec.t.zone, r.label], [spec.t.funded, r.funded + ' / ' + r.capacity]])
+        });
+      }
+      if (r.crisis > 0) {
+        // 2px surface gap separates the two fills instead of a border.
+        s += tag('rect', {
+          x: f.p.l + wFunded + 2, y: y, width: Math.max(2, wCrisis - 2), height: bh, rx: 4,
+          fill: colour, 'fill-opacity': 0.34,
+          'data-tip': tip([[spec.t.zone, r.label], [spec.t.crisis, r.crisis]])
+        });
+        s += tag('rect', {
+          x: f.p.l + wFunded + 2, y: y, width: Math.max(2, wCrisis - 2), height: bh, rx: 4,
+          fill: 'url(#hatch)'
+        });
+      }
+      // Funded-establishment rule — the line the department is staffed for.
+      var cx = xOf(r.capacity);
+      s += tag('line', { x1: cx, y1: y - 2, x2: cx, y2: y + bh + 2,
+                         stroke: INK, 'stroke-width': 1.5 });
+
+      // Direct label — colour never carries zone identity alone.
+      s += txt(f.p.l - Math.round(5 * sc), mid + 3,
+               fitText(r.label, labelW - Math.round(6 * sc), fsLabel, 800), {
+        'text-anchor': 'end', 'font-size': fsLabel, 'font-weight': 800, fill: INK2
+      });
+      var vLabel = (r.funded + r.crisis) + '/' + r.capacity;
+      var vy = r.waiting > 0 ? mid - Math.round(2 * sc) : mid + 3;
+      s += txt(f.p.l + f.iw + Math.round(5 * sc), vy, vLabel, {
+        'font-size': fsVal, 'font-weight': 800, fill: INK,
+        'font-family': 'IBM Plex Mono, monospace'
+      });
+      if (r.waiting > 0) {
+        s += txt(f.p.l + f.iw + Math.round(5 * sc), mid + Math.round(9 * sc),
+                 fitText('+' + r.waiting + ' ' + spec.t.queueShort,
+                         valueW - Math.round(6 * sc), Math.round(8.5 * sc), 700), {
+          'font-size': Math.round(8.5 * sc), 'font-weight': 700, fill: ZONE.gz
+        });
+      }
+    });
+
+    s += '<defs><pattern id="hatch" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">' +
+         '<line x1="0" y1="0" x2="0" y2="6" stroke="' + SURFACE + '" stroke-width="2.2"/></pattern></defs>';
+    s += '</svg>';
+    el.innerHTML = s;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     DONUT — part-to-whole at a glance, <=6 segments
+     ══════════════════════════════════════════════════════════ */
+  function donut(el, spec) {
+    var data = (spec.data || []).filter(function (d) { return d.count > 0; });
+    if (!data.length) return empty(el, spec.emptyMsg || 'Nothing to show');
+    var sc = scale();
+    var f = frame(el, { t: 4, r: 4, b: 4, l: 4 });
+    var total = data.reduce(function (a, d) { return a + d.count; }, 0);
+
+    var cx = f.p.l + f.iw / 2, cy = f.p.t + f.ih / 2;
+    var R = Math.max(14, Math.min(f.iw, f.ih) / 2 - Math.round(4 * sc));
+    var r0 = R * 0.58;
+    var s = open(f, spec.aria);
+    var a0 = -Math.PI / 2;
+    var GAPRAD = data.length > 1 ? 0.018 : 0;   // the 2px surface gap, in radians
+
+    data.forEach(function (d, i) {
+      var sweep = (d.count / total) * Math.PI * 2;
+      var a1 = a0 + sweep;
+      var sa = a0 + GAPRAD, ea = a1 - GAPRAD;
+      if (ea <= sa) { sa = a0; ea = a1; }
+      var large = (ea - sa) > Math.PI ? 1 : 0;
+      var p = [
+        'M', cx + R * Math.cos(sa), cy + R * Math.sin(sa),
+        'A', R, R, 0, large, 1, cx + R * Math.cos(ea), cy + R * Math.sin(ea),
+        'L', cx + r0 * Math.cos(ea), cy + r0 * Math.sin(ea),
+        'A', r0, r0, 0, large, 0, cx + r0 * Math.cos(sa), cy + r0 * Math.sin(sa), 'Z'
+      ].join(' ');
+      s += tag('path', {
+        d: p, fill: d.colour || CAT[i % CAT.length],
+        'data-tip': tip([[d.label, d.count + ' (' + num(d.count / total * 100, 1) + '%)']])
+      });
+      a0 = a1;
+    });
+
+    // Centre carries the total — the one number the reader wants.
+    s += txt(cx, cy + Math.round(2 * sc), String(total), {
+      'text-anchor': 'middle', 'font-size': Math.round(Math.min(21, R * 0.52)),
+      'font-weight': 800, fill: INK
+    });
+    if (spec.centreLabel) {
+      s += txt(cx, cy + Math.round(14 * sc), spec.centreLabel, {
+        'text-anchor': 'middle', 'font-size': Math.round(8.5 * sc), 'font-weight': 700, fill: INK3
+      });
+    }
+    s += '</svg>';
+    el.innerHTML = s;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     ARRIVALS + FORECAST — one axis, patients per hour.
+     Observed is solid; the projection is dashed with 95% and 80%
+     prediction bands behind it.
+     ══════════════════════════════════════════════════════════ */
+  function forecastLine(el, spec) {
+    var obs = spec.observed || [], fc = spec.forecast || [];
+    if (obs.length < 1) return empty(el, spec.emptyMsg || 'No arrivals recorded');
+    var sc = scale();
+    var f = frame(el, { t: Math.round(10 * sc), r: Math.round(8 * sc),
+                        b: Math.round(18 * sc), l: Math.round(24 * sc) });
+
+    var all = obs.map(function (p) { return p.count; });
+    fc.forEach(function (p) { all.push(p.hi95, p.lo95, p.yhat); });
+    var hi = Math.max.apply(null, all.concat([1]));
+    var ticks = niceTicks(0, hi, 4);
+    var top = Math.max(hi, ticks[ticks.length - 1] || hi);
+
+    var n = obs.length + fc.length;
+    var stepX = f.iw / Math.max(1, n - 1);
+    var xAt = function (i) { return f.p.l + i * stepX; };
+    var yOf = function (v) { return f.p.t + f.ih - (v / top) * f.ih; };
+
+    var s = open(f, spec.aria);
+    s += yGrid(f, ticks, yOf);
+
+    // Bands first, so the lines sit on top.
+    function band(lo, hi_, opacity) {
+      if (!fc.length) return '';
+      var startI = obs.length - 1;
+      var up = [], dn = [];
+      up.push([xAt(startI), yOf(obs[obs.length - 1].count)]);
+      dn.push([xAt(startI), yOf(obs[obs.length - 1].count)]);
+      fc.forEach(function (p, i) {
+        up.push([xAt(obs.length + i), yOf(p[hi_])]);
+        dn.push([xAt(obs.length + i), yOf(p[lo])]);
+      });
+      var d = 'M' + up.map(function (q) { return q[0] + ',' + q[1]; }).join(' L') +
+              ' L' + dn.reverse().map(function (q) { return q[0] + ',' + q[1]; }).join(' L') + ' Z';
+      return tag('path', { d: d, fill: CAT[0], 'fill-opacity': opacity });
+    }
+    s += band('lo95', 'hi95', 0.12);
+    s += band('lo80', 'hi80', 0.2);
+
+    // Observed line
+    var obsPts = obs.map(function (p, i) { return [xAt(i), yOf(p.count)]; });
+    s += tag('path', {
+      d: 'M' + obsPts.map(function (q) { return q[0] + ',' + q[1]; }).join(' L'),
+      fill: 'none', stroke: CAT[0], 'stroke-width': 2,
+      'stroke-linejoin': 'round', 'stroke-linecap': 'round'
+    });
+
+    // Projection line, dashed to say "not observed"
+    if (fc.length) {
+      var fcPts = [[xAt(obs.length - 1), yOf(obs[obs.length - 1].count)]].concat(
+        fc.map(function (p, i) { return [xAt(obs.length + i), yOf(p.yhat)]; }));
+      s += tag('path', {
+        d: 'M' + fcPts.map(function (q) { return q[0] + ',' + q[1]; }).join(' L'),
+        fill: 'none', stroke: CAT[1], 'stroke-width': 2,
+        'stroke-dasharray': '5 4', 'stroke-linecap': 'round'
+      });
+      // Boundary between recorded and projected.
+      s += tag('line', { x1: xAt(obs.length - 1), y1: f.p.t, x2: xAt(obs.length - 1),
+                         y2: f.p.t + f.ih, stroke: AXIS, 'stroke-width': 1 });
+    }
+
+    // Markers: >=8px, with a 2px surface ring where they overlap the line.
+    var rM = Math.max(3.2, Math.min(4.6, stepX / 3.2));
+    obs.forEach(function (p, i) {
+      s += tag('circle', {
+        cx: xAt(i), cy: yOf(p.count), r: rM, fill: CAT[0],
+        stroke: SURFACE, 'stroke-width': 2,
+        'data-tip': tip([[spec.t.hour, pad2(p.hour) + ':00'],
+                         [spec.t.arrivals, String(p.count)],
+                         p.partial ? [spec.t.partialHour] : null].filter(Boolean))
+      });
+    });
+    fc.forEach(function (p, i) {
+      s += tag('circle', {
+        cx: xAt(obs.length + i), cy: yOf(p.yhat), r: rM, fill: CAT[1],
+        stroke: SURFACE, 'stroke-width': 2,
+        'data-tip': tip([[spec.t.hour, pad2(p.hour) + ':00'],
+                         [spec.t.projected, num(p.yhat, 1)],
+                         [spec.t.pi80, num(p.lo80, 1) + ' – ' + num(p.hi80, 1)],
+                         [spec.t.pi95, num(p.lo95, 1) + ' – ' + num(p.hi95, 1)]])
+      });
+    });
+
+    // Hour axis — label about six, never all of them.
+    var every = Math.max(1, Math.ceil(n / 6));
+    for (var i2 = 0; i2 < n; i2 ++) {
+      if (i2 % every !== 0 && i2 !== n - 1) continue;
+      var pt = i2 < obs.length ? obs[i2] : fc[i2 - obs.length];
+      s += txt(xAt(i2), f.p.t + f.ih + Math.round(11 * sc), pad2(pt.hour), {
+        'text-anchor': 'middle', 'font-size': Math.round(8.5 * sc), fill: INK3
+      });
+    }
+    s += '</svg>';
+    el.innerHTML = s;
+  }
+  function pad2(n) { return ('0' + n).slice(-2); }
+
+  /* ══════════════════════════════════════════════════════════
+     HISTOGRAM — distribution of a duration, fixed-width bins
+     ══════════════════════════════════════════════════════════ */
+  function histogram(el, spec) {
+    var bins = spec.bins || [];
+    if (!bins.length || !bins.some(function (b) { return b.count > 0; })) {
+      return empty(el, spec.emptyMsg || 'No completed episodes yet');
+    }
+    var sc = scale();
+    var f = frame(el, { t: Math.round(12 * sc), r: Math.round(6 * sc),
+                        b: Math.round(20 * sc), l: Math.round(24 * sc) });
+    var hi = Math.max.apply(null, bins.map(function (b) { return b.count; }).concat([1]));
+    var ticks = niceTicks(0, hi, 3);
+    var top = Math.max(hi, ticks[ticks.length - 1] || hi);
+    var yOf = function (v) { return f.p.t + f.ih - (v / top) * f.ih; };
+
+    var bw = f.iw / bins.length;
+    var s = open(f, spec.aria);
+    s += yGrid(f, ticks, yOf);
+
+    // Median marker, where it is meaningful.
+    if (spec.medianValue !== null && spec.medianValue !== undefined && spec.binWidth) {
+      var mIdx = spec.medianValue / spec.binWidth;
+      var mx = f.p.l + Math.min(bins.length, mIdx) * bw;
+      s += tag('line', { x1: mx, y1: f.p.t - 3, x2: mx, y2: f.p.t + f.ih,
+                         stroke: INK, 'stroke-width': 1.5 });
+      s += txt(Math.min(mx + 3, f.p.l + f.iw - Math.round(26 * sc)), f.p.t - Math.round(4 * sc),
+               spec.t.median + ' ' + spec.fmt(spec.medianValue),
+               { 'font-size': Math.round(8.5 * sc), 'font-weight': 800, fill: INK });
+    }
+
+    bins.forEach(function (b, i) {
+      var h = b.count > 0 ? Math.max(2, f.p.t + f.ih - yOf(b.count)) : 0;
+      if (h <= 0) return;
+      var label = b.overflow ? spec.fmt(b.lo) + '+' : spec.fmt(b.lo) + '–' + spec.fmt(b.hi);
+      // 2px surface gap between adjacent bars; 4px rounded top on the data end.
+      s += tag('rect', {
+        x: f.p.l + i * bw + 1, y: yOf(b.count), width: Math.max(1, bw - 2), height: h,
+        rx: Math.min(4, Math.max(1, (bw - 2) / 2)),
+        fill: b.overflow ? STATUS.serious : CAT[0],
+        'data-tip': tip([[spec.t.range, label], [spec.t.patients, String(b.count)]])
+      });
+    });
+
+    // Axis: first, last and a couple between.
+    var every2 = Math.max(1, Math.ceil(bins.length / 5));
+    bins.forEach(function (b, i) {
+      if (i % every2 !== 0 && i !== bins.length - 1) return;
+      s += txt(f.p.l + i * bw + bw / 2, f.p.t + f.ih + Math.round(12 * sc),
+               b.overflow ? spec.fmt(b.lo) + '+' : spec.fmt(b.lo),
+               { 'text-anchor': 'middle', 'font-size': Math.round(8.5 * sc), fill: INK3 });
+    });
+    s += '</svg>';
+    el.innerHTML = s;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     SCATTER — age against time in the department.
+     Capped at three colour classes: past three, colour-vision
+     separation cannot be guaranteed across every pair, so acuity
+     collapses to Red / Yellow / Other rather than one hue per zone.
+     ══════════════════════════════════════════════════════════ */
+  function scatter(el, spec) {
+    var pts = spec.points || [];
+    if (!pts.length) return empty(el, spec.emptyMsg || 'No patients to plot');
+    var sc = scale();
+    var f = frame(el, { t: Math.round(8 * sc), r: Math.round(10 * sc),
+                        b: Math.round(20 * sc), l: Math.round(30 * sc) });
+
+    var xs = pts.map(function (p) { return p.x; }), ys = pts.map(function (p) { return p.y; });
+    var xHi = Math.max.apply(null, xs), yHi = Math.max.apply(null, ys);
+    var xTicks = niceTicks(0, Math.max(xHi, 10), 4);
+    var yTicks = niceTicks(0, Math.max(yHi, 60), 4);
+    var xTop = xTicks[xTicks.length - 1], yTop = yTicks[yTicks.length - 1];
+
+    var clampX = function (v) { return Math.max(0, Math.min(xTop, v)); };
+    var clampY = function (v) { return Math.max(0, Math.min(yTop, v)); };
+    var xOf = function (v) { return f.p.l + (clampX(v) / xTop) * f.iw; };
+    var yOf = function (v) { return f.p.t + f.ih - (clampY(v) / yTop) * f.ih; };
+
+    var s = open(f, spec.aria);
+    s += yGrid(f, yTicks, yOf, spec.yFmt);
+    xTicks.forEach(function (t) {
+      s += tag('line', { x1: xOf(t), y1: f.p.t, x2: xOf(t), y2: f.p.t + f.ih,
+                         stroke: GRID, 'stroke-width': 1 });
+      s += txt(xOf(t), f.p.t + f.ih + Math.round(12 * sc), num(t),
+               { 'text-anchor': 'middle', 'font-size': Math.round(8.5 * sc), fill: INK3 });
+    });
+
+    var r = Math.max(4, Math.round(4.4 * sc));    // >=8px diameter
+    // Inset the plot by the marker radius so no circle straddles the edge.
+    f.p.l += r; f.p.r += r; f.iw = Math.max(10, f.iw - 2 * r);
+    f.p.t += r; f.ih = Math.max(10, f.ih - r);
+    pts.forEach(function (p) {
+      s += tag('circle', {
+        cx: xOf(p.x), cy: yOf(p.y), r: r,
+        fill: p.colour, 'fill-opacity': 0.82,
+        stroke: SURFACE, 'stroke-width': 2,       // surface ring for overlaps
+        'data-tip': tip([[spec.t.group, p.groupLabel],
+                         [spec.t.age, num(p.x) + ' ' + spec.t.years],
+                         [spec.t.elapsed, spec.yFmt(p.y)]])
+      });
+    });
+
+    s += '</svg>';
+    el.innerHTML = s;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     GROUPED BAR — a measure compared across units
+     ══════════════════════════════════════════════════════════ */
+  function groupedBars(el, spec) {
+    var groups = spec.groups || [], series = spec.series || [];
+    if (!groups.length || !series.length) return empty(el, spec.emptyMsg || 'Nothing to compare');
+    var sc = scale();
+    var f = frame(el, { t: Math.round(8 * sc), r: Math.round(6 * sc),
+                        b: Math.round(24 * sc), l: Math.round(26 * sc) });
+
+    var hi = 1;
+    groups.forEach(function (g) { g.values.forEach(function (v) { hi = Math.max(hi, v); }); });
+    var ticks = niceTicks(0, hi, 4);
+    var top = ticks[ticks.length - 1];
+    var yOf = function (v) { return f.p.t + f.ih - (v / top) * f.ih; };
+
+    var gw = f.iw / groups.length;
+    var inner = Math.min(gw * 0.78, Math.round(52 * sc) * series.length);
+    var bw = inner / series.length;
+
+    var s = open(f, spec.aria);
+    s += yGrid(f, ticks, yOf);
+
+    groups.forEach(function (g, gi) {
+      var gx = f.p.l + gi * gw + (gw - inner) / 2;
+      g.values.forEach(function (v, si) {
+        var h = v > 0 ? Math.max(2, f.p.t + f.ih - yOf(v)) : 0;
+        if (h <= 0) return;
+        s += tag('rect', {
+          x: gx + si * bw + 1, y: yOf(v), width: Math.max(1, bw - 2), height: h,
+          rx: Math.min(4, Math.max(1, (bw - 2) / 2)),
+          fill: series[si].colour || CAT[si % CAT.length],
+          'data-tip': tip([[spec.t.unit, g.label], [series[si].label, String(v)]])
+        });
+      });
+      s += txt(f.p.l + gi * gw + gw / 2, f.p.t + f.ih + Math.round(12 * sc), g.short || g.label,
+               { 'text-anchor': 'middle', 'font-size': Math.round(9 * sc),
+                 'font-weight': 700, fill: INK2 });
+    });
+    s += '</svg>';
+    el.innerHTML = s;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     MATRIX HEATMAP — one hue, light to dark, with a scale legend
+     that states the unit and says what dark and bright mean.
+     ══════════════════════════════════════════════════════════ */
+  function seqColour(v, max) {
+    if (!v) return SEQ_ZERO;
+    if (max <= 0) return SEQ_ZERO;
+    var idx = Math.min(SEQ.length - 1, Math.floor((v / max) * SEQ.length));
+    if (idx < 0) idx = 0;
+    return SEQ[idx];
+  }
+  function inkOn(v, max) {
+    return (max > 0 && v / max > 0.55) ? '#ffffff' : INK;
+  }
+
+  function heatmap(el, spec) {
+    var m = spec.matrix;
+    if (!m || !m.rows.length || !m.cols.length) {
+      return empty(el, spec.emptyMsg || 'Not enough data for a heatmap');
+    }
+    var sc = scale();
+    var fsRow = Math.round(8.5 * sc);
+    var boxW2 = Math.max(80, Math.round(el.clientWidth));
+    var rowTexts = m.rows.map(function (r) { return spec.rowLabel ? spec.rowLabel(r) : r; });
+    var rowLabelW = Math.min(Math.round(boxW2 * 0.26),
+      Math.ceil(widestW(rowTexts, fsRow, 700)) + Math.round(6 * sc));
+    var colLabelH = Math.round((spec.colLabelHeight || 14) * sc);
+    var legendH = Math.round(15 * sc);
+    var f = frame(el, { t: colLabelH, r: Math.round(4 * sc),
+                        b: legendH + Math.round(4 * sc), l: rowLabelW });
+
+    var cw = f.iw / m.cols.length, ch = f.ih / m.rows.length;
+    var s = open(f, spec.aria);
+
+    // Column headers, rotated when they cannot fit flat.
+    var rotate = cw < Math.round(34 * sc);
+    m.cols.forEach(function (c, ci) {
+      var cx = f.p.l + ci * cw + cw / 2;
+      var label = spec.colLabel ? spec.colLabel(c) : c;
+      if (rotate) {
+        s += tag('text', {
+          x: cx, y: colLabelH - Math.round(3 * sc), fill: INK3,
+          'font-size': Math.round(8 * sc), 'font-weight': 700, 'text-anchor': 'start',
+          transform: 'rotate(-58 ' + cx + ' ' + (colLabelH - Math.round(3 * sc)) + ')'
+        }, esc(short(label, 9)));
+      } else {
+        s += txt(cx, colLabelH - Math.round(4 * sc), short(label, 8), {
+          'text-anchor': 'middle', 'font-size': Math.round(8.5 * sc), 'font-weight': 700, fill: INK3
+        });
+      }
+    });
+
+    m.rows.forEach(function (rk, ri) {
+      var y = f.p.t + ri * ch;
+      s += txt(f.p.l - Math.round(4 * sc), y + ch / 2 + 3,
+               fitText(spec.rowLabel ? spec.rowLabel(rk) : rk,
+                       rowLabelW - Math.round(5 * sc), fsRow, 700),
+               { 'text-anchor': 'end', 'font-size': fsRow, 'font-weight': 700, fill: INK2 });
+      m.cols.forEach(function (ck, ci) {
+        var v = m.cells[ri][ci];
+        var x = f.p.l + ci * cw;
+        s += tag('rect', {
+          x: x + 1, y: y + 1, width: Math.max(1, cw - 2), height: Math.max(1, ch - 2),
+          rx: 2, fill: seqColour(v, m.max),
+          'data-tip': tip([[spec.t.row, spec.rowLabel ? spec.rowLabel(rk) : rk],
+                           [spec.t.col, spec.colLabel ? spec.colLabel(ck) : ck],
+                           [spec.unit, String(v)]])
+        });
+        // Print the value when the cell is big enough to hold it legibly.
+        if (cw > Math.round(24 * sc) && ch > Math.round(15 * sc) && v > 0) {
+          s += txt(x + cw / 2, y + ch / 2 + 3, String(v), {
+            'text-anchor': 'middle', 'font-size': Math.round(8.5 * sc),
+            'font-weight': 700, fill: inkOn(v, m.max)
+          });
+        }
+      });
+    });
+
+    // Scale legend: swatches, the range, and the unit.
+    var lw = Math.min(f.iw, Math.round(120 * sc));
+    var lx = f.p.l, ly = f.h - legendH + Math.round(2 * sc);
+    var swW = lw / SEQ.length;
+    for (var i = 0; i < SEQ.length; i++) {
+      s += tag('rect', { x: lx + i * swW, y: ly, width: swW - 1,
+                         height: Math.round(6 * sc), fill: SEQ[i] });
+    }
+    s += txt(lx, ly + Math.round(14 * sc), '0', { 'font-size': Math.round(8 * sc), fill: INK3 });
+    s += txt(lx + lw, ly + Math.round(14 * sc), String(m.max),
+             { 'text-anchor': 'end', 'font-size': Math.round(8 * sc), fill: INK3 });
+    s += txt(lx + lw + Math.round(8 * sc), ly + Math.round(6 * sc), spec.unit,
+             { 'font-size': Math.round(8.5 * sc), 'font-weight': 700, fill: INK2 });
+    s += '</svg>';
+    el.innerHTML = s;
+  }
+  function short(s, n) {
+    s = String(s);
+    return s.length > n ? s.slice(0, n - 1) + '…' : s;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     MALAYSIA TILE CARTOGRAM — states laid out roughly
+     geographically. A tile grid rather than an outline map:
+     at the ~300px this panel gets, real coastlines would be
+     unreadable, and every state needs the same clickable area.
+     ══════════════════════════════════════════════════════════ */
+  var MY_TILES = [
+    { k: 'PLS', c: 0, r: 0 }, { k: 'KDH', c: 0, r: 1 }, { k: 'PNG', c: 0, r: 2 },
+    { k: 'PRK', c: 1, r: 2 }, { k: 'KTN', c: 2, r: 1 }, { k: 'TRG', c: 3, r: 1 },
+    { k: 'PHG', c: 2, r: 2 }, { k: 'SGR', c: 1, r: 3 }, { k: 'KUL', c: 2, r: 3 },
+    { k: 'PJY', c: 3, r: 3 }, { k: 'NSN', c: 1, r: 4 }, { k: 'MLK', c: 2, r: 4 },
+    { k: 'JHR', c: 2, r: 5 }, { k: 'LBN', c: 5, r: 1 }, { k: 'SBH', c: 6, r: 1 },
+    { k: 'SWK', c: 5, r: 3 }
+  ];
+
+  function cartogram(el, spec) {
+    var counts = spec.counts || {};
+    var sc = scale();
+    var legendH = Math.round(15 * sc);
+    var f = frame(el, { t: Math.round(4 * sc), r: Math.round(4 * sc),
+                        b: legendH + Math.round(4 * sc), l: Math.round(4 * sc) });
+
+    var cols = 7, rowsN = 6;
+    var cell = Math.min(f.iw / cols, f.ih / rowsN);
+    var offX = f.p.l + (f.iw - cell * cols) / 2;
+    var offY = f.p.t + (f.ih - cell * rowsN) / 2;
+
+    var max = 0;
+    MY_TILES.forEach(function (t) { max = Math.max(max, counts[t.k] || 0); });
+
+    var s = open(f, spec.aria);
+    MY_TILES.forEach(function (t) {
+      var v = counts[t.k] || 0;
+      var x = offX + t.c * cell, y = offY + t.r * cell;
+      s += tag('rect', {
+        x: x + 1.5, y: y + 1.5, width: cell - 3, height: cell - 3, rx: 3,
+        fill: seqColour(v, max), stroke: v ? 'none' : AXIS,
+        'stroke-width': v ? 0 : 1, 'stroke-dasharray': v ? null : '2 2',
+        'data-tip': tip([[spec.stateName(t.k)], [spec.unit, String(v)]])
+      });
+      s += txt(x + cell / 2, y + cell / 2 + Math.round(1 * sc), t.k, {
+        'text-anchor': 'middle', 'font-size': Math.round(Math.min(8.5, cell / 4.4)),
+        'font-weight': 800, fill: v ? inkOn(v, max) : INK3
+      });
+      if (v > 0 && cell > Math.round(30 * sc)) {
+        s += txt(x + cell / 2, y + cell / 2 + Math.round(10 * sc), String(v), {
+          'text-anchor': 'middle', 'font-size': Math.round(Math.min(8, cell / 5)),
+          'font-weight': 700, fill: inkOn(v, max), 'fill-opacity': 0.85
+        });
+      }
+    });
+
+    var lw = Math.min(f.iw, Math.round(120 * sc));
+    var lx = f.p.l, ly = f.h - legendH + Math.round(2 * sc);
+    var swW = lw / SEQ.length;
+    for (var i = 0; i < SEQ.length; i++) {
+      s += tag('rect', { x: lx + i * swW, y: ly, width: swW - 1,
+                         height: Math.round(6 * sc), fill: SEQ[i] });
+    }
+    s += txt(lx, ly + Math.round(14 * sc), '0', { 'font-size': Math.round(8 * sc), fill: INK3 });
+    s += txt(lx + lw, ly + Math.round(14 * sc), String(max),
+             { 'text-anchor': 'end', 'font-size': Math.round(8 * sc), fill: INK3 });
+    s += txt(lx + lw + Math.round(8 * sc), ly + Math.round(6 * sc), spec.unit,
+             { 'font-size': Math.round(8.5 * sc), 'font-weight': 700, fill: INK2 });
+    s += '</svg>';
+    el.innerHTML = s;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     PROJECTED CENSUS — observed "now" then four projected hours,
+     with the 80% band carried through the flow equation.
+     ══════════════════════════════════════════════════════════ */
+  function projection(el, spec) {
+    var j = spec.projection;
+    if (!j || !j.available) return empty(el, spec.emptyMsg || 'No projection available');
+    var sc = scale();
+    var f = frame(el, { t: Math.round(14 * sc), r: Math.round(10 * sc),
+                        b: Math.round(18 * sc), l: Math.round(26 * sc) });
+
+    var series = [j.current].concat(j.mid);
+    var his = [j.current].concat(j.hi80);
+    var los = [j.current].concat(j.lo80);
+    var hi = Math.max.apply(null, his.concat([j.bedsAvailable || 0, 1]));
+    var ticks = niceTicks(0, hi, 4);
+    var top = ticks[ticks.length - 1];
+
+    var n = series.length;
+    var stepX = f.iw / Math.max(1, n - 1);
+    var xAt = function (i) { return f.p.l + i * stepX; };
+    var yOf = function (v) { return f.p.t + f.ih - (Math.min(v, top) / top) * f.ih; };
+
+    var s2 = open(f, spec.aria);
+    s2 += yGrid(f, ticks, yOf);
+
+    // Band
+    var up = his.map(function (v, i) { return [xAt(i), yOf(v)]; });
+    var dn = los.map(function (v, i) { return [xAt(i), yOf(v)]; }).reverse();
+    s2 += tag('path', {
+      d: 'M' + up.map(function (q) { return q[0] + ',' + q[1]; }).join(' L') +
+         ' L' + dn.map(function (q) { return q[0] + ',' + q[1]; }).join(' L') + ' Z',
+      fill: CAT[0], 'fill-opacity': 0.18
+    });
+
+    // Bed-availability reference: total places that exist right now.
+    if (j.bedsAvailable > 0 && j.bedsAvailable <= top) {
+      var by = yOf(j.bedsAvailable);
+      s2 += tag('line', { x1: f.p.l, y1: by, x2: f.p.l + f.iw, y2: by,
+                          stroke: STATUS.critical, 'stroke-width': 1.5 });
+      s2 += txt(f.p.l + f.iw, by - Math.round(4 * sc), spec.t.bedsAvailable + ' ' + j.bedsAvailable,
+                { 'text-anchor': 'end', 'font-size': Math.round(8.5 * sc),
+                  'font-weight': 800, fill: STATUS.critical });
+    }
+
+    s2 += tag('path', {
+      d: 'M' + series.map(function (v, i) { return xAt(i) + ',' + yOf(v); }).join(' L'),
+      fill: 'none', stroke: CAT[0], 'stroke-width': 2,
+      'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+    });
+
+    var rM = Math.max(3.2, Math.min(4.6, stepX / 3.4));
+    series.forEach(function (v, i) {
+      var label = i === 0 ? spec.t.now : Charts_pad(j.hours[i - 1]) + ':00';
+      s2 += tag('circle', {
+        cx: xAt(i), cy: yOf(v), r: rM, fill: i === 0 ? INK : CAT[0],
+        stroke: SURFACE, 'stroke-width': 2,
+        'data-tip': tip([[spec.t.hour, label], [spec.t.patients, num(v, 1)],
+          i === 0 ? null : [spec.t.pi80, num(los[i], 1) + ' – ' + num(his[i], 1)]].filter(Boolean))
+      });
+      s2 += txt(xAt(i), f.p.t + f.ih + Math.round(12 * sc), label,
+                { 'text-anchor': 'middle', 'font-size': Math.round(8 * sc), fill: INK3 });
+    });
+
+    // Direct-label the endpoint only.
+    s2 += txt(xAt(n - 1), yOf(series[n - 1]) - Math.round(7 * sc), num(series[n - 1], 0),
+              { 'text-anchor': 'end', 'font-size': Math.round(10 * sc),
+                'font-weight': 800, fill: INK });
+    s2 += '</svg>';
+    el.innerHTML = s2;
+  }
+  function Charts_pad(n) { return ('0' + n).slice(-2); }
+
+  /* ══════════════════════════════════════════════════════════
+     COMPLETENESS BARS — how much of each field is populated
+     ══════════════════════════════════════════════════════════ */
+  function completeness(el, spec) {
+    var rows = spec.rows || [];
+    if (!rows.length) return empty(el, 'No fields');
+    var sc = scale();
+    var fsL = Math.round(8.5 * sc);
+    var boxW = Math.max(80, Math.round(el.clientWidth));
+    var gutter = Math.min(Math.round(boxW * 0.42),
+      Math.ceil(widestW(rows.map(function (r) { return r.label; }), fsL, 700)) + Math.round(6 * sc));
+    var f = frame(el, { t: Math.round(4 * sc), r: Math.round(34 * sc),
+                        b: Math.round(4 * sc), l: gutter });
+    var gap = Math.max(1, Math.round(2 * sc));
+    var bh = Math.max(5, Math.floor((f.ih - gap * (rows.length - 1)) / rows.length));
+
+    var s = open(f, spec.aria);
+    rows.forEach(function (r, i) {
+      var y = f.p.t + i * (bh + gap);
+      var pctv = r.pct === null ? 0 : r.pct;
+      var colour = pctv >= 95 ? STATUS.ok : pctv >= 50 ? STATUS.warn : STATUS.critical;
+      s += tag('rect', { x: f.p.l, y: y, width: f.iw, height: bh, rx: 2, fill: '#f2f5f8' });
+      s += tag('rect', {
+        x: f.p.l, y: y, width: Math.max(1, f.iw * pctv / 100), height: bh, rx: 2, fill: colour,
+        'data-tip': tip([[r.label], [spec.t.populated, r.n + ' / ' + r.total + ' (' + num(pctv, 1) + '%)']])
+      });
+      s += txt(f.p.l - Math.round(4 * sc), y + bh / 2 + 3,
+               fitText(r.label, gutter - Math.round(5 * sc), fsL, 700), {
+        'text-anchor': 'end', 'font-size': fsL, 'font-weight': 700, fill: INK2
+      });
+      s += txt(f.p.l + f.iw + Math.round(4 * sc), y + bh / 2 + 3, num(pctv, 0) + '%', {
+        'font-size': Math.round(8.5 * sc), 'font-weight': 800, fill: INK,
+        'font-family': 'IBM Plex Mono, monospace'
+      });
+    });
+    s += '</svg>';
+    el.innerHTML = s;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     TABLE VIEW — every chart's accessible equivalent. Also the
+     documented relief for the palette slots that sit below 3:1
+     against the surface.
+     ══════════════════════════════════════════════════════════ */
+  function tableHtml(spec) {
+    if (!spec || !spec.head || !spec.body) return '<p>No table available.</p>';
+    var h = '<table class="dt">';
+    if (spec.caption) h += '<caption>' + esc(spec.caption) + '</caption>';
+    h += '<thead><tr>' + spec.head.map(function (c) {
+      return '<th scope="col">' + esc(c) + '</th>';
+    }).join('') + '</tr></thead><tbody>';
+    h += spec.body.map(function (row) {
+      return '<tr>' + row.map(function (c, i) {
+        return i === 0 ? '<th scope="row">' + esc(c) + '</th>' : '<td>' + esc(c) + '</td>';
+      }).join('') + '</tr>';
+    }).join('');
+    return h + '</tbody></table>';
+  }
+
+  // ── dispatcher ───────────────────────────────────────────
+  var RENDERERS = {
+    capacityBars: capacityBars, donut: donut, forecastLine: forecastLine,
+    histogram: histogram, scatter: scatter, groupedBars: groupedBars,
+    heatmap: heatmap, cartogram: cartogram, completeness: completeness,
+    projection: projection
+  };
+
+  function render(el, spec) {
+    if (!el || !spec) return;
+    var fn = RENDERERS[spec.type];
+    if (!fn) { empty(el, 'Unknown chart type: ' + spec.type); return; }
+    try {
+      fn(el, spec);
+    } catch (err) {
+      empty(el, 'Chart could not be drawn');
+      if (window.console) console.error('chart ' + spec.type, err);
+    }
+  }
+
+  // ── hover tooltip, delegated once for the whole page ─────
+  function initTooltip() {
+    var tipEl = document.getElementById('tip');
+    if (!tipEl) return;
+    function hide() { tipEl.style.display = 'none'; }
+    function show(target, x, y) {
+      tipEl.innerHTML = target.getAttribute('data-tip');
+      tipEl.style.display = 'block';
+      var r = tipEl.getBoundingClientRect();
+      var left = Math.min(window.innerWidth - r.width - 8, Math.max(8, x + 12));
+      var top = y - r.height - 12;
+      if (top < 8) top = y + 18;
+      tipEl.style.left = left + 'px';
+      tipEl.style.top = top + 'px';
+    }
+    document.addEventListener('mousemove', function (e) {
+      var t = e.target && e.target.closest ? e.target.closest('[data-tip]') : null;
+      if (t) show(t, e.clientX, e.clientY); else hide();
+    }, { passive: true });
+    document.addEventListener('touchstart', function (e) {
+      var t = e.target && e.target.closest ? e.target.closest('[data-tip]') : null;
+      if (!t) { hide(); return; }
+      var touch = e.touches[0];
+      show(t, touch.clientX, touch.clientY);
+      setTimeout(hide, 2600);
+    }, { passive: true });
+    document.addEventListener('scroll', hide, { passive: true });
+  }
+
+  return {
+    render: render, tableHtml: tableHtml, initTooltip: initTooltip,
+    ZONE: ZONE, CAT: CAT, SEQ: SEQ, STATUS: STATUS,
+    seqColour: seqColour, esc: esc, num: num, pad2: pad2
+  };
+})();
+</script>

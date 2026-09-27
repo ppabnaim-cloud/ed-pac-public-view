@@ -1,0 +1,1138 @@
+<script>
+/* ============================================================
+   APPLICATION — tab and step routing, panel composition,
+   search, and the administrative gate.
+
+   The no-scroll rule is enforced structurally: each step declares
+   a CSS grid whose rows are fractions of the content box, and every
+   panel clips its own overflow. Charts measure the box they land in
+   and draw to it, so adding data can never lengthen the page.
+   ============================================================ */
+(function () {
+  'use strict';
+
+  var S = {
+    lang: 'ms',
+    tab: (window.BOOT_SCOPE && ['wcc', 'bu', 'pac', 'admin'].indexOf(window.BOOT_SCOPE) >= 0)
+           ? window.BOOT_SCOPE : 'wcc',
+    step: 0,
+    data: {},          // scope -> payload
+    stepIndex: {},     // scope -> last viewed step
+    adminToken: null,
+    narrativeHtml: '',
+    illustrations: null,
+    illustrationsLoading: false,
+    busy: {},
+    specs: []          // chart specs currently mounted, for re-render on resize
+  };
+
+  var TABS = ['wcc', 'bu', 'pac', 'admin'];
+
+  // ── i18n ─────────────────────────────────────────────────
+  function dict() { return I18N[S.lang] || I18N.ms; }
+  function t(path) {
+    var parts = String(path).split('.'), o = dict();
+    for (var i = 0; i < parts.length; i++) {
+      if (o === null || o === undefined) break;
+      o = o[parts[i]];
+    }
+    if (o === undefined || o === null) {
+      var f = I18N.ms;
+      for (var j = 0; j < parts.length; j++) { if (!f) break; f = f[parts[j]]; }
+      return f === undefined || f === null ? path : f;
+    }
+    return o;
+  }
+  function tf(path) {
+    var fn = t(path), args = Array.prototype.slice.call(arguments, 1);
+    return typeof fn === 'function' ? fn.apply(null, args) : String(fn);
+  }
+  function esc(s) { return Charts.esc(s); }
+
+  // ── formatting ───────────────────────────────────────────
+  function fmtMin(m) {
+    if (m === null || m === undefined || isNaN(m)) return '—';
+    m = Math.round(m);
+    var h = Math.floor(m / 60), r = m % 60;
+    var hu = S.lang === 'ms' ? 'j' : 'h';
+    return h > 0 ? h + hu + ' ' + ('0' + r).slice(-2) + 'm' : r + 'm';
+  }
+  function fmtMinShort(m) {
+    if (m === null || m === undefined || isNaN(m)) return '—';
+    var h = m / 60;
+    return (h >= 1 ? (Math.round(h * 10) / 10) + (S.lang === 'ms' ? 'j' : 'h') : Math.round(m) + 'm');
+  }
+  /** Axis formatter: one unit for the whole scale, chosen from its top value. */
+  function axisMinFmt(topMin) {
+    var hours = topMin >= 90, u = S.lang === 'ms' ? 'j' : 'h';
+    return function (m) {
+      if (m === null || m === undefined || isNaN(m)) return '—';
+      return hours ? (Math.round(m / 60 * 10) / 10) + u : Math.round(m) + 'm';
+    };
+  }
+  function fmtPct(v) { return (v === null || v === undefined) ? '—' : Charts.num(v, 1) + '%'; }
+  function fmtInt(v) { return (v === null || v === undefined || isNaN(v)) ? '—' : String(Math.round(v)); }
+  function zoneName(z) { return t('zone.' + z) || String(z).toUpperCase(); }
+  function zoneShort(z) { return t('zoneShort.' + z) || String(z).toUpperCase(); }
+  function statusName(s) { return t('status.' + s) || s; }
+  function unitShort(u) { return t('unitsShort.' + u) || u; }
+
+  // ── viewport scale: fill the screen, never exceed it ─────
+  function setScale() {
+    var h = window.innerHeight || 1024;
+    var w = window.innerWidth || 768;
+    var byH = h / 1024, byW = w / 768;
+    var s = Math.min(byH, byW * 1.06);
+    s = Math.max(0.78, Math.min(1.22, s));
+    document.documentElement.style.setProperty('--s', String(Math.round(s * 1000) / 1000));
+  }
+
+  // ── DOM helpers ──────────────────────────────────────────
+  function $(id) { return document.getElementById(id); }
+  function node(tagName, cls, html) {
+    var n = document.createElement(tagName);
+    if (cls) n.className = cls;
+    if (html !== undefined && html !== null) n.innerHTML = html;
+    return n;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     CHROME
+     ══════════════════════════════════════════════════════════ */
+  function renderChrome() {
+    $('appTitle').textContent = t('appTitle');
+    $('appSub').textContent = t('appSub');
+    $('demoTag').textContent = t('demoTag');
+    $('demoNote').textContent = t('demoNote');
+    $('langLabel').textContent = t('langLabel');
+    $('langFlag').textContent = t('langFlag');
+    $('searchBtnLabel').textContent = t('searchBtn');
+    $('searchTitle').textContent = t('search.title');
+    $('searchInput').placeholder = t('search.placeholder');
+    $('searchHint').textContent = t('search.hint');
+    $('searchGo').textContent = t('searchBtn');
+    $('gateTitle').textContent = t('admin.gateTitle');
+    $('gateBody').textContent = t('admin.gateBody');
+    $('gateInput').placeholder = t('admin.passcode');
+    $('gateGo').textContent = t('admin.enter');
+    $('tblTitle').textContent = t('tableView');
+    $('footerText').textContent = t('footer') + '  ·  ' + t('credit');
+    document.documentElement.lang = S.lang;
+
+    var tabs = $('tabs');
+    tabs.innerHTML = '';
+    TABS.forEach(function (key) {
+      var b = node('button', 'tab');
+      b.type = 'button';
+      b.setAttribute('role', 'tab');
+      b.setAttribute('aria-selected', key === S.tab ? 'true' : 'false');
+      b.innerHTML = '<span class="tab-name">' + esc(t('tabs.' + key + '.name')) + '</span>' +
+                    '<span class="tab-sub">' + esc(t('tabs.' + key + '.sub')) + '</span>';
+      b.onclick = function () { gotoTab(key); };
+      tabs.appendChild(b);
+    });
+  }
+
+  function renderStamp(data) {
+    var el = $('stamp'), pre = $('stampPrefix');
+    if (!data || data.error) { el.textContent = '—'; pre.textContent = t('loading'); return; }
+    // The prefix is the first thing dropped on a narrow screen, so the
+    // timestamp itself must stand alone.
+    pre.textContent = data.isSnapshot ? t('snapshot') : t('updated');
+    el.textContent = data.refTime;
+  }
+
+  function narrativeHtml(data) {
+    if (!data || !data.narrative) return '';
+    return data.narrative.map(function (n) {
+      var fn = t('narr.' + n.key);
+      return typeof fn === 'function' ? fn(n.params) : '';
+    }).filter(Boolean).join(' ');
+  }
+
+  function renderNarrative(data) {
+    var strip = $('narr'), txtEl = $('narrText'), icon = $('narrIcon');
+    if (!data || !data.narrative) { strip.style.display = 'none'; return; }
+    strip.style.display = 'flex';
+    var crisis = (data.kpi && data.kpi.crisisBeds > 0);
+    strip.className = 'narr' + (crisis ? ' is-crisis' : '');
+    icon.textContent = crisis ? '⚠️' : 'ℹ️';
+    S.narrativeHtml = narrativeHtml(data);
+    txtEl.innerHTML = S.narrativeHtml;
+  }
+
+  /* ── Help overlay: the full narrative plus the reviewed illustrations. ── */
+  function openHelp() {
+    $('helpTitle').textContent = S.lang === 'ms' ? 'Maklumat untuk anda' : 'Information for you';
+    $('helpNarrative').innerHTML = S.narrativeHtml || '';
+    $('helpCredit').textContent = t('footer');
+    openOv('ovHelp');
+
+    var box = $('helpImages');
+    if (S.illustrations) { paintHelpImages(S.illustrations); return; }
+    if (S.illustrationsLoading) return;
+    S.illustrationsLoading = true;
+    box.innerHTML = '<div class="state"><div class="spin"></div></div>';
+    serverCall('getIllustrations', null, function (res) {
+      S.illustrationsLoading = false;
+      S.illustrations = (res && res.items) ? res : { items: [] };
+      paintHelpImages(S.illustrations);
+    });
+  }
+
+  function paintHelpImages(data) {
+    var box = $('helpImages');
+    if (!data.items || !data.items.length) { box.innerHTML = ''; return; }
+    box.innerHTML = data.items.map(function (it) {
+      var cap = S.lang === 'ms' ? it.captionMs : it.captionEn;
+      return '<figure class="help-fig"><img src="' + it.dataUri + '" alt="' + esc(cap) +
+             '" loading="lazy"/><figcaption>' + esc(cap) + '</figcaption></figure>';
+    }).join('');
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     KPI TILES
+     ══════════════════════════════════════════════════════════ */
+  function kpiTile(o) {
+    var tone = o.tone ? ' t-' + o.tone : '';
+    var val = o.na
+      ? '<span class="kpi-na">' + esc(o.na) + '</span>'
+      : esc(o.value) + (o.unit ? '<span class="unit">' + esc(o.unit) + '</span>' : '');
+    return '<div class="kpi' + tone + '">' +
+      '<span class="kpi-label">' + esc(o.label) + '</span>' +
+      '<span class="kpi-val">' + val + '</span>' +
+      '<span class="kpi-sub">' + esc(o.sub || '') + '</span>' +
+      '</div>';
+  }
+  function kpiBlock(tiles, cols) {
+    var wrap = node('div', 'kpis');
+    wrap.style.gridTemplateColumns = 'repeat(' + cols + ', minmax(0, 1fr))';
+    wrap.innerHTML = tiles.map(kpiTile).join('');
+    return wrap;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     PANELS
+     ══════════════════════════════════════════════════════════ */
+  function panel(def) {
+    var p = node('div', 'panel');
+    p.style.gridArea = def.area;
+
+    var hd = node('div', 'panel-hd');
+    hd.innerHTML = '<h2>' + esc(def.title) + '</h2>' +
+                   '<span class="sub">' + esc(def.sub || '') + '</span>';
+    if (def.table) {
+      var tb = node('button', 'panel-tbl', esc(t('tableView')));
+      tb.type = 'button';
+      tb.onclick = function () { openTable(def.title, def.table); };
+      hd.appendChild(tb);
+    }
+    p.appendChild(hd);
+
+    var bd = node('div', 'panel-bd');
+    p.appendChild(bd);
+
+    if (def.legend && def.legend.length) {
+      var lg = node('div', 'legend');
+      lg.innerHTML = def.legend.map(function (l) {
+        var cls = 'legend-sw' + (l.kind === 'line' ? ' is-line' : l.kind === 'band' ? ' is-band' : '');
+        var style = 'background:' + l.colour + (l.hatch ? ';opacity:.45' : '');
+        return '<span class="legend-item"><span class="' + cls + '" style="' + style + '"></span>' +
+               esc(l.label) + '</span>';
+      }).join('');
+      p.appendChild(lg);
+    }
+    if (def.note) p.appendChild(node('div', 'panel-note', esc(def.note)));
+
+    if (def.html) { bd.innerHTML = def.html; }
+    else if (def.chart) { S.specs.push({ el: bd, spec: def.chart }); }
+    return p;
+  }
+
+  function bannerPanel(def) {
+    var p = node('div', 'banner is-' + (def.tone || 'info'));
+    p.style.gridArea = def.area;
+    p.innerHTML = '<span>' + esc(def.icon || 'ℹ️') + '</span><span>' + def.html + '</span>';
+    return p;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     PANEL BUILDERS — one per visual
+     ══════════════════════════════════════════════════════════ */
+
+  function capacityPanel(d, area) {
+    var rows = d.occupancy.map(function (z) {
+      return {
+        zone: z.zone, label: zoneShort(z.zone), capacity: z.capacity,
+        funded: z.funded, crisis: z.crisis, waiting: z.waiting
+      };
+    });
+    return panel({
+      area: area, title: t('panel.capacity'), sub: t('panel.capacitySub'),
+      chart: {
+        type: 'capacityBars', rows: rows, t: t('chart'),
+        aria: t('panel.capacity')
+      },
+      legend: [
+        { colour: 'var(--zone-rz)', label: t('chart.legendFunded') },
+        { colour: 'var(--zone-rz)', label: t('chart.legendCrisis'), hatch: true },
+        { colour: 'var(--ink)', kind: 'line', label: t('chart.legendCapacity') }
+      ],
+      table: {
+        caption: t('panel.capacity'),
+        head: [t('chart.zone'), t('chart.legendCapacity'), t('chart.funded'),
+               t('chart.crisis'), t('chart.queueShort')],
+        body: d.occupancy.map(function (z) {
+          return [zoneName(z.zone), z.capacity, z.funded, z.crisis, z.waiting];
+        })
+      }
+    });
+  }
+
+  function statusPanel(d, area) {
+    var data = d.statusMix.map(function (s, i) {
+      return { label: statusName(s.key), count: s.count, colour: Charts.CAT[i % Charts.CAT.length] };
+    });
+    return panel({
+      area: area, title: t('panel.statusMix'),
+      chart: {
+        type: 'donut', data: data, centreLabel: t('kpi.attendances'),
+        aria: t('panel.statusMix')
+      },
+      legend: data.map(function (x) { return { colour: x.colour, label: x.label }; }),
+      table: {
+        caption: t('panel.statusMix'),
+        head: [t('field.status'), t('chart.patients')],
+        body: d.statusMix.map(function (s) { return [statusName(s.key), s.count]; })
+      }
+    });
+  }
+
+  function arrivalsPanel(d, area) {
+    var fc = (d.forecast && d.forecast.available) ? d.forecast.points : [];
+    var notes = [];
+    if (d.forecast && d.forecast.available) {
+      notes.push(d.forecast.model === 'holtWintersAdditive' ? t('note.modelHW') : t('note.modelDamped'));
+      if (d.forecast.stale) notes.push(t('note.staleForecast'));
+    }
+    return panel({
+      area: area, title: t('panel.arrivals'),
+      sub: d.arrivals.series.length + ' ' + t('chart.hour').toLowerCase(),
+      chart: {
+        type: 'forecastLine', observed: d.arrivals.series, forecast: fc,
+        t: t('chart'), aria: t('panel.arrivals')
+      },
+      legend: [
+        { colour: Charts.CAT[0], kind: 'line', label: t('chart.observed') },
+        { colour: Charts.CAT[1], kind: 'line', label: t('chart.forecastLbl') },
+        { colour: Charts.CAT[0], kind: 'band', label: t('chart.pi80') }
+      ],
+      note: notes.join(' '),
+      table: {
+        caption: t('panel.arrivals'),
+        head: [t('chart.hour'), t('chart.arrivals'), t('chart.projected'), t('chart.pi80')],
+        body: d.arrivals.series.map(function (p) {
+          return [Charts.pad2(p.hour) + ':00', p.count, '', ''];
+        }).concat(fc.map(function (p) {
+          return [Charts.pad2(p.hour) + ':00', '', Charts.num(p.yhat, 1),
+                  Charts.num(p.lo80, 1) + '–' + Charts.num(p.hi80, 1)];
+        }))
+      }
+    });
+  }
+
+  function waitsPanel(d, area) {
+    var w = d.waits.elapsed;
+    if (w.suppressed) {
+      return panel({
+        area: area, title: t('panel.waitDist'),
+        html: '<div class="state"><span class="state-icon">◦</span><span>' +
+              esc(tf('note.suppressed', d.waits.minN)) + '</span></div>'
+      });
+    }
+    return panel({
+      area: area, title: t('panel.waitDist'),
+      sub: 'n = ' + w.summary.n,
+      chart: {
+        type: 'histogram', bins: w.histogram.bins, binWidth: w.histogram.binWidth,
+        medianValue: w.summary.median, fmt: axisMinFmt(w.summary.max || 0), t: t('chart'),
+        aria: t('panel.waitDist')
+      },
+      note: t('chart.elapsed') + ': ' + t('chart.median') + ' ' + fmtMin(w.summary.median) +
+            '  ·  p90 ' + fmtMin(w.summary.p90),
+      table: {
+        caption: t('panel.waitDist'),
+        head: [t('chart.range'), t('chart.patients')],
+        body: w.histogram.bins.map(function (b) {
+          return [b.overflow ? fmtMinShort(b.lo) + '+' : fmtMinShort(b.lo) + '–' + fmtMinShort(b.hi), b.count];
+        })
+      }
+    });
+  }
+
+  function hourZonePanel(d, area) {
+    return panel({
+      area: area, title: t('panel.heatHourZone'),
+      chart: {
+        type: 'heatmap', matrix: d.heatmaps.hourZone,
+        unit: t('heat.unitPatients'), t: t('chart'),
+        rowLabelWidth: 34, colLabelHeight: 14,
+        aria: t('panel.heatHourZone')
+      },
+      note: t('heat.hourZoneNote'),
+      table: heatTable(d.heatmaps.hourZone, t('panel.heatHourZone'))
+    });
+  }
+
+  function heatTable(m, caption) {
+    if (!m || !m.rows.length) return null;
+    return {
+      caption: caption,
+      head: [''].concat(m.cols),
+      body: m.rows.map(function (r, ri) { return [r].concat(m.cells[ri]); })
+    };
+  }
+
+  /* Scatter: three colour classes at most. Past three, colour-vision
+     separation cannot be guaranteed for every pair, so the six zones
+     collapse to the acuity grouping clinicians already use. */
+  function scatterPanel(d, area, byUnit) {
+    var pts, legend;
+    if (byUnit) {
+      var order = ['ED WCC', 'ED BU', 'PAC WCC'];
+      var cols = [Charts.CAT[0], Charts.CAT[1], Charts.CAT[2]];
+      pts = d.scatter.map(function (p) {
+        var i = Math.max(0, order.indexOf(p.unit));
+        return { x: p.x, y: p.y, colour: cols[i], groupLabel: unitShort(p.unit || order[i]) };
+      });
+      legend = order.map(function (u, i) { return { colour: cols[i], label: unitShort(u) }; });
+    } else {
+      var MAP = {
+        rz: { c: 'var(--zone-rz)', hex: '#c0392b', label: zoneName('rz') },
+        yz: { c: 'var(--zone-yz)', hex: '#e08b00', label: zoneName('yz') }
+      };
+      var OTHER = { hex: '#2a78d6', label: S.lang === 'ms' ? 'Zon lain' : 'Other zones' };
+      pts = d.scatter.map(function (p) {
+        var m = MAP[p.z];
+        return { x: p.x, y: p.y, colour: m ? m.hex : OTHER.hex,
+                 groupLabel: m ? m.label : OTHER.label };
+      });
+      legend = [
+        { colour: MAP.rz.hex, label: MAP.rz.label },
+        { colour: MAP.yz.hex, label: MAP.yz.label },
+        { colour: OTHER.hex, label: OTHER.label }
+      ];
+    }
+    var yTopMin = pts.length ? Math.max.apply(null, pts.map(function (q) { return q.y; })) : 60;
+    var yFmt = axisMinFmt(yTopMin);
+    return panel({
+      area: area, title: t('panel.scatter'),
+      sub: 'n = ' + pts.length,
+      chart: {
+        type: 'scatter', points: pts, yFmt: yFmt,
+        xAxisLabel: t('chart.axisAge'), t: t('chart'), aria: t('panel.scatter')
+      },
+      legend: legend,
+      note: t('chart.axisAge') + ' × ' + t('chart.elapsed') +
+            (S.lang === 'ms' ? '. Setiap titik ialah seorang pesakit.'
+                             : '. Each point is one patient.'),
+      table: {
+        caption: t('panel.scatter'),
+        head: [t('chart.group'), t('chart.age'), t('chart.elapsed')],
+        body: pts.slice(0, 300).map(function (p) { return [p.groupLabel, p.x, fmtMin(p.y)]; })
+      }
+    });
+  }
+
+  function projectionPanel(d, area) {
+    var j = d.projection;
+    if (!j || !j.available) {
+      return panel({
+        area: area, title: t('panel.projection'),
+        html: '<div class="state"><span class="state-icon">◦</span><span>' +
+              esc(S.lang === 'ms' ? 'Unjuran tidak tersedia — rekod terlalu sedikit.'
+                                  : 'No projection — too few records.') + '</span></div>'
+      });
+    }
+    var notes = [];
+    notes.push((S.lang === 'ms' ? 'Sekarang ' : 'Now ') + j.current +
+               ' (' + j.beddedNow + ' ' + t('chart.funded').toLowerCase() +
+               ', ' + j.waitingNow + ' ' + t('chart.queueShort') + ').');
+    notes.push((S.lang === 'ms' ? 'Tempoh rawatan rata-rata ' : 'Mean length of stay ') +
+               j.meanLosHours + (S.lang === 'ms' ? ' jam.' : ' h.'));
+    if (j.losIsDefault) notes.push(t('note.losDefault'));
+    if (j.crisisBedsImplied > 0) {
+      notes.push((S.lang === 'ms' ? 'Dijangka perlu ' : 'Projected need: ') +
+                 j.crisisBedsImplied + (S.lang === 'ms' ? ' katil krisis.' : ' escalation beds.'));
+    }
+    return panel({
+      area: area, title: t('panel.projection'),
+      sub: (S.lang === 'ms' ? 'Aliran deterministik' : 'Deterministic flow model'),
+      chart: {
+        type: 'projection', projection: j,
+        t: {
+          hour: t('chart.hour'), patients: t('chart.patients'), pi80: t('chart.pi80'),
+          now: S.lang === 'ms' ? 'Kini' : 'Now',
+          bedsAvailable: S.lang === 'ms' ? 'Tempat sedia ada' : 'Places available'
+        },
+        aria: t('panel.projection')
+      },
+      legend: [
+        { colour: Charts.CAT[0], kind: 'line', label: t('kpi.census') },
+        { colour: Charts.CAT[0], kind: 'band', label: t('chart.pi80') },
+        { colour: Charts.STATUS.critical, kind: 'line',
+          label: (S.lang === 'ms' ? 'Tempat sedia ada' : 'Places available') }
+      ],
+      note: notes.join(' '),
+      table: {
+        caption: t('panel.projection'),
+        head: [t('chart.hour'), t('kpi.census'), '80% lo', '80% hi'],
+        body: j.hours.map(function (h, i) {
+          return [Charts.pad2(h) + ':00', j.mid[i], j.lo80[i], j.hi80[i]];
+        })
+      }
+    });
+  }
+
+  function methodPanel(d, area) {
+    var f = d.forecast || {};
+    var lines = [];
+    if (f.available) {
+      lines.push('<strong>' + esc(f.model === 'holtWintersAdditive'
+        ? t('note.modelHW') : t('note.modelDamped')) + '</strong>');
+      var pr = f.params || {};
+      var ps = Object.keys(pr).map(function (k) { return k + ' = ' + pr[k]; }).join(', ');
+      lines.push(esc('α/β/φ: ' + ps));
+      lines.push(esc((S.lang === 'ms' ? 'Jam lengkap digunakan: ' : 'Complete hours fitted: ') + f.n +
+        (S.lang === 'ms' ? '. Jam belum tamat dikecualikan.' : '. The part-elapsed hour is excluded.')));
+      if (f.accuracy && f.accuracy.n) {
+        lines.push(esc(tf('note.accuracy', Charts.num(f.accuracy.mae, 2), Charts.num(f.accuracy.rmse, 2))));
+      }
+      if (f.stale) lines.push('<em>' + esc(t('note.staleForecast')) + '</em>');
+    } else {
+      lines.push(esc(S.lang === 'ms'
+        ? 'Ramalan tidak tersedia — rekod kemasukan terlalu sedikit.'
+        : 'No forecast — too few arrival records.'));
+    }
+    return panel({
+      area: area, title: t('panel.method'),
+      html: '<div style="padding:2px 10px 8px;font-size:calc(10px * var(--s));' +
+            'color:var(--ink-2);line-height:1.5">' + lines.join('<br>') + '</div>'
+    });
+  }
+
+  function barListPanel(d, area, title, items, labelFn, unitLabel) {
+    if (!items.length) {
+      return panel({ area: area, title: title,
+        html: '<div class="state"><span class="state-icon">◦</span><span>—</span></div>' });
+    }
+    var groups = items.map(function (x) {
+      return { label: labelFn(x.key), short: labelFn(x.key), values: [x.count] };
+    });
+    return panel({
+      area: area, title: title,
+      chart: {
+        type: 'groupedBars', groups: groups,
+        series: [{ label: unitLabel, colour: Charts.CAT[0] }],
+        t: t('chart'), aria: title
+      },
+      table: {
+        caption: title, head: [title, unitLabel],
+        body: items.map(function (x) { return [labelFn(x.key), x.count]; })
+      }
+    });
+  }
+
+  function ageBandPanel(d, area) {
+    var groups = d.ageBands.map(function (b) {
+      return { label: b.key, short: b.key, values: [b.count] };
+    });
+    return panel({
+      area: area, title: t('panel.ageBands'),
+      sub: t('chart.median') + ' ' + fmtInt(d.ageSummary.median) + ' ' + t('chart.years'),
+      chart: {
+        type: 'groupedBars', groups: groups,
+        series: [{ label: t('chart.patients'), colour: Charts.CAT[3] }],
+        t: t('chart'), aria: t('panel.ageBands')
+      },
+      table: {
+        caption: t('panel.ageBands'), head: [t('chart.age'), t('chart.patients')],
+        body: d.ageBands.map(function (b) { return [b.key, b.count]; })
+      }
+    });
+  }
+
+  function genderPanel(d, area) {
+    var data = d.genderMix.map(function (g, i) {
+      return { label: g.key, count: g.count, colour: Charts.CAT[i % Charts.CAT.length] };
+    });
+    return panel({
+      area: area, title: t('panel.gender'),
+      chart: { type: 'donut', data: data, aria: t('panel.gender') },
+      legend: data.map(function (x) { return { colour: x.colour, label: x.label }; }),
+      table: { caption: t('panel.gender'), head: [t('field.gender'), t('chart.patients')],
+               body: d.genderMix.map(function (g) { return [g.key, g.count]; }) }
+    });
+  }
+
+  function statePanel(d, area) {
+    var counts = {};
+    d.stateMap.forEach(function (s) { counts[s.key] = s.count; });
+    return panel({
+      area: area, title: t('panel.stateMap'), sub: t('note.icProxy'),
+      chart: {
+        type: 'cartogram', counts: counts, unit: t('heat.unitPatients'),
+        stateName: function (k) { return t('states.' + k) || k; },
+        aria: t('panel.stateMap')
+      },
+      note: t('heat.stateNote'),
+      table: {
+        caption: t('panel.stateMap'),
+        head: [t('panel.stateMap'), t('heat.unitPatients')],
+        body: d.stateMap.map(function (s) { return [t('states.' + s.key) || s.key, s.count]; })
+      }
+    });
+  }
+
+  function unitComparePanel(d, area) {
+    var units = d.units || [];
+    var series = [
+      { label: t('status.ongoingtreatment'), colour: Charts.CAT[0] },
+      { label: t('status.referred'), colour: Charts.CAT[1] },
+      { label: t('status.preadmit'), colour: Charts.CAT[3] },
+      { label: t('status.admitted'), colour: Charts.CAT[2] }
+    ];
+    var groups = units.map(function (u) {
+      return { label: t('units.' + u.location) || u.location, short: unitShort(u.location),
+               values: [u.ongoing, u.referred, u.preadmit, u.admitted] };
+    });
+    return panel({
+      area: area, title: t('panel.unitCompare'),
+      chart: { type: 'groupedBars', groups: groups, series: series,
+               t: t('chart'), aria: t('panel.unitCompare') },
+      legend: series,
+      table: {
+        caption: t('panel.unitCompare'),
+        head: [t('chart.unit'), t('kpi.attendances'), t('chart.legendCapacity'),
+               t('chart.crisis'), t('kpi.load')],
+        body: units.map(function (u) {
+          return [unitShort(u.location), u.attendances, u.capacity, u.crisis,
+                  fmtPct(u.capacity ? (u.funded + u.crisis) / u.capacity * 100 : null)];
+        })
+      }
+    });
+  }
+
+  function completenessPanel(d, area) {
+    var dq = d.dataQuality;
+    var rows = dq.fields.map(function (f) {
+      return { label: t('field.' + f.key) || f.key, n: f.n, total: f.total, pct: f.pct };
+    });
+    return panel({
+      area: area, title: t('panel.completeness'), sub: dq.records + ' ' + t('chart.patients').toLowerCase(),
+      chart: { type: 'completeness', rows: rows, t: t('chart'), aria: t('panel.completeness') },
+      table: {
+        caption: t('panel.completeness'),
+        head: [t('panel.completeness'), t('chart.populated'), '%'],
+        body: rows.map(function (r) { return [r.label, r.n + ' / ' + r.total, fmtPct(r.pct)]; })
+      }
+    });
+  }
+
+  function flagsPanel(d, area) {
+    var dq = d.dataQuality;
+    var html = '<div style="padding:2px 10px 8px;font-size:calc(10px * var(--s));line-height:1.6">';
+    if (!dq.flags.length && !dq.capacityFlags.length && !dq.stepDown.length) {
+      html += '<span style="color:var(--ok);font-weight:700">✓ ' + esc(t('dq.clean')) + '</span>';
+    } else {
+      dq.flags.forEach(function (f) {
+        html += '<div><span style="color:var(--critical);font-weight:800">' + f.count + '</span> ' +
+                esc(t('dq.' + f.key) || f.key) + '</div>';
+      });
+      dq.capacityFlags.forEach(function (c) {
+        html += '<div><span style="color:var(--warn);font-weight:800">!</span> ' +
+                esc(unitShort(c.location) + ' ' + zoneShort(c.zone) + ': ' + c.funded + ' > ' + c.capacity) +
+                '</div>';
+      });
+      if (dq.stepDown.length) {
+        html += '<div style="margin-top:6px;color:var(--ink-2)">' +
+                esc(tf('note.stepDown', dq.stepDown.length)) + '</div>';
+      }
+    }
+    html += '</div>';
+    return panel({ area: area, title: t('panel.flags'), html: html });
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     STEP DEFINITIONS
+     ══════════════════════════════════════════════════════════ */
+  function clinicalSteps(d) {
+    var k = d.kpi;
+    var loadTone = k.crisisBeds > 0 ? 'critical' : (k.loadPct >= 100 ? 'serious' : k.loadPct >= 80 ? 'warn' : 'ok');
+    return [
+      {
+        title: t('steps.now'),
+        rows: 'auto minmax(0,1fr) minmax(0,1.1fr)', cols: '1fr',
+        areas: '"kpi" "cap" "proj"',
+        build: function () {
+          var tiles = [
+            { label: t('kpi.census'), value: fmtInt(k.census),
+              sub: k.attendances + ' ' + t('kpi.attendances').toLowerCase() },
+            { label: t('kpi.load'), value: fmtPct(k.loadPct), tone: loadTone,
+              sub: (k.fundedOccupied + k.crisisBeds) + ' / ' + k.capacity },
+            { label: t('kpi.crisis'), value: fmtInt(k.crisisBeds),
+              tone: k.crisisBeds > 0 ? 'critical' : 'ok',
+              sub: k.freeFundedBeds + ' ' + t('kpi.freeBeds').toLowerCase() },
+            { label: t('kpi.gzQueue'), value: fmtInt(k.gzQueue),
+              sub: k.gzAverageWaitMin
+                     ? t('kpi.gzAvg') + ' ' + fmtMin(k.gzAverageWaitMin)
+                     : k.gzRooms + ' / ' + k.gzRoomCapacity + ' ' + zoneName('gz') }
+          ];
+          var blk = kpiBlock(tiles, 4);
+          blk.style.gridArea = 'kpi';
+          return [blk, capacityPanel(d, 'cap'), projectionPanel(d, 'proj')];
+        }
+      },
+      {
+        title: t('steps.flow'),
+        rows: 'minmax(0,1.15fr) minmax(0,1fr)', cols: '1.35fr 1fr',
+        areas: '"arr arr" "wait status"',
+        build: function () {
+          return [arrivalsPanel(d, 'arr'), waitsPanel(d, 'wait'), statusPanel(d, 'status')];
+        }
+      },
+      {
+        title: t('steps.pattern'),
+        rows: 'minmax(0,1.1fr) minmax(0,1fr)', cols: '1fr 1fr',
+        areas: '"heat heat" "scat method"',
+        build: function () {
+          return [hourZonePanel(d, 'heat'), scatterPanel(d, 'scat', false), methodPanel(d, 'method')];
+        }
+      }
+    ];
+  }
+
+  function pacSteps(d) {
+    var k = d.kpi;
+    return [
+      {
+        title: t('steps.now'),
+        rows: 'auto minmax(0,1fr) minmax(0,1.1fr)', cols: '1fr 1fr',
+        areas: '"kpi kpi" "cap cap" "status ages"',
+        build: function () {
+          var tiles = [
+            { label: t('kpi.census'), value: fmtInt(k.census),
+              sub: k.attendances + ' ' + t('kpi.attendances').toLowerCase() },
+            { label: t('kpi.load'), value: fmtPct(k.loadPct),
+              tone: k.crisisBeds > 0 ? 'critical' : 'ok',
+              sub: (k.fundedOccupied + k.crisisBeds) + ' / ' + k.capacity },
+            { label: t('kpi.crisis'), value: fmtInt(k.crisisBeds),
+              tone: k.crisisBeds > 0 ? 'critical' : 'ok',
+              sub: k.freeFundedBeds + ' ' + t('kpi.freeBeds').toLowerCase() },
+            { label: t('kpi.preadmit'), value: fmtInt(k.preadmit),
+              sub: t('kpi.referred') + ' ' + k.referred }
+          ];
+          var blk = kpiBlock(tiles, 4);
+          blk.style.gridArea = 'kpi';
+          return [blk, capacityPanel(d, 'cap'), statusPanel(d, 'status'), ageBandPanel(d, 'ages')];
+        }
+      },
+      {
+        title: t('steps.flow'),
+        rows: 'minmax(0,1.1fr) minmax(0,1fr)', cols: '1fr 1fr',
+        areas: '"arr arr" "refs method"',
+        build: function () {
+          return [
+            arrivalsPanel(d, 'arr'),
+            barListPanel(d, 'refs', t('panel.referrals'), d.referralMix,
+                         function (x) { return x; }, t('chart.patients')),
+            methodPanel(d, 'method')
+          ];
+        }
+      }
+    ];
+  }
+
+  function adminSteps(d) {
+    var k = d.kpi;
+    return [
+      {
+        title: t('steps.overview'),
+        rows: 'auto minmax(0,1fr)', cols: '1.45fr 1fr',
+        areas: '"kpi kpi" "units status"',
+        build: function () {
+          var tiles = [
+            { label: t('kpi.attendances'), value: fmtInt(k.attendances),
+              sub: fmtInt(k.census) + ' ' + t('kpi.census').toLowerCase() },
+            { label: t('kpi.admitted'), value: fmtInt(k.admitted),
+              sub: t('kpi.admitRate') + ' ' + fmtPct(k.admissionRatePct) },
+            { label: t('kpi.deaths'),
+              value: k.deathFieldPresent ? fmtInt(k.deaths) : null,
+              na: k.deathFieldPresent ? null : t('note.notConfigured'),
+              sub: k.deathFieldPresent ? fmtPct(k.mortalityRatePct) : t('note.noDeathField'),
+              tone: k.deaths > 0 ? 'critical' : null },
+            { label: t('kpi.referRate'), value: fmtPct(k.referralRatePct),
+              sub: fmtInt(k.referred) + ' ' + t('kpi.referred').toLowerCase() },
+            { label: t('kpi.medianWait'), value: fmtMinShort(k.medianElapsedMin),
+              sub: (S.lang === 'ms' ? 'Nilai pertengahan' : 'Median') +
+                   (k.medianTwtMin ? ' · ' + t('kpi.medianTwt') + ' ' + fmtMinShort(k.medianTwtMin) : '') },
+            { label: t('kpi.cost'),
+              value: k.costConfigured ? ('RM ' + Number(k.cost).toLocaleString('en-MY')) : null,
+              na: k.costConfigured ? null : t('note.notConfigured'),
+              sub: k.costConfigured ? t('note.costModelled') : 'UNIT_COST_PER_ATTENDANCE' }
+          ];
+          var blk = kpiBlock(tiles, 3);
+          blk.style.gridArea = 'kpi';
+          return [blk, unitComparePanel(d, 'units'), statusPanel(d, 'status')];
+        }
+      },
+      {
+        title: t('steps.casemix'),
+        rows: 'minmax(0,1fr) minmax(0,1fr)', cols: '1.25fr 1fr',
+        areas: '"refs ages" "heatref gender"',
+        build: function () {
+          return [
+            barListPanel(d, 'refs', t('panel.referrals'), d.referralMix,
+                         function (x) { return x; }, t('chart.patients')),
+            ageBandPanel(d, 'ages'),
+            panel({
+              area: 'heatref', title: t('panel.heatZoneRef'),
+              chart: {
+                type: 'heatmap', matrix: d.heatmaps.zoneReferral,
+                unit: t('heat.unitReferrals'), t: t('chart'),
+                rowLabelWidth: 40, colLabelHeight: 34,
+                rowLabel: function (r) { return zoneShort(String(r).toLowerCase()); },
+                aria: t('panel.heatZoneRef')
+              },
+              note: t('heat.zoneRefNote'),
+              table: heatTable(d.heatmaps.zoneReferral, t('panel.heatZoneRef'))
+            }),
+            genderPanel(d, 'gender')
+          ];
+        }
+      },
+      {
+        title: t('steps.geo'),
+        rows: 'minmax(0,1.2fr) minmax(0,1fr)', cols: '1fr 1fr',
+        areas: '"map map" "heathz scat"',
+        build: function () {
+          return [statePanel(d, 'map'), hourZonePanel(d, 'heathz'), scatterPanel(d, 'scat', true)];
+        }
+      },
+      {
+        title: t('steps.quality'),
+        rows: 'minmax(0,1.25fr) minmax(0,1fr)', cols: '1fr 1fr',
+        areas: '"complete flags" "arr arr"',
+        build: function () {
+          return [completenessPanel(d, 'complete'), flagsPanel(d, 'flags'), arrivalsPanel(d, 'arr')];
+        }
+      }
+    ];
+  }
+
+  function stepsFor(tab, d) {
+    if (tab === 'admin') return adminSteps(d);
+    if (tab === 'pac') return pacSteps(d);
+    return clinicalSteps(d);
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     RENDER
+     ══════════════════════════════════════════════════════════ */
+  function showState(kind, msg) {
+    var c = $('content');
+    c.innerHTML = '<div class="state" style="height:100%">' +
+      (kind === 'load' ? '<div class="spin"></div>'
+                       : '<span class="state-icon">⚠️</span>') +
+      '<span>' + esc(msg) + '</span>' +
+      (kind === 'err' ? '<button class="pager-btn" id="retryBtn" type="button">' +
+                        esc(t('retry')) + '</button>' : '') +
+      '</div>';
+    $('pager').style.visibility = 'hidden';
+    var r = $('retryBtn');
+    if (r) r.onclick = function () { loadTab(S.tab, true); };
+  }
+
+  function renderTab() {
+    var d = S.data[S.tab];
+    renderStamp(d);
+    if (S.tab === 'admin' && !S.adminToken) { openGate(); }
+    if (!d) { showState('load', t('loading')); return; }
+    if (d.error) {
+      showState('err', d.error === 'UNAUTHORISED' ? t('admin.unauth') : t('errBody'));
+      return;
+    }
+
+    renderNarrative(S.tab === 'admin' ? null : d);
+    var steps = stepsFor(S.tab, d);
+    S.step = Math.min(S.step, steps.length - 1);
+
+    var c = $('content');
+    c.innerHTML = '';
+    S.specs = [];
+
+    var def = steps[S.step];
+    var stepEl = node('div', 'step is-active');
+    stepEl.style.gridTemplateRows = def.rows;
+    stepEl.style.gridTemplateColumns = def.cols;
+    stepEl.style.gridTemplateAreas = def.areas;
+    def.build().forEach(function (n) { if (n) stepEl.appendChild(n); });
+    c.appendChild(stepEl);
+
+    renderPager(steps);
+    drawCharts();
+  }
+
+  function renderPager(steps) {
+    var p = $('pager');
+    p.style.visibility = 'visible';
+    var prev = $('pgPrev'), next = $('pgNext');
+    prev.textContent = '‹ ' + t('prev');
+    next.textContent = t('next') + ' ›';
+    prev.disabled = S.step === 0;
+    next.disabled = S.step >= steps.length - 1;
+    $('pgTitle').textContent = steps[S.step].title;
+    var dots = $('pgDots');
+    dots.innerHTML = '';
+    steps.forEach(function (s, i) {
+      var b = node('button', 'pager-dot');
+      b.type = 'button';
+      b.setAttribute('aria-current', i === S.step ? 'true' : 'false');
+      b.setAttribute('aria-label', tf('stepOf', i + 1, steps.length) + ': ' + s.title);
+      b.onclick = function () { S.step = i; S.stepIndex[S.tab] = i; renderTab(); };
+      dots.appendChild(b);
+    });
+  }
+
+  function drawCharts() {
+    // Two frames: the grid must settle before a chart can measure its box.
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        S.specs.forEach(function (s) { Charts.render(s.el, s.spec); });
+      });
+    });
+  }
+
+  var resizeTimer = null;
+  function onResize() {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      setScale();
+      drawCharts();
+    }, 140);
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     DATA
+     ══════════════════════════════════════════════════════════ */
+  function serverCall(fn, arg, onOk) {
+    // Local harness hook, used by the layout tests.
+    if (window.__MOCK__ && window.__MOCK__[fn]) {
+      setTimeout(function () { onOk(window.__MOCK__[fn](arg)); }, 0);
+      return;
+    }
+    if (typeof google === 'undefined' || !google.script || !google.script.run) {
+      onOk({ error: 'NO_BRIDGE' });
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(onOk)
+      .withFailureHandler(function (err) {
+        onOk({ error: 'SERVER_ERROR', message: err && err.message });
+      })[fn](arg);
+  }
+
+  function loadTab(tab, force) {
+    if (S.busy[tab] && !force) return;
+    if (tab === 'admin' && !S.adminToken) { renderTab(); return; }
+    S.busy[tab] = true;
+    if (!S.data[tab] || force) {
+      if (tab === S.tab) showState('load', t('loading'));
+    }
+    var fn = tab === 'admin' ? 'getAdminDashboard' : 'getDashboard';
+    var arg = tab === 'admin' ? S.adminToken : tab;
+    serverCall(fn, arg, function (res) {
+      S.busy[tab] = false;
+      if (res && res.error === 'UNAUTHORISED') { S.adminToken = null; }
+      S.data[tab] = res;
+      if (tab === S.tab) renderTab();
+    });
+  }
+
+  function gotoTab(tab) {
+    if (S.tab === tab) return;
+    S.stepIndex[S.tab] = S.step;
+    S.tab = tab;
+    S.step = S.stepIndex[tab] || 0;
+    renderChrome();
+    if (S.data[tab] && !S.data[tab].error) renderTab(); else loadTab(tab);
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     OVERLAYS
+     ══════════════════════════════════════════════════════════ */
+  function openOv(id) {
+    $(id).classList.add('is-open');
+    document.addEventListener('keydown', escClose);
+  }
+  function closeOv(id) {
+    $(id).classList.remove('is-open');
+  }
+  function escClose(e) {
+    if (e.key !== 'Escape') return;
+    ['ovSearch', 'ovTable', 'ovGate', 'ovHelp'].forEach(closeOv);
+    document.removeEventListener('keydown', escClose);
+  }
+
+  function openTable(title, spec) {
+    $('tblTitle').textContent = title;
+    $('tblBody').innerHTML = Charts.tableHtml(spec);
+    openOv('ovTable');
+  }
+
+  // ── search ───────────────────────────────────────────────
+  function doSearch() {
+    var q = $('searchInput').value.trim();
+    var out = $('searchResults');
+    if (q.length < 6) { out.innerHTML = msgBox(tf('search.minChars', 6)); return; }
+    out.innerHTML = '<div class="state"><div class="spin"></div></div>';
+    serverCall('getPatientStatus', q, function (res) {
+      if (!res) { out.innerHTML = msgBox(t('search.error')); return; }
+      if (res.error === 'MIN_CHARS') { out.innerHTML = msgBox(tf('search.minChars', res.minChars || 6)); return; }
+      if (res.error === 'TOO_MANY') { out.innerHTML = msgBox(tf('search.tooMany', res.found)); return; }
+      if (res.error === 'RATE_LIMITED') { out.innerHTML = msgBox(t('search.rateLimit')); return; }
+      if (res.error) { out.innerHTML = msgBox(t('search.error')); return; }
+      if (!res.results || !res.results.length) { out.innerHTML = msgBox(t('search.none')); return; }
+      out.innerHTML = res.results.map(resultCard).join('');
+    });
+  }
+  function msgBox(m) {
+    return '<div class="state"><span class="state-icon">🔍</span><span>' + esc(m) + '</span></div>';
+  }
+  function resultCard(p) {
+    var f = t('search.fields');
+    var chipColour = {
+      ongoingtreatment: 'var(--brand-lt);color:var(--brand-dk)',
+      referred: '#e6f0fa;color:#1a4c82',
+      preadmit: '#fff4e0;color:#8a4b00',
+      admitted: '#e6f7ee;color:#1a7c4a',
+      discharge: '#f3eeff;color:#6b3ea0'
+    }[p.status] || 'var(--surface-2);color:var(--ink-2)';
+
+    var rows = [];
+    function add(k, v) { if (v) rows.push('<div><div class="res-k">' + esc(k) + '</div><div class="res-v">' + esc(v) + '</div></div>'); }
+    add(f.location, p.location);
+    add(f.zone, zoneName(p.zone) + (p.isCrisisBed ? ' · ' + f.crisisBed : '') + (p.isWaiting ? ' · ' + f.waitingArea : ''));
+    add(f.triage, p.triage);
+    add(f.elapsed, p.elapsed);
+    add(f.referredTo, p.referredTo);
+    add(f.preadmit, p.preadmit);
+    add(f.admitted, p.admitted);
+    add(f.bwt, p.bwt);
+    add(f.twt, p.twt);
+
+    var queue = '';
+    if (p.queueNo && !p.calledGZ) {
+      queue = '<div class="queue"><span class="queue-n">' + esc(p.queueNo) + '</span>' +
+              '<span class="queue-t"><strong>' + esc(f.queueNo) + '</strong><br>' +
+              esc(t('search.queueWait')) + '</span></div>';
+    } else if (p.calledGZ) {
+      queue = '<div class="queue"><span style="font-size:calc(19px * var(--s))">✅</span>' +
+              '<span class="queue-t"><strong>' + esc(f.calledIn) + '</strong><br>' + esc(p.calledGZ) + '</span></div>';
+    }
+
+    return '<div class="res"><div class="res-hd">' +
+      '<div><div class="res-name">' + esc(p.nameDisplay) + '</div>' +
+      '<div class="res-id mono">IC ' + esc(p.icMasked) + ' · MRN ' + esc(p.mrnMasked) + '</div></div>' +
+      '<span class="chip" style="background:' + chipColour + '">' + esc(statusName(p.status)) + '</span>' +
+      '</div><div class="res-grid">' + rows.join('') + '</div>' + queue + '</div>';
+  }
+
+  // ── admin gate ───────────────────────────────────────────
+  function openGate() {
+    $('gateMsg').textContent = '';
+    openOv('ovGate');
+    setTimeout(function () { $('gateInput').focus(); }, 80);
+  }
+  function submitGate() {
+    var code = $('gateInput').value;
+    var msg = $('gateMsg');
+    msg.textContent = t('loading');
+    serverCall('verifyAdmin', code, function (res) {
+      if (!res) { msg.textContent = t('search.error'); return; }
+      if (res.ok) {
+        S.adminToken = res.token;
+        $('gateInput').value = '';
+        msg.textContent = '';
+        closeOv('ovGate');
+        loadTab('admin', true);
+        return;
+      }
+      if (res.reason === 'NOT_CONFIGURED') msg.textContent = t('admin.notConfig');
+      else if (res.reason === 'RATE_LIMITED') msg.textContent = t('admin.rateLimited');
+      else msg.textContent = tf('admin.badCode', res.remaining === undefined ? 0 : res.remaining);
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     BOOT
+     ══════════════════════════════════════════════════════════ */
+  function toggleLang() {
+    S.lang = S.lang === 'ms' ? 'en' : 'ms';
+    try { localStorage.setItem('edpac_lang', S.lang); } catch (e) { /* private mode */ }
+    renderChrome();
+    renderTab();
+    if (S.illustrations) paintHelpImages(S.illustrations);
+  }
+
+  function boot() {
+    try {
+      var saved = localStorage.getItem('edpac_lang');
+      if (saved === 'ms' || saved === 'en') S.lang = saved;
+    } catch (e) { /* storage unavailable — default stands */ }
+
+    setScale();
+    Charts.initTooltip();
+    renderChrome();
+
+    $('langBtn').onclick = toggleLang;
+    $('searchBtn').onclick = function () {
+      openOv('ovSearch');
+      setTimeout(function () { $('searchInput').focus(); }, 80);
+    };
+    $('searchGo').onclick = doSearch;
+    $('searchInput').onkeydown = function (e) { if (e.key === 'Enter') doSearch(); };
+    $('gateGo').onclick = submitGate;
+    $('gateInput').onkeydown = function (e) { if (e.key === 'Enter') submitGate(); };
+    $('narr').onclick = openHelp;
+    ['ovSearch', 'ovTable', 'ovGate', 'ovHelp'].forEach(function (id) {
+      var ov = $(id);
+      ov.addEventListener('click', function (e) { if (e.target === ov) closeOv(id); });
+      ov.querySelector('.ov-x').onclick = function () { closeOv(id); };
+    });
+    $('pgPrev').onclick = function () {
+      if (S.step > 0) { S.step--; S.stepIndex[S.tab] = S.step; renderTab(); }
+    };
+    $('pgNext').onclick = function () {
+      S.step++; S.stepIndex[S.tab] = S.step; renderTab();
+    };
+
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+
+    loadTab(S.tab);
+    // Public tabs refresh on the same 5-minute cadence as the server cache.
+    setInterval(function () {
+      TABS.forEach(function (tab) {
+        if (tab === 'admin' && !S.adminToken) return;
+        if (tab === S.tab || S.data[tab]) loadTab(tab, true);
+      });
+    }, 300000);
+  }
+
+  window.EDPAC = { state: S, boot: boot, render: renderTab, t: t };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else { boot(); }
+})();
+</script>

@@ -1,0 +1,10 @@
+{
+  "name": "ed-pac-dashboard-tests",
+  "private": true,
+  "description": "Layout and behaviour gates for the ED/PAC dashboard",
+  "scripts": {
+    "build": "node gen_payloads.js && node build_test_page.js",
+    "test": "npm run build && node test_layout.js && node test_overlays.js"
+  },
+  "devDependencies": { "playwright": "^1.40.0" }
+}

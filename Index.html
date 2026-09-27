@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<meta name="color-scheme" content="light"/>
+<title>Status Pesakit — Jabatan Kecemasan &amp; PAC | HTPN Kajang</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet"/>
+<?!= include('Styles') ?>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- HEADER -->
+  <header class="hdr">
+    <div class="hdr-id">
+      <h1 id="appTitle">Jabatan Kecemasan &amp; PAC</h1>
+      <p id="appSub">Hospital Tengku Permaisuri Norashikin, Kajang</p>
+    </div>
+    <span class="hdr-chip" id="demoChip" title="Demo">
+      <span id="demoTag">DEMO</span>
+      <span style="opacity:.6">·</span>
+      <span id="demoNote">Data rekaan</span>
+    </span>
+    <span class="hdr-chip">
+      <span class="dot"></span>
+      <span id="stampPrefix"></span>
+      <span id="stamp" class="mono">—</span>
+    </span>
+    <button class="hdr-btn" id="langBtn" type="button">
+      <span id="langFlag">🇬🇧</span><span id="langLabel">English</span>
+    </button>
+    <button class="hdr-btn" id="searchBtn" type="button">
+      <span aria-hidden="true">🔍</span><span id="searchBtnLabel">Cari pesakit</span>
+    </button>
+  </header>
+
+  <!-- PLAIN-LANGUAGE NARRATIVE FOR FAMILIES. Tapping it opens the help
+       overlay, so the explanatory material costs no vertical space. -->
+  <button class="narr" id="narr" type="button">
+    <span class="narr-icon" id="narrIcon" aria-hidden="true">ℹ️</span>
+    <span class="narr-text" id="narrText"></span>
+    <span class="narr-more" id="narrMore" aria-hidden="true">›</span>
+  </button>
+
+  <!-- TABS -->
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Sections"></nav>
+
+  <!-- CONTENT: exactly one step visible, never scrolled -->
+  <main class="content" id="content" role="tabpanel"></main>
+
+  <!-- STEP PAGER -->
+  <footer class="pager" id="pager">
+    <button class="pager-btn" id="pgPrev" type="button">‹</button>
+    <div class="pager-mid">
+      <div class="pager-title" id="pgTitle"></div>
+      <div class="pager-dots" id="pgDots"></div>
+    </div>
+    <button class="pager-btn" id="pgNext" type="button">›</button>
+  </footer>
+</div>
+
+<!-- SEARCH OVERLAY -->
+<div class="ov" id="ovSearch" role="dialog" aria-modal="true" aria-labelledby="searchTitle">
+  <div class="ov-card">
+    <div class="ov-hd">
+      <h2 id="searchTitle">Semak status ahli keluarga anda</h2>
+      <button class="ov-x" type="button" aria-label="Tutup">✕</button>
+    </div>
+    <div class="ov-bd">
+      <div class="field">
+        <input type="text" id="searchInput" maxlength="60" autocomplete="off"
+               inputmode="text" spellcheck="false"/>
+        <button class="btn-go" id="searchGo" type="button">Cari</button>
+      </div>
+      <p class="hint" id="searchHint"></p>
+      <div id="searchResults" style="margin-top:calc(12px * var(--s))"></div>
+    </div>
+    <div class="ov-ft">
+      <span>🔒</span>
+      <span id="footerText"></span>
+    </div>
+  </div>
+</div>
+
+<!-- HELP OVERLAY: plain-language guidance and illustrations -->
+<div class="ov" id="ovHelp" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="ov-card">
+    <div class="ov-hd">
+      <h2 id="helpTitle">Maklumat</h2>
+      <button class="ov-x" type="button" aria-label="Tutup">✕</button>
+    </div>
+    <div class="ov-bd">
+      <p class="hint" id="helpNarrative" style="margin:0 0 calc(12px * var(--s));font-size:calc(12px * var(--s));color:var(--ink-2)"></p>
+      <div id="helpImages"></div>
+    </div>
+    <div class="ov-ft"><span id="helpCredit"></span></div>
+  </div>
+</div>
+
+<!-- TABLE VIEW OVERLAY — the accessible equivalent of every chart -->
+<div class="ov" id="ovTable" role="dialog" aria-modal="true" aria-labelledby="tblTitle">
+  <div class="ov-card is-wide">
+    <div class="ov-hd">
+      <h2 id="tblTitle">Jadual</h2>
+      <button class="ov-x" type="button" aria-label="Tutup">✕</button>
+    </div>
+    <div class="ov-bd" id="tblBody"></div>
+  </div>
+</div>
+
+<!-- ADMIN GATE -->
+<div class="ov" id="ovGate" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+  <div class="ov-card">
+    <div class="ov-hd">
+      <h2 id="gateTitle">Papan pemuka pentadbiran</h2>
+      <button class="ov-x" type="button" aria-label="Tutup">✕</button>
+    </div>
+    <div class="ov-bd">
+      <p class="hint" id="gateBody" style="margin:0 0 calc(10px * var(--s))"></p>
+      <div class="field">
+        <input type="password" id="gateInput" autocomplete="off"/>
+        <button class="btn-go" id="gateGo" type="button">Masuk</button>
+      </div>
+      <p class="hint" id="gateMsg" style="color:var(--critical);font-weight:700"></p>
+    </div>
+  </div>
+</div>
+
+<div id="tip" role="status" aria-live="polite"></div>
+
+<script>window.BOOT_SCOPE = '<?= bootScope ?>';</script>
+<?!= include('I18n') ?>
+<?!= include('Charts') ?>
+<?!= include('App') ?>
+</body>
+</html>
