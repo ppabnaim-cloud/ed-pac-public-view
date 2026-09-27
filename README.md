@@ -24,6 +24,8 @@ Bahasa Malaysia is the default language; English is one tap away.
 | `I18n.html` | Bahasa Malaysia and English strings |
 | `App.html` | Tab and step routing, panel composition, search, admin gate |
 | `appsscript.json` | Manifest (time zone, scopes, web-app access) |
+| `dist/Code.gs` | **Generated** single-file build — everything in one pasteable file |
+| `build/bundle.js`, `build/verify.js` | Builds and checks that single file |
 | `sheet/ED_PAC_Register.xlsx` | Ready-to-upload register, pre-filled with the full-capacity scenario |
 | `sheet/build_workbook.py` | Regenerates that workbook |
 | `docs/VARIABLE_VISUAL_MAP.md` | Which variable each visual carries, and the statistical specification |
@@ -31,6 +33,37 @@ Bahasa Malaysia is the default language; English is one tap away.
 ---
 
 ## Deployment
+
+### Quickest route: the single-file build
+
+`dist/Code.gs` contains everything — server, register builder, illustrations and
+the whole interface inlined. Paste it over your existing `Code.gs`, save, and
+redeploy. No new files to create.
+
+```
+Deploy → Manage deployments → ✏️ edit → Version: New version → Deploy
+```
+
+Editing the **existing** deployment keeps the same `/exec` URL, so posters and
+QR codes carry on working. Creating a *new* deployment would give you a new URL.
+
+It reads your current `Sheet1` as it stands — 20 columns, header on row 2, data
+from row 3. Column 21 (`Discharge Date/Time`) is used if present and ignored if
+not, so **you do not need to rebuild the sheet to deploy.** Add
+`ADMIN_PASSCODE` under Script Properties or the Administrative tab will not
+open, and re-authorise when prompted: the scopes have changed.
+
+Rebuild it after editing any source file:
+
+```bash
+node build/bundle.js && node build/verify.js
+```
+
+`verify.js` checks that the page inlined in the bundle is byte-identical to the
+one the multi-file build produces, that every entry point is present, and that
+nothing still tries to load files from disk.
+
+### Multi-file route (better for maintenance)
 
 ### 1. Create the spreadsheet and the register
 

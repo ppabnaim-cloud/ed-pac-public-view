@@ -996,10 +996,28 @@
   /* ══════════════════════════════════════════════════════════
      DATA
      ══════════════════════════════════════════════════════════ */
+  /**
+   * Calls the data layer. Three hosts are supported, in order:
+   *   __BRIDGE__   the static browser build (or the layout tests), which may
+   *                answer synchronously or with a promise
+   *   google.script.run   the Apps Script web app
+   *   neither      report it rather than hanging
+   */
   function serverCall(fn, arg, onOk) {
-    // Local harness hook, used by the layout tests.
-    if (window.__MOCK__ && window.__MOCK__[fn]) {
-      setTimeout(function () { onOk(window.__MOCK__[fn](arg)); }, 0);
+    var bridge = window.__BRIDGE__ || window.__MOCK__;
+    if (bridge && bridge[fn]) {
+      setTimeout(function () {
+        var res;
+        try { res = bridge[fn](arg); }
+        catch (err) { onOk({ error: 'SERVER_ERROR', message: String(err && err.message || err) }); return; }
+        if (res && typeof res.then === 'function') {
+          res.then(onOk, function (err) {
+            onOk({ error: 'SERVER_ERROR', message: String(err && err.message || err) });
+          });
+        } else {
+          onOk(res);
+        }
+      }, 0);
       return;
     }
     if (typeof google === 'undefined' || !google.script || !google.script.run) {
