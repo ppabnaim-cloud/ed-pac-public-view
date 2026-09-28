@@ -82,7 +82,15 @@
     var w = window.innerWidth || 768;
     var byH = h / 1024, byW = w / 768;
     var s = Math.min(byH, byW * 1.06);
-    s = Math.max(0.78, Math.min(1.22, s));
+
+    // A wide screen is almost always a wall display read from across a room,
+    // and its layout packs the same content into fewer, shorter rows. Both
+    // arguments point the same way: type up, not merely proportional to
+    // height, which on a 1080p television is no taller than a tablet.
+    if (w >= 1000) s *= 1.22;
+    if (w >= 1600) s *= 1.06;
+
+    s = Math.max(0.78, Math.min(1.75, s));
     document.documentElement.style.setProperty('--s', String(Math.round(s * 1000) / 1000));
   }
 
@@ -742,66 +750,53 @@
     var wrap = node('div', 'zone-grid');
     wrap.style.gridArea = area;
 
-    // Fixed reading order, by rising acuity and then function: red, yellow,
-    // observation, asthma, PAC, and the green zone last because its card
-    // spans the full width and reads as the summary line.
+    // Fixed reading order, left to right: red, yellow, observation, asthma,
+    // then green. All on one row - never wrapped onto a second layer - so the
+    // sequence reads as the escalation ladder it is.
     var ORDER = ['rz', 'yz', 'ob', 'ab', 'pac', 'gz'];
     var zones = d.occupancy.filter(function (z) { return z.capacity > 0; })
       .sort(function (a, b) { return ORDER.indexOf(a.zone) - ORDER.indexOf(b.zone); });
+    wrap.style.gridTemplateColumns = 'repeat(' + zones.length + ', minmax(0, 1fr))';
 
-    var bedded = zones.filter(function (z) { return !z.isRoomZone; }).length;
-    var cols = bedded >= 5 ? 3 : bedded >= 3 ? 2 : 1;
-    wrap.style.gridTemplateColumns = 'repeat(' + cols + ', minmax(0, 1fr))';
-
-    // One row of cards should not swell to fill a tall screen.
-    var rows = Math.ceil(bedded / cols) + (zones.length - bedded);
-    if (rows <= 1) {
-      wrap.style.maxHeight = 'calc(210px * var(--s))';
-      wrap.style.alignSelf = 'start';
-    }
     wrap.innerHTML = zones.map(function (z) {
       var total = z.funded + z.crisis;
       var isRoom = z.isRoomZone;
       var full = z.crisis > 0 || total >= z.capacity;
       var pct = z.capacity > 0 ? Math.min(100, Math.round(total / z.capacity * 100)) : 0;
-
       var state = z.crisis > 0 ? 'crisis' : (total >= z.capacity ? 'full' : (pct >= 70 ? 'busy' : 'ok'));
-      var stateText = t('public.state.' + state);
 
       var badge = z.crisis > 0
-        ? '<span class="zc-badge is-crisis">⚠ ' + z.crisis + ' ' + esc(t('public.crisisBeds')) + '</span>'
-        : '<span class="zc-badge is-' + state + '">' + esc(stateText) + '</span>';
+        ? '<span class="zc-badge is-crisis">' + z.crisis + ' ' + esc(t('public.crisisBeds')) + '</span>'
+        : '<span class="zc-badge is-' + state + '">' + esc(t('public.state.' + state)) + '</span>';
 
+      // The green zone carries the two figures families ask about most.
       var extra = '';
       if (isRoom) {
         extra = '<div class="zc-gz">' +
           '<div class="zc-gz-row"><span class="zc-gz-n">' + z.waiting + '</span>' +
             '<span class="zc-gz-l">' + esc(t('public.waitingNow')) + '</span></div>' +
           (d.kpi.gzAverageWaitMin
-            ? '<div class="zc-gz-wait">⏱ ' + esc(t('public.avgWait')) + ' <strong>' +
+            ? '<div class="zc-gz-wait">' + esc(t('public.avgWait')) + ' <strong>' +
               esc(fmtMin(d.kpi.gzAverageWaitMin)) + '</strong></div>'
             : '<div class="zc-gz-wait zc-muted">' + esc(t('public.avgWaitNone')) + '</div>') +
           '</div>';
       }
 
-      return '<div class="zone-card z-' + z.zone + (full ? ' is-full' : '') +
-             (isRoom ? ' is-wide' : '') + '">' +
-        '<div class="zc-head">' +
-          '<span class="zc-name">' + esc(zoneName(z.zone)) + '</span>' + badge +
-        '</div>' +
+      return '<div class="zone-card z-' + z.zone + (full ? ' is-full' : '') + '">' +
+        '<div class="zc-name">' + esc(zoneName(z.zone)) + '</div>' +
         '<div class="zc-nums">' +
           '<span class="zc-big">' + total + '</span>' +
-          '<span class="zc-cap">/ ' + z.capacity + ' ' +
+          '<span class="zc-cap">/ ' + z.capacity + '<br>' +
             esc(isRoom ? t('public.rooms') : t('public.beds')) + '</span>' +
         '</div>' +
         '<div class="zc-bar"><span style="width:' + pct + '%"></span></div>' +
-        extra +
+        badge + extra +
       '</div>';
     }).join('');
     return wrap;
   }
 
-  /** The crisis alert the specification asks for, in plain Malay. */
+  /** The crisis alert the specification asks for, in plain language. */
   function crisisBanner(d, area) {
     var k = d.kpi;
     if (!k.crisisBeds) return null;
@@ -822,7 +817,8 @@
     n.innerHTML =
       '<span class="klinik-ic" aria-hidden="true">🏥</span>' +
       '<div><strong>' + esc(t('public.klinikTitle')) + '</strong>' +
-      '<p>' + esc(t('public.klinikBody')) + '</p></div>';
+      '<p>' + esc(t('public.klinikBody')) + '</p>' +
+      '<p class="klinik-madani">' + esc(t('public.klinikMadani')) + '</p></div>';
     return n;
   }
 
@@ -851,49 +847,39 @@
     return p;
   }
 
+  /* Below this width the five zone cards cannot share a row, so they stack
+     in the same order, top to bottom, and the content area is allowed to
+     scroll. That is a phone; on anything from a 10-inch tablet upwards the
+     whole public view is one page with nothing to page through. */
+  var NARROW_PX = 620;
+
+  /**
+   * One page. Nobody walks up to a waiting-room television and presses Next,
+   * and a family glancing at a screen on their way past should not have to
+   * either, so every public tab is a single screen: the zone row, the search
+   * prompt, the non-emergency notice and the guidance together.
+   */
   function publicSteps(d) {
     var hasCrisis = d.kpi.crisisBeds > 0;
-    var zoneCount = d.occupancy.filter(function (z) { return z.capacity > 0; }).length;
-
-    // A unit with a single zone - PAC - has too little to justify a second
-    // screen, so it gets everything at once rather than a half-empty one.
-    if (zoneCount <= 1) {
-      return [{
-        title: t('public.stepNow'),
-        rows: (hasCrisis ? 'auto auto auto auto minmax(0,1fr)' : 'auto auto auto minmax(0,1fr)'),
-        cols: '1fr',
-        areas: (hasCrisis
-          ? '"seek" "alert" "zones" "klinik" "guide"'
-          : '"seek" "zones" "klinik" "guide"'),
-        build: function () {
-          var out = [searchPrompt('seek')];
-          if (hasCrisis) out.push(crisisBanner(d, 'alert'));
-          out.push(zoneCards(d, 'zones'), klinikNotice('klinik'), guidePanel(d, 'guide', true));
-          return out;
-        }
-      }];
-    }
-
-    return [
-      {
-        title: t('public.stepNow'),
-        rows: hasCrisis ? 'auto auto minmax(0,1fr) auto' : 'auto minmax(0,1fr) auto',
-        cols: '1fr',
-        areas: hasCrisis ? '"seek" "alert" "zones" "klinik"' : '"seek" "zones" "klinik"',
-        build: function () {
-          var out = [searchPrompt('seek')];
-          if (hasCrisis) out.push(crisisBanner(d, 'alert'));
-          out.push(zoneCards(d, 'zones'), klinikNotice('klinik'));
-          return out;
-        }
-      },
-      {
-        title: t('public.stepGuide'),
-        rows: 'minmax(0,1fr)', cols: '1fr',
-        areas: '"guide"',
-        build: function () { return [guidePanel(d, 'guide')]; }
+    return [{
+      title: t('public.stepNow'),
+      // Seven guidance entries need slightly more room than five zone cards,
+      // which are a number and a label however much height they are given.
+      rows: hasCrisis
+        ? 'auto minmax(0,1fr) auto minmax(0,1.2fr)'
+        : 'minmax(0,1fr) auto minmax(0,1.2fr)',
+      cols: '1.15fr 1fr',
+      areas: hasCrisis
+        ? '"alert alert" "zones zones" "seek klinik" "guide guide"'
+        : '"zones zones" "seek klinik" "guide guide"',
+      build: function () {
+        var out = [];
+        if (hasCrisis) out.push(crisisBanner(d, 'alert'));
+        out.push(zoneCards(d, 'zones'), searchPrompt('seek'),
+                 klinikNotice('klinik'), guidePanel(d, 'guide', true));
+        return out;
       }
-    ];
+    }];
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -1029,7 +1015,7 @@
       (kind === 'err' ? '<button class="pager-btn" id="retryBtn" type="button">' +
                         esc(t('retry')) + '</button>' : '') +
       '</div>';
-    $('pager').style.visibility = 'hidden';
+    $('pager').style.display = 'none';
     var r = $('retryBtn');
     if (r) r.onclick = function () { loadTab(S.tab, true); };
   }
@@ -1066,6 +1052,10 @@
 
   function renderPager(steps) {
     var p = $('pager');
+    // A single-step tab has nothing to page through, so the bar is removed
+    // rather than shown with two disabled buttons.
+    if (steps.length <= 1) { p.style.display = 'none'; return; }
+    p.style.display = 'flex';
     p.style.visibility = 'visible';
     var prev = $('pgPrev'), next = $('pgNext');
     prev.textContent = '‹ ' + t('prev');
@@ -1097,10 +1087,7 @@
   var resizeTimer = null;
   function onResize() {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(function () {
-      setScale();
-      drawCharts();
-    }, 140);
+    resizeTimer = setTimeout(function () { setScale(); drawCharts(); }, 160);
   }
 
   /* ══════════════════════════════════════════════════════════

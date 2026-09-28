@@ -67,26 +67,26 @@ A family in a waiting room does not need a scatter plot. Every chart, distributi
 
 ### Tabs 1–3 — public view
 
-| Tab | Scope filter | Steps |
-|-----|-------------|-------|
-| **A — Emergency Department, Women & Children Centre** | `Location = ED WCC` | 2 |
-| **B — Emergency Department, Main Building** | `Location = ED BU` | 2 |
+| Tab | Scope filter | Screens |
+|-----|-------------|---------|
+| **A — Emergency Department, Women & Children Centre** | `Location = ED WCC` | 1 |
+| **B — Emergency Department, Main Building** | `Location = ED BU` | 1 |
 | **C — Patient Assessment Centre, O&G** | `Location = PAC WCC` | 1 |
 
-PAC has a single zone, so a second screen would be half empty; it carries everything at once instead.
+Each is a **single page with no pager**. A waiting-room television cannot be paged, so everything a family needs sits on one screen.
 
-| Step | Panels | Form | Variables |
-|------|--------|------|-----------|
-| 1 — Zone status now | Patient search prompt | Call to action | 3, 5, 6 via the search overlay |
-| | Crisis alert (when escalation beds are open) | Conditional banner | Bed code (10) |
-| | **One card per zone**, in fixed order (Red, Yellow, Observation, Asthma, Green) — patients being cared for against the zone's normal bed count, a state badge, and a fill bar | **Big numbers** | Bed code (10), Zone (9) |
-| | Green-zone card (full width) — queue length and average time to be called | **Big numbers** | Queue No. (14), Called into GZ (15), Triage (2) |
-| | Non-emergency notice directing minor cases to a Klinik Kesihatan | Standing banner | — |
-| 2 — Guidance for families | Why the sickest are seen first, what each zone means, what happens while waiting for a ward bed, what belongs at a Klinik Kesihatan | Plain-language text | — |
+| Panel | Form | Variables |
+|-------|------|-----------|
+| **One card per zone, in a single row** — Red, Yellow, Observation Bay, Asthma Bay, Green Zone, left to right and never wrapped. Patients being cared for against the zone's normal bed count, a fill bar and a state badge | **Big numbers** | Bed code (10), Zone (9) |
+| Green-zone card — queue length and average time to be called | **Big numbers** | Queue No. (14), Called into GZ (15), Triage (2) |
+| Crisis alert, when crisis beds are activated | Conditional banner | Bed code (10) |
+| Patient search prompt | Call to action | 3, 5, 6 via the search overlay |
+| Non-emergency notice — Klinik Kesihatan, GP, Skim Perubatan MADANI | Standing banner | — |
+| Family guidance — urgency order, what each zone means, waiting for a ward bed, what belongs at a Klinik Kesihatan | Plain-language text | — |
 
-The strip above the tabs carries one standing message: turns are given by how serious the condition is, not by arrival time.
+The strip above the tabs carries one standing message: patients are seen in order of clinical urgency, not order of arrival.
 
-**Excluded from the public view by design:** patient counts by stage of care, and any commentary on departmental workload or forecast arrivals. Both are operational measures for the staff view. Public typography runs a size up throughout, since these screens are read from several metres away.
+**Excluded from the public view by design:** patient counts by stage of care, and any commentary on departmental workload or forecast arrivals. Both are operational measures for the staff view. Public type scales with the viewport and steps up again above 1000px wide, for reading across a waiting room.
 
 ### Tab 4 — Administrative (gated)
 

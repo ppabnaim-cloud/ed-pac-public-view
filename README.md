@@ -117,20 +117,28 @@ is, how full that zone is and how long the green-zone queue is — not a scatter
 plot. The public tabs carry big numbers, a crisis alert and the queue, in plain
 Malay; every visualisation sits behind the passcode.
 
-| Tab | Scope | Steps | Content |
-|-----|-------|-------|---------|
-| Emergency — Women & Children (WCC) | `Location = ED WCC` | 2 | Zone status · Guidance |
-| Emergency — Main Building | `Location = ED BU` | 2 | Zone status · Guidance |
-| Patient Assessment Centre — O&G | `Location = PAC WCC` | 1 | Everything on one screen — a single zone does not fill two |
-| Administrative (gated) | all three | 6 | Overview · Arrivals & forecast · Waiting times · Case-mix · Bed management · Data quality & method |
+| Tab | Scope | Screens | Content |
+|-----|-------|---------|---------|
+| Emergency — Women & Children (WCC) | `Location = ED WCC` | 1 | Zone status, search, clinic notice and guidance, all on one page |
+| Emergency — Main Building | `Location = ED BU` | 1 | the same |
+| Patient Assessment Centre — O&G | `Location = PAC WCC` | 1 | the same |
+| Administrative (gated) | all three | 6 steps | Overview · Arrivals & forecast · Waiting times · Case-mix · Bed management · Data quality & method |
+
+**The public tabs are a single page with no pager at all.** Nobody walks up to a
+waiting-room television and presses Next, and a family glancing at a screen on
+their way past should not have to either. Everything a family needs — the zone
+row, the search prompt, the non-emergency notice and the guidance — is on one
+screen. The step pager exists only on the Administrative tab.
 
 ### What the public tabs show
 
 - **A search prompt**, front and centre, since finding a relative is why most
   people open the page at all.
-- **One card per zone**, in fixed reading order — Red, Yellow, Observation Bay,
-  Asthma Bay, then Green Zone: how many patients are being cared for, against
-  that zone's normal bed count, with a fill bar and a state badge.
+- **One card per zone in a single row**, left to right in fixed order — Red,
+  Yellow, Observation Bay, Asthma Bay, then Green Zone. The row never wraps to
+  a second layer: the sequence is the escalation ladder, and reading it across
+  is the point. Each card carries how many patients are being cared for against
+  that zone's normal bed count, a fill bar and a state badge.
 - **A crisis alert** whenever crisis beds are activated, naming how many — the
   alert notification the specification asks for.
 - **The green zone across the full width**: how many are waiting, and the
@@ -158,9 +166,21 @@ the **forecast** and its prediction bands, a **scatter plot**, **histograms**
 disciplines, field completeness, zone occupancy) and three **heatmaps** (the bed
 board, arrival intensity by hour and zone, zone against referral discipline).
 
-**Nothing scrolls**, on any tab, at any step. This is verified automatically at
-768×1024, 800×1280 and 600×960 across every tab and step, with an additional
-check that the public tabs render no charts at all.
+**Nothing scrolls** on a 10-inch tablet or anything larger. Verified
+automatically at 768×1024, 800×1280, 600×960, 1280×800 and 1920×1080 across
+every tab and screen, with additional checks that the public tabs render no
+charts, keep their zone cards and search prompt, carry the Klinik Kesihatan
+notice, and show no pager.
+
+A phone is the one exception: below 620px the five zone cards cannot share a
+row, so they stack in the same order and the content area scrolls. The
+no-scroll guarantee was always for the tablet and up, and a phone is a
+scrolling device by nature.
+
+Type scales with the viewport, and steps up again above 1000px wide: a wide
+screen is almost always a wall display read from across a room, and on a 1080p
+television the viewport is no taller than a tablet, so scaling on height alone
+would leave the text too small to read at distance.
 
 `docs/VARIABLE_VISUAL_MAP.md` sets out which of the register's columns each
 visual carries.

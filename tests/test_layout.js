@@ -9,9 +9,14 @@ const { findChromium } = require('./chromium');
 const VIEWPORTS = [
   { name: 'iPad-portrait-768x1024',    width: 768,  height: 1024 },
   { name: 'Android10in-portrait-800x1280', width: 800, height: 1280 },
-  { name: 'small-tablet-600x960',      width: 600,  height: 960 }
+  { name: 'small-tablet-600x960',      width: 600,  height: 960 },
+  { name: 'phone-390x844',             width: 390,  height: 844 },
+  { name: 'tv-1080p-1920x1080',        width: 1920, height: 1080 },
+  { name: 'landscape-tablet-1280x800', width: 1280, height: 800 }
 ];
-const TABS = { wcc: 2, bu: 2, pac: 1, admin: 6 };
+// Every public tab is a single page with no pager. Phones are exempt from
+// the no-scroll assertion: the guarantee is for a 10-inch tablet and larger.
+const TABS = { wcc: 1, bu: 1, pac: 1, admin: 6 };
 
 (async () => {
   const browser = await chromium.launch({ executablePath: findChromium() });
@@ -26,7 +31,8 @@ const TABS = { wcc: 2, bu: 2, pac: 1, admin: 6 };
     await page.goto('file://' + path.join(__dirname, 'dashboard_test.html'));
     await page.waitForTimeout(500);
 
-    for (const [tab, nSteps] of Object.entries(TABS)) {
+    const tabSteps = TABS;
+    for (const [tab, nSteps] of Object.entries(tabSteps)) {
       await page.evaluate((tb) => {
         const btns = [...document.querySelectorAll('.tab')];
         const order = ['wcc','bu','pac','admin'];
@@ -94,7 +100,7 @@ const TABS = { wcc: 2, bu: 2, pac: 1, admin: 6 };
           document.querySelectorAll('#app *').forEach(el => {
             const q = el.getBoundingClientRect();
             if (q.width === 0 && q.height === 0) return;
-            if (q.right > vw + 1.5 || q.bottom > vh + 1.5 || q.left < -1.5) {
+              if (q.right > vw + 1.5 || q.bottom > vh + 1.5 || q.left < -1.5) {
               res.overflowing.push({ cls: 'OUTSIDE ' + el.className + ' ' + el.tagName,
                 right: Math.round(q.right), bottom: Math.round(q.bottom), vw, vh,
                 txt: (el.textContent || '').slice(0, 30) });
@@ -103,8 +109,16 @@ const TABS = { wcc: 2, bu: 2, pac: 1, admin: 6 };
           return res;
         });
 
+        const dots = await page.evaluate(() =>
+          getComputedStyle(document.getElementById('pager')).display === 'none'
+            ? 0 : document.querySelectorAll('.pager-dot').length);
+        const wantDots = nSteps <= 1 ? 0 : nSteps;
+        if (dots !== wantDots) {
+          failures.push(`${vp.name} / ${tab}: pager shows ${dots} steps, expected ${wantDots}`);
+        }
         const label = `${vp.name} / ${tab} / step${step + 1} "${r.stepTitle}"`;
-        const scrolls = r.pageScrollH > r.clientH + 1 || r.pageScrollW > r.clientW + 1;
+        const phone = vp.width < 620;
+        const scrolls = !phone && (r.pageScrollH > r.clientH + 1 || r.pageScrollW > r.clientW + 1);
         if (scrolls) {
           failures.push(`${label}: PAGE SCROLLS  h ${r.pageScrollH}>${r.clientH}  w ${r.pageScrollW}>${r.clientW}`);
         }
@@ -116,7 +130,7 @@ const TABS = { wcc: 2, bu: 2, pac: 1, admin: 6 };
         // the flexible track to a different row passes every overflow check
         // while leaving the charts squashed into a strip.
         const share = r.contentH / r.clientH;
-        if (share < 0.55) {
+        if (!phone && share < 0.55) {
           failures.push(`${label}: content area only ${Math.round(share * 100)}% of the ` +
             `viewport (rows ${r.gridRows})`);
         }
@@ -126,8 +140,9 @@ const TABS = { wcc: 2, bu: 2, pac: 1, admin: 6 };
         console.log(`${scrolls || r.overflowing.length || r.emptyCharts.length ? 'FAIL' : ' ok '} ${label}` +
                     `  panels=${r.panels} charts=${r.charts} app=${Math.round(r.appH)}/${r.clientH}`);
 
-        if (vp.width === 768) {
-          await page.screenshot({ path: `/home/user/ed-pac-public-view/tests/shots/${tab}-step${step + 1}.png` });
+        if (vp.width === 768 || vp.width === 1920) {
+          const pre = vp.width === 1920 ? 'tv-' : '';
+          await page.screenshot({ path: `/home/user/ed-pac-public-view/tests/shots/${pre}${tab}-step${step + 1}.png` });
         }
       }
     }

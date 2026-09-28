@@ -26,7 +26,7 @@
  * The "ED/PAC Register" menu can generate a fresh register and a demonstration
  * scenario. Those items CLEAR Sheet1 — run them on a copy, never on live data.
  *
- * Built 2026-09-28 00:30 UTC
+ * Built 2026-09-28 01:03 UTC
  * ============================================================================
  */
 
@@ -2557,90 +2557,85 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
 
 
 /* ── PUBLIC VIEW ─────────────────────────────────────────── */
-/* Tabs 1-3 are read by families, often on a wall screen from a few
-   metres away, so the numbers are large and the language is plain.
-   No charts here: the analysis lives on the Administrative tab. */
+/* Tabs 1-3 are read by families: from across a waiting room on a wall
+   television, and at arm's length on a phone. Type is therefore a size up
+   from the staff view, and the whole screen is laid out as a grid rather
+   than a stack of full-width bands, which read as clutter at this size. */
 
 .seek {
   background: linear-gradient(135deg, var(--brand-dk), var(--brand));
   color: #fff; border-radius: var(--radius);
-  padding: calc(12px * var(--s)) calc(16px * var(--s));
+  padding: calc(10px * var(--s)) calc(14px * var(--s));
   display: flex; align-items: center; gap: calc(12px * var(--s));
-  box-shadow: var(--shadow); min-width: 0;
+  box-shadow: var(--shadow); min-width: 0; overflow: hidden;
 }
 .seek-copy { flex: 1; min-width: 0 }
 .seek-copy h2 {
-  font-size: calc(21px * var(--s)); font-weight: 800; line-height: 1.2;
+  font-size: calc(18px * var(--s)); font-weight: 800; line-height: 1.2;
   margin-bottom: calc(2px * var(--s));
 }
 .seek-copy p {
-  font-size: calc(14px * var(--s)); opacity: .9; font-weight: 500;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  font-size: calc(12.5px * var(--s)); opacity: .9; font-weight: 500; line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 .seek-btn {
   flex: none; border: 0; cursor: pointer; font: inherit;
   background: var(--accent); color: #fff;
-  font-size: calc(16px * var(--s)); font-weight: 800;
-  border-radius: 999px; padding: calc(13px * var(--s)) calc(24px * var(--s));
+  font-size: calc(15px * var(--s)); font-weight: 800;
+  border-radius: 999px; padding: calc(11px * var(--s)) calc(20px * var(--s));
   white-space: nowrap; min-height: calc(44px * var(--s));
   box-shadow: 0 2px 10px rgba(0,0,0,.18);
 }
 .seek-btn:hover { background: #8f4a00 }
 .seek-btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px }
 
+/* ── ZONE CARDS ──────────────────────────────────────────── */
+/* One row, left to right, in escalation order. Columns are set from the
+   zone count in App.html so the row never wraps onto a second layer. */
 .zone-grid {
-  display: grid; gap: calc(10px * var(--s)); min-height: 0; min-width: 0;
-  /* Columns are set from the zone count in App.html so no card is orphaned. */
-  grid-auto-rows: minmax(calc(104px * var(--s)), 1fr);
-  overflow: hidden;
+  display: grid; gap: calc(10px * var(--s));
+  min-height: 0; min-width: 0; overflow: hidden;
 }
-.zone-card.is-wide { grid-column: 1 / -1 }
 .zone-card {
   background: var(--surface); border: 1px solid var(--line);
-  border-left: 6px solid var(--ink-3); border-radius: var(--radius);
+  border-top: 7px solid var(--ink-3); border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: calc(12px * var(--s)) calc(14px * var(--s));
-  display: flex; flex-direction: column; justify-content: center;
-  gap: calc(7px * var(--s)); min-width: 0; min-height: 0; overflow: hidden;
-}
-.zone-card.z-rz  { border-left-color: var(--zone-rz) }
-.zone-card.z-yz  { border-left-color: var(--zone-yz) }
-.zone-card.z-gz  { border-left-color: var(--zone-gz) }
-.zone-card.z-ob  { border-left-color: var(--zone-ob) }
-.zone-card.z-ab  { border-left-color: var(--zone-ab) }
-.zone-card.z-pac { border-left-color: var(--zone-pac) }
-.zone-card.is-full { background: #fffafa }
-
-.zc-head {
+  padding: calc(10px * var(--s)) calc(11px * var(--s));
   display: flex; flex-direction: column; align-items: flex-start;
-  gap: calc(5px * var(--s)); min-width: 0;
+  justify-content: flex-start;
+  gap: calc(6px * var(--s)); min-width: 0; min-height: 0; overflow: hidden;
 }
+/* The status badge sits at the foot of the card, so a row of cards reads as
+   a row of numbers with a row of states beneath it. */
+.zone-card > .zc-badge { margin-top: auto }
+.zone-card.z-rz  { border-top-color: var(--zone-rz) }
+.zone-card.z-yz  { border-top-color: var(--zone-yz) }
+.zone-card.z-gz  { border-top-color: var(--zone-gz) }
+.zone-card.z-ob  { border-top-color: var(--zone-ob) }
+.zone-card.z-ab  { border-top-color: var(--zone-ab) }
+.zone-card.z-pac { border-top-color: var(--zone-pac) }
+.zone-card.is-full { background: #fffaf9 }
+
 .zc-name {
-  font-size: calc(19px * var(--s)); font-weight: 800; width: 100%; min-width: 0;
-  line-height: 1.2;
+  flex: none;
+  font-size: calc(15.5px * var(--s)); font-weight: 800; width: 100%;
+  line-height: 1.2; color: var(--ink);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.zc-badge {
-  flex: none; max-width: 100%; font-size: calc(12px * var(--s)); font-weight: 800;
-  border-radius: 999px; padding: calc(5px * var(--s)) calc(12px * var(--s));
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.zc-badge.is-ok     { background: #e7f6e9; color: #14691a }
-.zc-badge.is-busy   { background: #fff4e0; color: #8a4b00 }
-.zc-badge.is-full   { background: #fde8e6; color: #a32b1d }
-.zc-badge.is-crisis { background: var(--critical); color: #fff }
-
-.zc-nums { display: flex; align-items: baseline; gap: calc(6px * var(--s)); min-width: 0 }
+.zc-nums { flex: none; display: flex; align-items: baseline; gap: calc(7px * var(--s)); min-width: 0 }
 .zc-big {
-  font-size: calc(54px * var(--s)); font-weight: 800; line-height: 1;
-  letter-spacing: -.03em; font-variant-numeric: tabular-nums;
+  font-size: calc(46px * var(--s)); font-weight: 800; line-height: .95;
+  letter-spacing: -.035em; font-variant-numeric: tabular-nums; color: var(--ink);
 }
 .zc-cap {
-  font-size: calc(15px * var(--s)); color: var(--ink-2); font-weight: 700;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: calc(13px * var(--s)); color: var(--ink-2); font-weight: 700;
+  line-height: 1.2; min-width: 0;
 }
-.zc-bar { background: #eef2f5; border-radius: 999px; height: calc(7px * var(--s)); overflow: hidden }
-.zc-bar > span { display: block; height: 100%; border-radius: 999px; background: currentColor }
+.zc-bar {
+  width: 100%; background: #eef2f5; border-radius: 999px;
+  height: calc(8px * var(--s)); overflow: hidden; flex: none;
+}
+.zc-bar > span { display: block; height: 100%; border-radius: 999px }
 .zone-card.z-rz  .zc-bar > span { background: var(--zone-rz) }
 .zone-card.z-yz  .zc-bar > span { background: var(--zone-yz) }
 .zone-card.z-gz  .zc-bar > span { background: var(--zone-gz) }
@@ -2648,89 +2643,117 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
 .zone-card.z-ab  .zc-bar > span { background: var(--zone-ab) }
 .zone-card.z-pac .zc-bar > span { background: var(--zone-pac) }
 
+.zc-badge {
+  flex: none; max-width: 100%; font-size: calc(11px * var(--s)); font-weight: 800;
+  border-radius: 999px; padding: calc(4px * var(--s)) calc(10px * var(--s));
+  line-height: 1.25; text-align: center;
+}
+.zc-badge.is-ok     { background: #e7f6e9; color: #14691a }
+.zc-badge.is-busy   { background: #fff4e0; color: #8a4b00 }
+.zc-badge.is-full   { background: #fde8e6; color: #a32b1d }
+.zc-badge.is-crisis { background: var(--critical); color: #fff }
+
+/* Green zone: the queue and the wait, the two figures families ask about. */
 .zc-gz {
-  margin-top: calc(3px * var(--s)); padding-top: calc(6px * var(--s));
-  border-top: 1px dashed var(--line);
+  flex: none;
+  width: 100%; margin-top: auto; padding-top: calc(8px * var(--s));
+  border-top: 1px dashed var(--line); min-width: 0;
 }
-.zc-gz-row { display: flex; align-items: baseline; gap: calc(6px * var(--s)) }
-.zone-card.is-wide { flex-direction: row; align-items: center; gap: calc(16px * var(--s)) }
-.zone-card.is-wide .zc-head,
-.zone-card.is-wide .zc-nums,
-.zone-card.is-wide .zc-bar { flex: none }
-.zone-card.is-wide .zc-head { flex-direction: column; align-items: flex-start; min-width: calc(120px * var(--s)) }
-.zone-card.is-wide .zc-bar { display: none }   /* the badge already says it */
-.zone-card.is-wide .zc-gz {
-  flex: 1; min-width: 0; margin-top: 0; padding-top: 0;
-  border-top: 0; border-left: 1px dashed var(--line);
-  padding-left: calc(16px * var(--s));
-  display: flex; align-items: center; gap: calc(14px * var(--s)); flex-wrap: wrap;
-}
-.zone-card.is-wide .zc-gz-wait { margin-top: 0 }
+.zc-gz-row { display: flex; align-items: baseline; gap: calc(6px * var(--s)); min-width: 0 }
 .zc-gz-n {
-  font-size: calc(44px * var(--s)); font-weight: 800; color: var(--zone-gz);
+  font-size: calc(30px * var(--s)); font-weight: 800; color: var(--zone-gz);
   line-height: 1; font-variant-numeric: tabular-nums;
 }
-.zc-gz-l { font-size: calc(15px * var(--s)); font-weight: 700; color: var(--ink-2) }
-.zc-gz-wait { font-size: calc(15px * var(--s)); color: var(--ink-2); margin-top: calc(3px * var(--s)) }
+.zc-gz-l {
+  font-size: calc(11.5px * var(--s)); font-weight: 700; color: var(--ink-2);
+  line-height: 1.2; min-width: 0;
+}
+.zc-gz-wait {
+  font-size: calc(11.5px * var(--s)); color: var(--ink-2); margin-top: calc(3px * var(--s));
+  line-height: 1.3;
+}
 .zc-gz-wait strong { color: var(--brand-dk) }
 .zc-muted { color: var(--ink-3); font-style: italic }
 
-/* The single-screen layout shares its height, so the guidance runs a size
-   down there rather than being clipped. */
-.guide.is-compact { gap: calc(7px * var(--s)) calc(16px * var(--s)); align-content: start }
-.guide.is-compact .guide-ic { font-size: calc(19px * var(--s)) }
-.guide.is-compact .guide-row strong { font-size: calc(13px * var(--s)) }
-.guide.is-compact .guide-row p { font-size: calc(12px * var(--s)); -webkit-line-clamp: 3 }
-
-/* Non-emergency notice: the message that actually shortens the queue, so it
-   is given its own standing band rather than a line inside the guidance. */
+/* ── NON-EMERGENCY NOTICE ────────────────────────────────── */
+/* The one message on this screen that can shorten the queue. */
 .klinik {
-  display: flex; align-items: center; gap: calc(12px * var(--s));
-  background: #fff8e8; border: 1.5px solid #f0dcae; border-left: 6px solid var(--warn);
+  display: flex; align-items: flex-start; gap: calc(10px * var(--s));
+  background: #fff8e8; border: 1.5px solid #f0dcae; border-left: 7px solid var(--warn);
   border-radius: var(--radius); box-shadow: var(--shadow);
-  padding: calc(11px * var(--s)) calc(14px * var(--s));
+  padding: calc(12px * var(--s)) calc(14px * var(--s));
   min-width: 0; overflow: hidden;
 }
-.klinik-ic { font-size: calc(26px * var(--s)); flex: none; line-height: 1 }
+.klinik-ic { font-size: calc(22px * var(--s)); flex: none; line-height: 1.1 }
+.klinik > div { min-width: 0 }
 .klinik strong {
-  display: block; font-size: calc(16px * var(--s)); font-weight: 800; color: #7a5200;
-  margin-bottom: calc(2px * var(--s));
+  display: block; font-size: calc(14.5px * var(--s)); font-weight: 800; color: #7a5200;
+  margin-bottom: calc(3px * var(--s)); line-height: 1.25;
 }
 .klinik p {
-  font-size: calc(13px * var(--s)); color: var(--ink-2); line-height: 1.4;
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  font-size: calc(12px * var(--s)); color: var(--ink-2); line-height: 1.35;
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+}
+.klinik-madani {
+  margin-top: calc(4px * var(--s)); font-weight: 700; color: #7a5200;
+  -webkit-line-clamp: 2;
 }
 
-/* Family guidance */
+/* ── FAMILY GUIDANCE ─────────────────────────────────────── */
+/* Capped at three columns. Left to its own devices on a wide screen the grid
+   stretched into a single band of seven narrow strips, which is unreadable. */
 .guide {
   height: 100%; overflow: hidden;
   padding: calc(4px * var(--s)) calc(14px * var(--s)) calc(10px * var(--s));
-  display: grid; gap: calc(10px * var(--s)) calc(20px * var(--s));
-  /* Spread down the panel: this screen is nothing but guidance, so the rows
-     should use the height rather than huddle at the top. */
+  display: grid; gap: calc(10px * var(--s)) calc(22px * var(--s));
   align-content: space-evenly;
-  grid-template-columns: repeat(auto-fit, minmax(calc(300px * var(--s)), 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+@media (min-width: 1100px) { .guide { grid-template-columns: repeat(3, minmax(0, 1fr)) } }
+@media (max-width: 700px)  { .guide { grid-template-columns: 1fr } }
+
 .guide-row { display: flex; gap: calc(11px * var(--s)); min-width: 0; align-items: flex-start }
-.guide-ic { font-size: calc(24px * var(--s)); flex: none; line-height: 1.15 }
+.guide-ic { font-size: calc(23px * var(--s)); flex: none; line-height: 1.15 }
+.guide-row > div { min-width: 0 }
 .guide-row strong {
-  font-size: calc(15px * var(--s)); font-weight: 800; display: block;
+  font-size: calc(14.5px * var(--s)); font-weight: 800; display: block;
   margin-bottom: calc(2px * var(--s)); line-height: 1.25;
 }
 .guide-row p {
-  font-size: calc(13.5px * var(--s)); color: var(--ink-2); line-height: 1.45;
-  /* Four lines fits the longest entry whole; nothing here should trail off. */
+  font-size: calc(13px * var(--s)); color: var(--ink-2); line-height: 1.45;
   display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
 }
+.guide.is-compact {
+  gap: calc(6px * var(--s)) calc(16px * var(--s)); align-content: start;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.guide.is-compact .guide-ic { font-size: calc(17px * var(--s)) }
+.guide.is-compact .guide-row { gap: calc(8px * var(--s)) }
+.guide.is-compact .guide-row strong { font-size: calc(12.5px * var(--s)); line-height: 1.2 }
+.guide.is-compact .guide-row p { font-size: calc(11.5px * var(--s)); -webkit-line-clamp: 3; line-height: 1.35 }
+@media (min-width: 1100px) { .guide.is-compact { grid-template-columns: repeat(3, minmax(0, 1fr)) } }
+/* On a wall display four columns puts the seven entries on two rows instead
+   of three, which buys the height the larger type needs. At this width each
+   column is still some 450px, so it is not the narrow strip a fully fluid
+   grid would produce. */
+@media (min-width: 1500px) { .guide.is-compact { grid-template-columns: repeat(4, minmax(0, 1fr)) } }
 
-@media (max-width: 700px) {
-  .zone-card.is-wide { flex-direction: column; align-items: stretch }
-  .zone-card.is-wide .zc-gz {
-    border-left: 0; border-top: 1px dashed var(--line);
-    padding-left: 0; padding-top: calc(7px * var(--s)); margin-top: calc(3px * var(--s));
-  }
-  .zc-big { font-size: calc(34px * var(--s)) }
-  .guide { grid-template-columns: 1fr }
+/* Phones: the cards stack in the same order, top to bottom. */
+@media (max-width: 620px) {
+  .content { overflow-y: auto; -webkit-overflow-scrolling: touch }
+  /* One narrow column, and the area scrolls, so nothing needs clamping. */
+  .guide.is-compact .guide-row p { -webkit-line-clamp: 6 }
+  .klinik p, .seek-copy p { -webkit-line-clamp: 6 }
+  .step.is-active { grid-template-columns: 1fr !important; grid-template-areas: none !important }
+  .step.is-active > * { grid-area: auto !important }
+  .zone-grid { grid-template-columns: 1fr !important; grid-auto-rows: max-content }
+  .zone-card { flex-direction: row; align-items: center; flex-wrap: wrap }
+  .zc-name { width: auto; flex: 1 }
+  .zc-bar { order: 10 }
+  .zc-gz { margin-top: 0 }
+  .zc-big { font-size: calc(40px * var(--s)) }
+  .seek { flex-direction: column; align-items: stretch; text-align: center }
+  .seek-btn { width: 100% }
 }
 
 /* ── STATES ──────────────────────────────────────────────── */
@@ -2918,9 +2941,9 @@ var I18N = {
 
     /* public view — tabs 1 to 3 */
     public: {
-      seekSub:     'Masukkan nombor kad pengenalan, nombor passport atau nombor MRN pesakit.',
-      tapTitle:    'Pesakit paling kritikal dirawat dahulu.',
-      tapBody:     'Giliran bukan mengikut masa sampai, tetapi mengikut tahap kecemasan.',
+      seekSub:     'Masukkan nombor kad pengenalan, passport atau MRN pesakit.',
+      tapTitle:    'Pesakit paling kritikal didahulukan.',
+      tapBody:     'Pesakit dipanggil mengikut tahap kecemasan, bukan mengikut masa pendaftaran.',
       stepNow:     'Status zon sekarang',
       stepGuide:   'Panduan untuk keluarga',
       beds:        'katil',
@@ -2937,23 +2960,24 @@ var I18N = {
       },
       guideTitle:  'Perkara yang perlu anda tahu',
       posterBtn:   'Lihat poster',
-      klinikTitle: 'Kes bukan kecemasan?',
-      klinikBody:  'Sila ke Klinik Kesihatan berdekatan. Jabatan Kecemasan adalah untuk kes yang mengancam nyawa. Ke Klinik Kesihatan bermakna anda dirawat lebih cepat, dan pesakit kritikal di sini dapat dibantu segera.',
+      klinikTitle: 'Bukan kecemasan? Tidak mengancam nyawa?',
+      klinikBody:  'Sila ke Klinik Kesihatan atau klinik GP berdekatan. Sakit tekak, demam ringan, batuk ringan dan luka kecil dirawat dengan lebih cepat.',
+      klinikMadani:'Skim Perubatan MADANI meliputi rawatan di klinik swasta yang menyertai skim.',
       guide: [
         { icon: '🚑', title: 'Pesakit paling kritikal didahulukan',
-          body: 'Giliran bukan mengikut masa sampai. Pesakit yang paling tenat akan dirawat dahulu. Ini bermakna orang yang datang kemudian mungkin dipanggil lebih awal.' },
+          body: 'Pesakit dipanggil mengikut tahap kecemasan, bukan masa pendaftaran. Pesakit yang tiba selepas anda mungkin dipanggil dahulu.' },
         { icon: '🟥', title: 'Zon Merah & Zon Kuning',
-          body: 'Pesakit di zon ini dirawat serta-merta tanpa nombor giliran kerana keadaan mereka lebih serius.' },
+          body: 'Zon ini untuk kes kecemasan dan kes yang mengancam nyawa. Pesakit dirawat serta-merta dan tidak diberikan nombor giliran.' },
         { icon: '🟩', title: 'Zon Hijau',
-          body: 'Pesakit menerima nombor giliran dan menunggu di ruang tunggu sebelum dipanggil masuk ke bilik doktor.' },
+          body: 'Untuk kes kurang kritikal. Pesakit diberi nombor giliran dan menunggu sehingga dipanggil ke bilik rawatan.' },
         { icon: '🛏️', title: 'Menunggu katil wad',
-          body: 'Selepas doktor pakar memutuskan pesakit perlu masuk wad, pesakit menunggu katil kosong di wad. Masa menunggu bergantung pada katil yang ada.' },
-        { icon: '🏠', title: 'Selepas dibenarkan pulang',
-          body: 'Nama pesakit kekal dalam sistem selama 24 jam supaya keluarga masih boleh menyemak status.' },
-        { icon: '🏥', title: 'Kes bukan kecemasan? Ke Klinik Kesihatan',
-          body: 'Demam biasa, batuk, luka kecil, ubat berulang dan sijil sakit boleh dirawat di Klinik Kesihatan berdekatan, dengan masa menunggu yang jauh lebih singkat.' },
-        { icon: '💬', title: 'Perlu bantuan segera?',
-          body: 'Sila ke kaunter jururawat. Jangan tunggu di luar jika keadaan pesakit bertambah teruk.' }
+          body: 'Setelah pegawai perubatan atau pakar memutuskan pesakit perlu masuk wad, pesakit menunggu di sini sehingga ada katil kosong.' },
+        { icon: '🏠', title: 'Selepas discaj',
+          body: 'Nama pesakit kekal dalam sistem selama 24 jam selepas discaj, supaya keluarga masih boleh menyemak status.' },
+        { icon: '🏥', title: 'Bukan kecemasan? Ke Klinik Kesihatan atau klinik GP',
+          body: 'Sakit tekak, demam ringan, hidung berair, batuk ringan dan luka kecil dirawat lebih cepat di Klinik Kesihatan atau klinik GP.' },
+        { icon: '💬', title: 'Keadaan pesakit bertambah teruk?',
+          body: 'Terus ke kaunter jururawat dengan segera. Jangan menunggu di luar.' }
       ]
     },
     /* tabs */
@@ -3208,9 +3232,9 @@ var I18N = {
 
     /* public view — tabs 1 to 3 */
     public: {
-      seekSub:     "Enter the patient's IC number, passport number or MRN.",
-      tapTitle:    'The most seriously ill are treated first.',
-      tapBody:     'Turns are given by how serious the condition is, not by arrival time.',
+      seekSub:     "Enter the patient's IC, passport number or MRN.",
+      tapTitle:    'The most seriously ill are seen first.',
+      tapBody:     'Patients are seen in order of clinical urgency, not order of arrival.',
       stepNow:     'Zone status now',
       stepGuide:   'Guidance for families',
       beds:        'beds',
@@ -3227,23 +3251,24 @@ var I18N = {
       },
       guideTitle:  'What you need to know',
       posterBtn:   'View posters',
-      klinikTitle: 'Not an emergency?',
-      klinikBody:  'Please go to your nearest Klinik Kesihatan. The Emergency Department is for life-threatening conditions. Going to a Klinik Kesihatan means you are seen sooner, and critically ill patients here can be helped straight away.',
+      klinikTitle: 'Not an emergency? Not life-threatening?',
+      klinikBody:  'Go to your nearest Klinik Kesihatan or GP clinic. Sore throat, mild fever, cough and minor wounds are treated far sooner.',
+      klinikMadani:'Skim Perubatan MADANI covers treatment at participating private clinics.',
       guide: [
         { icon: '🚑', title: 'The most seriously ill are seen first',
-          body: 'Turns are not given in order of arrival. The sickest patients are treated first, so someone who arrived after you may be called before you.' },
+          body: 'Patients are seen in order of clinical urgency, not arrival. Someone who arrives after you may be seen first.' },
         { icon: '🟥', title: 'Red and Yellow Zones',
-          body: 'Patients here are treated immediately, without a queue number, because their condition is more serious.' },
+          body: 'These zones are for emergencies and life-threatening conditions. Patients are attended to immediately and are not given a queue number.' },
         { icon: '🟩', title: 'Green Zone',
-          body: 'Patients are given a queue number and wait in the waiting area until they are called into a consultation room.' },
+          body: 'For less urgent conditions. Patients are given a queue number and wait until called to a consultation room.' },
         { icon: '🛏️', title: 'Waiting for a ward bed',
-          body: 'Once a specialist decides a patient needs admission, they wait for a bed to become free on the ward. How long depends on bed availability.' },
+          body: 'Once a medical officer or specialist decides admission is required, the patient waits here until a ward bed is free.' },
         { icon: '🏠', title: 'After discharge',
-          body: 'The patient stays listed for 24 hours so family can still check their status.' },
-        { icon: '🏥', title: 'Not an emergency? Go to a Klinik Kesihatan',
-          body: 'Ordinary fever, cough, minor wounds, repeat medicines and sick certificates can be handled at your nearest Klinik Kesihatan, with a far shorter wait.' },
-        { icon: '💬', title: 'Need help now?',
-          body: 'Please go to the nursing counter. Do not wait outside if the patient becomes worse.' }
+          body: 'The patient remains listed here for 24 hours after discharge, so that family can still check their status.' },
+        { icon: '🏥', title: 'Not an emergency? Go to a Klinik Kesihatan or GP',
+          body: 'Sore throat, mild fever, runny nose, mild cough and minor wounds are treated far sooner at a Klinik Kesihatan or GP clinic.' },
+        { icon: '💬', title: 'Is the patient getting worse?',
+          body: 'Go to the nursing counter immediately. Do not wait outside.' }
       ]
     },
     tabs: {
@@ -4511,7 +4536,15 @@ var Charts = (function () {
     var w = window.innerWidth || 768;
     var byH = h / 1024, byW = w / 768;
     var s = Math.min(byH, byW * 1.06);
-    s = Math.max(0.78, Math.min(1.22, s));
+
+    // A wide screen is almost always a wall display read from across a room,
+    // and its layout packs the same content into fewer, shorter rows. Both
+    // arguments point the same way: type up, not merely proportional to
+    // height, which on a 1080p television is no taller than a tablet.
+    if (w >= 1000) s *= 1.22;
+    if (w >= 1600) s *= 1.06;
+
+    s = Math.max(0.78, Math.min(1.75, s));
     document.documentElement.style.setProperty('--s', String(Math.round(s * 1000) / 1000));
   }
 
@@ -5171,66 +5204,53 @@ var Charts = (function () {
     var wrap = node('div', 'zone-grid');
     wrap.style.gridArea = area;
 
-    // Fixed reading order, by rising acuity and then function: red, yellow,
-    // observation, asthma, PAC, and the green zone last because its card
-    // spans the full width and reads as the summary line.
+    // Fixed reading order, left to right: red, yellow, observation, asthma,
+    // then green. All on one row - never wrapped onto a second layer - so the
+    // sequence reads as the escalation ladder it is.
     var ORDER = ['rz', 'yz', 'ob', 'ab', 'pac', 'gz'];
     var zones = d.occupancy.filter(function (z) { return z.capacity > 0; })
       .sort(function (a, b) { return ORDER.indexOf(a.zone) - ORDER.indexOf(b.zone); });
+    wrap.style.gridTemplateColumns = 'repeat(' + zones.length + ', minmax(0, 1fr))';
 
-    var bedded = zones.filter(function (z) { return !z.isRoomZone; }).length;
-    var cols = bedded >= 5 ? 3 : bedded >= 3 ? 2 : 1;
-    wrap.style.gridTemplateColumns = 'repeat(' + cols + ', minmax(0, 1fr))';
-
-    // One row of cards should not swell to fill a tall screen.
-    var rows = Math.ceil(bedded / cols) + (zones.length - bedded);
-    if (rows <= 1) {
-      wrap.style.maxHeight = 'calc(210px * var(--s))';
-      wrap.style.alignSelf = 'start';
-    }
     wrap.innerHTML = zones.map(function (z) {
       var total = z.funded + z.crisis;
       var isRoom = z.isRoomZone;
       var full = z.crisis > 0 || total >= z.capacity;
       var pct = z.capacity > 0 ? Math.min(100, Math.round(total / z.capacity * 100)) : 0;
-
       var state = z.crisis > 0 ? 'crisis' : (total >= z.capacity ? 'full' : (pct >= 70 ? 'busy' : 'ok'));
-      var stateText = t('public.state.' + state);
 
       var badge = z.crisis > 0
-        ? '<span class="zc-badge is-crisis">⚠ ' + z.crisis + ' ' + esc(t('public.crisisBeds')) + '</span>'
-        : '<span class="zc-badge is-' + state + '">' + esc(stateText) + '</span>';
+        ? '<span class="zc-badge is-crisis">' + z.crisis + ' ' + esc(t('public.crisisBeds')) + '</span>'
+        : '<span class="zc-badge is-' + state + '">' + esc(t('public.state.' + state)) + '</span>';
 
+      // The green zone carries the two figures families ask about most.
       var extra = '';
       if (isRoom) {
         extra = '<div class="zc-gz">' +
           '<div class="zc-gz-row"><span class="zc-gz-n">' + z.waiting + '</span>' +
             '<span class="zc-gz-l">' + esc(t('public.waitingNow')) + '</span></div>' +
           (d.kpi.gzAverageWaitMin
-            ? '<div class="zc-gz-wait">⏱ ' + esc(t('public.avgWait')) + ' <strong>' +
+            ? '<div class="zc-gz-wait">' + esc(t('public.avgWait')) + ' <strong>' +
               esc(fmtMin(d.kpi.gzAverageWaitMin)) + '</strong></div>'
             : '<div class="zc-gz-wait zc-muted">' + esc(t('public.avgWaitNone')) + '</div>') +
           '</div>';
       }
 
-      return '<div class="zone-card z-' + z.zone + (full ? ' is-full' : '') +
-             (isRoom ? ' is-wide' : '') + '">' +
-        '<div class="zc-head">' +
-          '<span class="zc-name">' + esc(zoneName(z.zone)) + '</span>' + badge +
-        '</div>' +
+      return '<div class="zone-card z-' + z.zone + (full ? ' is-full' : '') + '">' +
+        '<div class="zc-name">' + esc(zoneName(z.zone)) + '</div>' +
         '<div class="zc-nums">' +
           '<span class="zc-big">' + total + '</span>' +
-          '<span class="zc-cap">/ ' + z.capacity + ' ' +
+          '<span class="zc-cap">/ ' + z.capacity + '<br>' +
             esc(isRoom ? t('public.rooms') : t('public.beds')) + '</span>' +
         '</div>' +
         '<div class="zc-bar"><span style="width:' + pct + '%"></span></div>' +
-        extra +
+        badge + extra +
       '</div>';
     }).join('');
     return wrap;
   }
 
-  /** The crisis alert the specification asks for, in plain Malay. */
+  /** The crisis alert the specification asks for, in plain language. */
   function crisisBanner(d, area) {
     var k = d.kpi;
     if (!k.crisisBeds) return null;
@@ -5251,7 +5271,8 @@ var Charts = (function () {
     n.innerHTML =
       '<span class="klinik-ic" aria-hidden="true">🏥</span>' +
       '<div><strong>' + esc(t('public.klinikTitle')) + '</strong>' +
-      '<p>' + esc(t('public.klinikBody')) + '</p></div>';
+      '<p>' + esc(t('public.klinikBody')) + '</p>' +
+      '<p class="klinik-madani">' + esc(t('public.klinikMadani')) + '</p></div>';
     return n;
   }
 
@@ -5280,49 +5301,39 @@ var Charts = (function () {
     return p;
   }
 
+  /* Below this width the five zone cards cannot share a row, so they stack
+     in the same order, top to bottom, and the content area is allowed to
+     scroll. That is a phone; on anything from a 10-inch tablet upwards the
+     whole public view is one page with nothing to page through. */
+  var NARROW_PX = 620;
+
+  /**
+   * One page. Nobody walks up to a waiting-room television and presses Next,
+   * and a family glancing at a screen on their way past should not have to
+   * either, so every public tab is a single screen: the zone row, the search
+   * prompt, the non-emergency notice and the guidance together.
+   */
   function publicSteps(d) {
     var hasCrisis = d.kpi.crisisBeds > 0;
-    var zoneCount = d.occupancy.filter(function (z) { return z.capacity > 0; }).length;
-
-    // A unit with a single zone - PAC - has too little to justify a second
-    // screen, so it gets everything at once rather than a half-empty one.
-    if (zoneCount <= 1) {
-      return [{
-        title: t('public.stepNow'),
-        rows: (hasCrisis ? 'auto auto auto auto minmax(0,1fr)' : 'auto auto auto minmax(0,1fr)'),
-        cols: '1fr',
-        areas: (hasCrisis
-          ? '"seek" "alert" "zones" "klinik" "guide"'
-          : '"seek" "zones" "klinik" "guide"'),
-        build: function () {
-          var out = [searchPrompt('seek')];
-          if (hasCrisis) out.push(crisisBanner(d, 'alert'));
-          out.push(zoneCards(d, 'zones'), klinikNotice('klinik'), guidePanel(d, 'guide', true));
-          return out;
-        }
-      }];
-    }
-
-    return [
-      {
-        title: t('public.stepNow'),
-        rows: hasCrisis ? 'auto auto minmax(0,1fr) auto' : 'auto minmax(0,1fr) auto',
-        cols: '1fr',
-        areas: hasCrisis ? '"seek" "alert" "zones" "klinik"' : '"seek" "zones" "klinik"',
-        build: function () {
-          var out = [searchPrompt('seek')];
-          if (hasCrisis) out.push(crisisBanner(d, 'alert'));
-          out.push(zoneCards(d, 'zones'), klinikNotice('klinik'));
-          return out;
-        }
-      },
-      {
-        title: t('public.stepGuide'),
-        rows: 'minmax(0,1fr)', cols: '1fr',
-        areas: '"guide"',
-        build: function () { return [guidePanel(d, 'guide')]; }
+    return [{
+      title: t('public.stepNow'),
+      // Seven guidance entries need slightly more room than five zone cards,
+      // which are a number and a label however much height they are given.
+      rows: hasCrisis
+        ? 'auto minmax(0,1fr) auto minmax(0,1.2fr)'
+        : 'minmax(0,1fr) auto minmax(0,1.2fr)',
+      cols: '1.15fr 1fr',
+      areas: hasCrisis
+        ? '"alert alert" "zones zones" "seek klinik" "guide guide"'
+        : '"zones zones" "seek klinik" "guide guide"',
+      build: function () {
+        var out = [];
+        if (hasCrisis) out.push(crisisBanner(d, 'alert'));
+        out.push(zoneCards(d, 'zones'), searchPrompt('seek'),
+                 klinikNotice('klinik'), guidePanel(d, 'guide', true));
+        return out;
       }
-    ];
+    }];
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -5458,7 +5469,7 @@ var Charts = (function () {
       (kind === 'err' ? '<button class="pager-btn" id="retryBtn" type="button">' +
                         esc(t('retry')) + '</button>' : '') +
       '</div>';
-    $('pager').style.visibility = 'hidden';
+    $('pager').style.display = 'none';
     var r = $('retryBtn');
     if (r) r.onclick = function () { loadTab(S.tab, true); };
   }
@@ -5495,6 +5506,10 @@ var Charts = (function () {
 
   function renderPager(steps) {
     var p = $('pager');
+    // A single-step tab has nothing to page through, so the bar is removed
+    // rather than shown with two disabled buttons.
+    if (steps.length <= 1) { p.style.display = 'none'; return; }
+    p.style.display = 'flex';
     p.style.visibility = 'visible';
     var prev = $('pgPrev'), next = $('pgNext');
     prev.textContent = '‹ ' + t('prev');
@@ -5526,10 +5541,7 @@ var Charts = (function () {
   var resizeTimer = null;
   function onResize() {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(function () {
-      setScale();
-      drawCharts();
-    }, 140);
+    resizeTimer = setTimeout(function () { setScale(); drawCharts(); }, 160);
   }
 
   /* ══════════════════════════════════════════════════════════

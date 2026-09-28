@@ -32,9 +32,9 @@ var I18N = {
 
     /* public view — tabs 1 to 3 */
     public: {
-      seekSub:     'Masukkan nombor kad pengenalan, nombor passport atau nombor MRN pesakit.',
-      tapTitle:    'Pesakit paling kritikal dirawat dahulu.',
-      tapBody:     'Giliran bukan mengikut masa sampai, tetapi mengikut tahap kecemasan.',
+      seekSub:     'Masukkan nombor kad pengenalan, passport atau MRN pesakit.',
+      tapTitle:    'Pesakit paling kritikal didahulukan.',
+      tapBody:     'Pesakit dipanggil mengikut tahap kecemasan, bukan mengikut masa pendaftaran.',
       stepNow:     'Status zon sekarang',
       stepGuide:   'Panduan untuk keluarga',
       beds:        'katil',
@@ -51,23 +51,24 @@ var I18N = {
       },
       guideTitle:  'Perkara yang perlu anda tahu',
       posterBtn:   'Lihat poster',
-      klinikTitle: 'Kes bukan kecemasan?',
-      klinikBody:  'Sila ke Klinik Kesihatan berdekatan. Jabatan Kecemasan adalah untuk kes yang mengancam nyawa. Ke Klinik Kesihatan bermakna anda dirawat lebih cepat, dan pesakit kritikal di sini dapat dibantu segera.',
+      klinikTitle: 'Bukan kecemasan? Tidak mengancam nyawa?',
+      klinikBody:  'Sila ke Klinik Kesihatan atau klinik GP berdekatan. Sakit tekak, demam ringan, batuk ringan dan luka kecil dirawat dengan lebih cepat.',
+      klinikMadani:'Skim Perubatan MADANI meliputi rawatan di klinik swasta yang menyertai skim.',
       guide: [
         { icon: '🚑', title: 'Pesakit paling kritikal didahulukan',
-          body: 'Giliran bukan mengikut masa sampai. Pesakit yang paling tenat akan dirawat dahulu. Ini bermakna orang yang datang kemudian mungkin dipanggil lebih awal.' },
+          body: 'Pesakit dipanggil mengikut tahap kecemasan, bukan masa pendaftaran. Pesakit yang tiba selepas anda mungkin dipanggil dahulu.' },
         { icon: '🟥', title: 'Zon Merah & Zon Kuning',
-          body: 'Pesakit di zon ini dirawat serta-merta tanpa nombor giliran kerana keadaan mereka lebih serius.' },
+          body: 'Zon ini untuk kes kecemasan dan kes yang mengancam nyawa. Pesakit dirawat serta-merta dan tidak diberikan nombor giliran.' },
         { icon: '🟩', title: 'Zon Hijau',
-          body: 'Pesakit menerima nombor giliran dan menunggu di ruang tunggu sebelum dipanggil masuk ke bilik doktor.' },
+          body: 'Untuk kes kurang kritikal. Pesakit diberi nombor giliran dan menunggu sehingga dipanggil ke bilik rawatan.' },
         { icon: '🛏️', title: 'Menunggu katil wad',
-          body: 'Selepas doktor pakar memutuskan pesakit perlu masuk wad, pesakit menunggu katil kosong di wad. Masa menunggu bergantung pada katil yang ada.' },
-        { icon: '🏠', title: 'Selepas dibenarkan pulang',
-          body: 'Nama pesakit kekal dalam sistem selama 24 jam supaya keluarga masih boleh menyemak status.' },
-        { icon: '🏥', title: 'Kes bukan kecemasan? Ke Klinik Kesihatan',
-          body: 'Demam biasa, batuk, luka kecil, ubat berulang dan sijil sakit boleh dirawat di Klinik Kesihatan berdekatan, dengan masa menunggu yang jauh lebih singkat.' },
-        { icon: '💬', title: 'Perlu bantuan segera?',
-          body: 'Sila ke kaunter jururawat. Jangan tunggu di luar jika keadaan pesakit bertambah teruk.' }
+          body: 'Setelah pegawai perubatan atau pakar memutuskan pesakit perlu masuk wad, pesakit menunggu di sini sehingga ada katil kosong.' },
+        { icon: '🏠', title: 'Selepas discaj',
+          body: 'Nama pesakit kekal dalam sistem selama 24 jam selepas discaj, supaya keluarga masih boleh menyemak status.' },
+        { icon: '🏥', title: 'Bukan kecemasan? Ke Klinik Kesihatan atau klinik GP',
+          body: 'Sakit tekak, demam ringan, hidung berair, batuk ringan dan luka kecil dirawat lebih cepat di Klinik Kesihatan atau klinik GP.' },
+        { icon: '💬', title: 'Keadaan pesakit bertambah teruk?',
+          body: 'Terus ke kaunter jururawat dengan segera. Jangan menunggu di luar.' }
       ]
     },
     /* tabs */
@@ -322,9 +323,9 @@ var I18N = {
 
     /* public view — tabs 1 to 3 */
     public: {
-      seekSub:     "Enter the patient's IC number, passport number or MRN.",
-      tapTitle:    'The most seriously ill are treated first.',
-      tapBody:     'Turns are given by how serious the condition is, not by arrival time.',
+      seekSub:     "Enter the patient's IC, passport number or MRN.",
+      tapTitle:    'The most seriously ill are seen first.',
+      tapBody:     'Patients are seen in order of clinical urgency, not order of arrival.',
       stepNow:     'Zone status now',
       stepGuide:   'Guidance for families',
       beds:        'beds',
@@ -341,23 +342,24 @@ var I18N = {
       },
       guideTitle:  'What you need to know',
       posterBtn:   'View posters',
-      klinikTitle: 'Not an emergency?',
-      klinikBody:  'Please go to your nearest Klinik Kesihatan. The Emergency Department is for life-threatening conditions. Going to a Klinik Kesihatan means you are seen sooner, and critically ill patients here can be helped straight away.',
+      klinikTitle: 'Not an emergency? Not life-threatening?',
+      klinikBody:  'Go to your nearest Klinik Kesihatan or GP clinic. Sore throat, mild fever, cough and minor wounds are treated far sooner.',
+      klinikMadani:'Skim Perubatan MADANI covers treatment at participating private clinics.',
       guide: [
         { icon: '🚑', title: 'The most seriously ill are seen first',
-          body: 'Turns are not given in order of arrival. The sickest patients are treated first, so someone who arrived after you may be called before you.' },
+          body: 'Patients are seen in order of clinical urgency, not arrival. Someone who arrives after you may be seen first.' },
         { icon: '🟥', title: 'Red and Yellow Zones',
-          body: 'Patients here are treated immediately, without a queue number, because their condition is more serious.' },
+          body: 'These zones are for emergencies and life-threatening conditions. Patients are attended to immediately and are not given a queue number.' },
         { icon: '🟩', title: 'Green Zone',
-          body: 'Patients are given a queue number and wait in the waiting area until they are called into a consultation room.' },
+          body: 'For less urgent conditions. Patients are given a queue number and wait until called to a consultation room.' },
         { icon: '🛏️', title: 'Waiting for a ward bed',
-          body: 'Once a specialist decides a patient needs admission, they wait for a bed to become free on the ward. How long depends on bed availability.' },
+          body: 'Once a medical officer or specialist decides admission is required, the patient waits here until a ward bed is free.' },
         { icon: '🏠', title: 'After discharge',
-          body: 'The patient stays listed for 24 hours so family can still check their status.' },
-        { icon: '🏥', title: 'Not an emergency? Go to a Klinik Kesihatan',
-          body: 'Ordinary fever, cough, minor wounds, repeat medicines and sick certificates can be handled at your nearest Klinik Kesihatan, with a far shorter wait.' },
-        { icon: '💬', title: 'Need help now?',
-          body: 'Please go to the nursing counter. Do not wait outside if the patient becomes worse.' }
+          body: 'The patient remains listed here for 24 hours after discharge, so that family can still check their status.' },
+        { icon: '🏥', title: 'Not an emergency? Go to a Klinik Kesihatan or GP',
+          body: 'Sore throat, mild fever, runny nose, mild cough and minor wounds are treated far sooner at a Klinik Kesihatan or GP clinic.' },
+        { icon: '💬', title: 'Is the patient getting worse?',
+          body: 'Go to the nursing counter immediately. Do not wait outside.' }
       ]
     },
     tabs: {

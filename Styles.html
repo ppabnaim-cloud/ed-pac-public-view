@@ -448,90 +448,85 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
 
 
 /* ── PUBLIC VIEW ─────────────────────────────────────────── */
-/* Tabs 1-3 are read by families, often on a wall screen from a few
-   metres away, so the numbers are large and the language is plain.
-   No charts here: the analysis lives on the Administrative tab. */
+/* Tabs 1-3 are read by families: from across a waiting room on a wall
+   television, and at arm's length on a phone. Type is therefore a size up
+   from the staff view, and the whole screen is laid out as a grid rather
+   than a stack of full-width bands, which read as clutter at this size. */
 
 .seek {
   background: linear-gradient(135deg, var(--brand-dk), var(--brand));
   color: #fff; border-radius: var(--radius);
-  padding: calc(12px * var(--s)) calc(16px * var(--s));
+  padding: calc(10px * var(--s)) calc(14px * var(--s));
   display: flex; align-items: center; gap: calc(12px * var(--s));
-  box-shadow: var(--shadow); min-width: 0;
+  box-shadow: var(--shadow); min-width: 0; overflow: hidden;
 }
 .seek-copy { flex: 1; min-width: 0 }
 .seek-copy h2 {
-  font-size: calc(21px * var(--s)); font-weight: 800; line-height: 1.2;
+  font-size: calc(18px * var(--s)); font-weight: 800; line-height: 1.2;
   margin-bottom: calc(2px * var(--s));
 }
 .seek-copy p {
-  font-size: calc(14px * var(--s)); opacity: .9; font-weight: 500;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  font-size: calc(12.5px * var(--s)); opacity: .9; font-weight: 500; line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 .seek-btn {
   flex: none; border: 0; cursor: pointer; font: inherit;
   background: var(--accent); color: #fff;
-  font-size: calc(16px * var(--s)); font-weight: 800;
-  border-radius: 999px; padding: calc(13px * var(--s)) calc(24px * var(--s));
+  font-size: calc(15px * var(--s)); font-weight: 800;
+  border-radius: 999px; padding: calc(11px * var(--s)) calc(20px * var(--s));
   white-space: nowrap; min-height: calc(44px * var(--s));
   box-shadow: 0 2px 10px rgba(0,0,0,.18);
 }
 .seek-btn:hover { background: #8f4a00 }
 .seek-btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px }
 
+/* ── ZONE CARDS ──────────────────────────────────────────── */
+/* One row, left to right, in escalation order. Columns are set from the
+   zone count in App.html so the row never wraps onto a second layer. */
 .zone-grid {
-  display: grid; gap: calc(10px * var(--s)); min-height: 0; min-width: 0;
-  /* Columns are set from the zone count in App.html so no card is orphaned. */
-  grid-auto-rows: minmax(calc(104px * var(--s)), 1fr);
-  overflow: hidden;
+  display: grid; gap: calc(10px * var(--s));
+  min-height: 0; min-width: 0; overflow: hidden;
 }
-.zone-card.is-wide { grid-column: 1 / -1 }
 .zone-card {
   background: var(--surface); border: 1px solid var(--line);
-  border-left: 6px solid var(--ink-3); border-radius: var(--radius);
+  border-top: 7px solid var(--ink-3); border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: calc(12px * var(--s)) calc(14px * var(--s));
-  display: flex; flex-direction: column; justify-content: center;
-  gap: calc(7px * var(--s)); min-width: 0; min-height: 0; overflow: hidden;
-}
-.zone-card.z-rz  { border-left-color: var(--zone-rz) }
-.zone-card.z-yz  { border-left-color: var(--zone-yz) }
-.zone-card.z-gz  { border-left-color: var(--zone-gz) }
-.zone-card.z-ob  { border-left-color: var(--zone-ob) }
-.zone-card.z-ab  { border-left-color: var(--zone-ab) }
-.zone-card.z-pac { border-left-color: var(--zone-pac) }
-.zone-card.is-full { background: #fffafa }
-
-.zc-head {
+  padding: calc(10px * var(--s)) calc(11px * var(--s));
   display: flex; flex-direction: column; align-items: flex-start;
-  gap: calc(5px * var(--s)); min-width: 0;
+  justify-content: flex-start;
+  gap: calc(6px * var(--s)); min-width: 0; min-height: 0; overflow: hidden;
 }
+/* The status badge sits at the foot of the card, so a row of cards reads as
+   a row of numbers with a row of states beneath it. */
+.zone-card > .zc-badge { margin-top: auto }
+.zone-card.z-rz  { border-top-color: var(--zone-rz) }
+.zone-card.z-yz  { border-top-color: var(--zone-yz) }
+.zone-card.z-gz  { border-top-color: var(--zone-gz) }
+.zone-card.z-ob  { border-top-color: var(--zone-ob) }
+.zone-card.z-ab  { border-top-color: var(--zone-ab) }
+.zone-card.z-pac { border-top-color: var(--zone-pac) }
+.zone-card.is-full { background: #fffaf9 }
+
 .zc-name {
-  font-size: calc(19px * var(--s)); font-weight: 800; width: 100%; min-width: 0;
-  line-height: 1.2;
+  flex: none;
+  font-size: calc(15.5px * var(--s)); font-weight: 800; width: 100%;
+  line-height: 1.2; color: var(--ink);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.zc-badge {
-  flex: none; max-width: 100%; font-size: calc(12px * var(--s)); font-weight: 800;
-  border-radius: 999px; padding: calc(5px * var(--s)) calc(12px * var(--s));
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.zc-badge.is-ok     { background: #e7f6e9; color: #14691a }
-.zc-badge.is-busy   { background: #fff4e0; color: #8a4b00 }
-.zc-badge.is-full   { background: #fde8e6; color: #a32b1d }
-.zc-badge.is-crisis { background: var(--critical); color: #fff }
-
-.zc-nums { display: flex; align-items: baseline; gap: calc(6px * var(--s)); min-width: 0 }
+.zc-nums { flex: none; display: flex; align-items: baseline; gap: calc(7px * var(--s)); min-width: 0 }
 .zc-big {
-  font-size: calc(54px * var(--s)); font-weight: 800; line-height: 1;
-  letter-spacing: -.03em; font-variant-numeric: tabular-nums;
+  font-size: calc(46px * var(--s)); font-weight: 800; line-height: .95;
+  letter-spacing: -.035em; font-variant-numeric: tabular-nums; color: var(--ink);
 }
 .zc-cap {
-  font-size: calc(15px * var(--s)); color: var(--ink-2); font-weight: 700;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: calc(13px * var(--s)); color: var(--ink-2); font-weight: 700;
+  line-height: 1.2; min-width: 0;
 }
-.zc-bar { background: #eef2f5; border-radius: 999px; height: calc(7px * var(--s)); overflow: hidden }
-.zc-bar > span { display: block; height: 100%; border-radius: 999px; background: currentColor }
+.zc-bar {
+  width: 100%; background: #eef2f5; border-radius: 999px;
+  height: calc(8px * var(--s)); overflow: hidden; flex: none;
+}
+.zc-bar > span { display: block; height: 100%; border-radius: 999px }
 .zone-card.z-rz  .zc-bar > span { background: var(--zone-rz) }
 .zone-card.z-yz  .zc-bar > span { background: var(--zone-yz) }
 .zone-card.z-gz  .zc-bar > span { background: var(--zone-gz) }
@@ -539,89 +534,117 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
 .zone-card.z-ab  .zc-bar > span { background: var(--zone-ab) }
 .zone-card.z-pac .zc-bar > span { background: var(--zone-pac) }
 
+.zc-badge {
+  flex: none; max-width: 100%; font-size: calc(11px * var(--s)); font-weight: 800;
+  border-radius: 999px; padding: calc(4px * var(--s)) calc(10px * var(--s));
+  line-height: 1.25; text-align: center;
+}
+.zc-badge.is-ok     { background: #e7f6e9; color: #14691a }
+.zc-badge.is-busy   { background: #fff4e0; color: #8a4b00 }
+.zc-badge.is-full   { background: #fde8e6; color: #a32b1d }
+.zc-badge.is-crisis { background: var(--critical); color: #fff }
+
+/* Green zone: the queue and the wait, the two figures families ask about. */
 .zc-gz {
-  margin-top: calc(3px * var(--s)); padding-top: calc(6px * var(--s));
-  border-top: 1px dashed var(--line);
+  flex: none;
+  width: 100%; margin-top: auto; padding-top: calc(8px * var(--s));
+  border-top: 1px dashed var(--line); min-width: 0;
 }
-.zc-gz-row { display: flex; align-items: baseline; gap: calc(6px * var(--s)) }
-.zone-card.is-wide { flex-direction: row; align-items: center; gap: calc(16px * var(--s)) }
-.zone-card.is-wide .zc-head,
-.zone-card.is-wide .zc-nums,
-.zone-card.is-wide .zc-bar { flex: none }
-.zone-card.is-wide .zc-head { flex-direction: column; align-items: flex-start; min-width: calc(120px * var(--s)) }
-.zone-card.is-wide .zc-bar { display: none }   /* the badge already says it */
-.zone-card.is-wide .zc-gz {
-  flex: 1; min-width: 0; margin-top: 0; padding-top: 0;
-  border-top: 0; border-left: 1px dashed var(--line);
-  padding-left: calc(16px * var(--s));
-  display: flex; align-items: center; gap: calc(14px * var(--s)); flex-wrap: wrap;
-}
-.zone-card.is-wide .zc-gz-wait { margin-top: 0 }
+.zc-gz-row { display: flex; align-items: baseline; gap: calc(6px * var(--s)); min-width: 0 }
 .zc-gz-n {
-  font-size: calc(44px * var(--s)); font-weight: 800; color: var(--zone-gz);
+  font-size: calc(30px * var(--s)); font-weight: 800; color: var(--zone-gz);
   line-height: 1; font-variant-numeric: tabular-nums;
 }
-.zc-gz-l { font-size: calc(15px * var(--s)); font-weight: 700; color: var(--ink-2) }
-.zc-gz-wait { font-size: calc(15px * var(--s)); color: var(--ink-2); margin-top: calc(3px * var(--s)) }
+.zc-gz-l {
+  font-size: calc(11.5px * var(--s)); font-weight: 700; color: var(--ink-2);
+  line-height: 1.2; min-width: 0;
+}
+.zc-gz-wait {
+  font-size: calc(11.5px * var(--s)); color: var(--ink-2); margin-top: calc(3px * var(--s));
+  line-height: 1.3;
+}
 .zc-gz-wait strong { color: var(--brand-dk) }
 .zc-muted { color: var(--ink-3); font-style: italic }
 
-/* The single-screen layout shares its height, so the guidance runs a size
-   down there rather than being clipped. */
-.guide.is-compact { gap: calc(7px * var(--s)) calc(16px * var(--s)); align-content: start }
-.guide.is-compact .guide-ic { font-size: calc(19px * var(--s)) }
-.guide.is-compact .guide-row strong { font-size: calc(13px * var(--s)) }
-.guide.is-compact .guide-row p { font-size: calc(12px * var(--s)); -webkit-line-clamp: 3 }
-
-/* Non-emergency notice: the message that actually shortens the queue, so it
-   is given its own standing band rather than a line inside the guidance. */
+/* ── NON-EMERGENCY NOTICE ────────────────────────────────── */
+/* The one message on this screen that can shorten the queue. */
 .klinik {
-  display: flex; align-items: center; gap: calc(12px * var(--s));
-  background: #fff8e8; border: 1.5px solid #f0dcae; border-left: 6px solid var(--warn);
+  display: flex; align-items: flex-start; gap: calc(10px * var(--s));
+  background: #fff8e8; border: 1.5px solid #f0dcae; border-left: 7px solid var(--warn);
   border-radius: var(--radius); box-shadow: var(--shadow);
-  padding: calc(11px * var(--s)) calc(14px * var(--s));
+  padding: calc(12px * var(--s)) calc(14px * var(--s));
   min-width: 0; overflow: hidden;
 }
-.klinik-ic { font-size: calc(26px * var(--s)); flex: none; line-height: 1 }
+.klinik-ic { font-size: calc(22px * var(--s)); flex: none; line-height: 1.1 }
+.klinik > div { min-width: 0 }
 .klinik strong {
-  display: block; font-size: calc(16px * var(--s)); font-weight: 800; color: #7a5200;
-  margin-bottom: calc(2px * var(--s));
+  display: block; font-size: calc(14.5px * var(--s)); font-weight: 800; color: #7a5200;
+  margin-bottom: calc(3px * var(--s)); line-height: 1.25;
 }
 .klinik p {
-  font-size: calc(13px * var(--s)); color: var(--ink-2); line-height: 1.4;
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  font-size: calc(12px * var(--s)); color: var(--ink-2); line-height: 1.35;
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+}
+.klinik-madani {
+  margin-top: calc(4px * var(--s)); font-weight: 700; color: #7a5200;
+  -webkit-line-clamp: 2;
 }
 
-/* Family guidance */
+/* ── FAMILY GUIDANCE ─────────────────────────────────────── */
+/* Capped at three columns. Left to its own devices on a wide screen the grid
+   stretched into a single band of seven narrow strips, which is unreadable. */
 .guide {
   height: 100%; overflow: hidden;
   padding: calc(4px * var(--s)) calc(14px * var(--s)) calc(10px * var(--s));
-  display: grid; gap: calc(10px * var(--s)) calc(20px * var(--s));
-  /* Spread down the panel: this screen is nothing but guidance, so the rows
-     should use the height rather than huddle at the top. */
+  display: grid; gap: calc(10px * var(--s)) calc(22px * var(--s));
   align-content: space-evenly;
-  grid-template-columns: repeat(auto-fit, minmax(calc(300px * var(--s)), 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+@media (min-width: 1100px) { .guide { grid-template-columns: repeat(3, minmax(0, 1fr)) } }
+@media (max-width: 700px)  { .guide { grid-template-columns: 1fr } }
+
 .guide-row { display: flex; gap: calc(11px * var(--s)); min-width: 0; align-items: flex-start }
-.guide-ic { font-size: calc(24px * var(--s)); flex: none; line-height: 1.15 }
+.guide-ic { font-size: calc(23px * var(--s)); flex: none; line-height: 1.15 }
+.guide-row > div { min-width: 0 }
 .guide-row strong {
-  font-size: calc(15px * var(--s)); font-weight: 800; display: block;
+  font-size: calc(14.5px * var(--s)); font-weight: 800; display: block;
   margin-bottom: calc(2px * var(--s)); line-height: 1.25;
 }
 .guide-row p {
-  font-size: calc(13.5px * var(--s)); color: var(--ink-2); line-height: 1.45;
-  /* Four lines fits the longest entry whole; nothing here should trail off. */
+  font-size: calc(13px * var(--s)); color: var(--ink-2); line-height: 1.45;
   display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
 }
+.guide.is-compact {
+  gap: calc(6px * var(--s)) calc(16px * var(--s)); align-content: start;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.guide.is-compact .guide-ic { font-size: calc(17px * var(--s)) }
+.guide.is-compact .guide-row { gap: calc(8px * var(--s)) }
+.guide.is-compact .guide-row strong { font-size: calc(12.5px * var(--s)); line-height: 1.2 }
+.guide.is-compact .guide-row p { font-size: calc(11.5px * var(--s)); -webkit-line-clamp: 3; line-height: 1.35 }
+@media (min-width: 1100px) { .guide.is-compact { grid-template-columns: repeat(3, minmax(0, 1fr)) } }
+/* On a wall display four columns puts the seven entries on two rows instead
+   of three, which buys the height the larger type needs. At this width each
+   column is still some 450px, so it is not the narrow strip a fully fluid
+   grid would produce. */
+@media (min-width: 1500px) { .guide.is-compact { grid-template-columns: repeat(4, minmax(0, 1fr)) } }
 
-@media (max-width: 700px) {
-  .zone-card.is-wide { flex-direction: column; align-items: stretch }
-  .zone-card.is-wide .zc-gz {
-    border-left: 0; border-top: 1px dashed var(--line);
-    padding-left: 0; padding-top: calc(7px * var(--s)); margin-top: calc(3px * var(--s));
-  }
-  .zc-big { font-size: calc(34px * var(--s)) }
-  .guide { grid-template-columns: 1fr }
+/* Phones: the cards stack in the same order, top to bottom. */
+@media (max-width: 620px) {
+  .content { overflow-y: auto; -webkit-overflow-scrolling: touch }
+  /* One narrow column, and the area scrolls, so nothing needs clamping. */
+  .guide.is-compact .guide-row p { -webkit-line-clamp: 6 }
+  .klinik p, .seek-copy p { -webkit-line-clamp: 6 }
+  .step.is-active { grid-template-columns: 1fr !important; grid-template-areas: none !important }
+  .step.is-active > * { grid-area: auto !important }
+  .zone-grid { grid-template-columns: 1fr !important; grid-auto-rows: max-content }
+  .zone-card { flex-direction: row; align-items: center; flex-wrap: wrap }
+  .zc-name { width: auto; flex: 1 }
+  .zc-bar { order: 10 }
+  .zc-gz { margin-top: 0 }
+  .zc-big { font-size: calc(40px * var(--s)) }
+  .seek { flex-direction: column; align-items: stretch; text-align: center }
+  .seek-btn { width: 100% }
 }
 
 /* ── STATES ──────────────────────────────────────────────── */
