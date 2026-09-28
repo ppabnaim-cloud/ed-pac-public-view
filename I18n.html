@@ -254,7 +254,9 @@ var I18N = {
       enter:      'Masuk',
       badCode:    function (n) { return 'Kod tidak sah. Tinggal ' + n + ' cubaan.'; },
       rateLimited:'Terlalu banyak cubaan. Sila tunggu 15 minit.',
-      notConfig:  'Kod akses belum ditetapkan. Sila hubungi pentadbir sistem untuk menetapkan ADMIN_PASSCODE.',
+      notConfig:  'Kod akses belum ditetapkan. Dalam editor Apps Script: Project Settings → Script Properties → tambah ADMIN_PASSCODE, kemudian tekan Save script properties.',
+      lockedBody: 'Bahagian ini untuk kegunaan staf sahaja.',
+      openGate:   'Masukkan kod akses',
       unauth:     'Sesi tamat. Sila masukkan kod akses semula.'
     },
 
@@ -511,7 +513,9 @@ var I18N = {
       passcode: 'Access code', enter: 'Enter',
       badCode: function (n) { return 'Incorrect code. ' + n + ' attempts remaining.'; },
       rateLimited: 'Too many attempts. Please wait 15 minutes.',
-      notConfig: 'No access code has been set. Ask the system administrator to set ADMIN_PASSCODE.',
+      notConfig: 'No access code has been set. In the Apps Script editor: Project Settings → Script Properties → add ADMIN_PASSCODE, then press Save script properties.',
+      lockedBody: 'This section is for staff use only.',
+      openGate:  'Enter access code',
       unauth: 'Session expired. Please enter the access code again.'
     },
 

@@ -61,14 +61,35 @@ const { findChromium } = require('./chromium');
     if (!pub.zoneCards) fails.push(`${vp.w}: public tab shows no zone cards`);
     if (!pub.seek) fails.push(`${vp.w}: public tab has no search prompt`);
 
-    // Table view from a chart on the Administrative tab
+    // Administrative tab: dismissing the access-code dialog must leave a way
+    // back in, not a spinner that turns for ever.
     await p.evaluate(() => document.querySelectorAll('.tab')[3].click());
-    await p.waitForTimeout(300);
-    if (await p.evaluate(() => document.getElementById('ovGate').classList.contains('is-open'))) {
-      await p.fill('#gateInput', 'test-code');
-      await p.click('#gateGo');
-      await p.waitForTimeout(500);
-    }
+    await p.waitForTimeout(350);
+    const gateOpen = await p.evaluate(() =>
+      document.getElementById('ovGate').classList.contains('is-open'));
+    if (!gateOpen) fails.push(`${vp.w}: the access-code dialog did not open`);
+    await p.keyboard.press('Escape');
+    await p.waitForTimeout(250);
+    const locked = await p.evaluate(() => ({
+      spinner: !!document.querySelector('#content .spin'),
+      button: !!document.getElementById('lockedBtn'),
+      text: (document.getElementById('content').textContent || '').trim().slice(0, 60)
+    }));
+    if (locked.spinner) fails.push(`${vp.w}: admin tab left spinning after the dialog was dismissed`);
+    if (!locked.button) fails.push(`${vp.w}: no way to reopen the access-code dialog`);
+
+    // Reopening it from that button must work, and the code must let us in.
+    await p.click('#lockedBtn');
+    await p.waitForTimeout(250);
+    await p.fill('#gateInput', 'test-code');
+    await p.click('#gateGo');
+    await p.waitForTimeout(600);
+    const entered = await p.evaluate(() => ({
+      gateShut: !document.getElementById('ovGate').classList.contains('is-open'),
+      charts: document.querySelectorAll('.panel-bd svg').length
+    }));
+    if (!entered.gateShut) fails.push(`${vp.w}: the dialog stayed open after a correct code`);
+    if (!entered.charts) fails.push(`${vp.w}: the admin tab rendered no charts after unlocking`);
     const tblBtn = await p.evaluate(() => {
       const b = document.querySelector('.panel-tbl');
       if (!b) return false;

@@ -26,7 +26,7 @@
  * The "ED/PAC Register" menu can generate a fresh register and a demonstration
  * scenario. Those items CLEAR Sheet1 — run them on a copy, never on live data.
  *
- * Built 2026-09-28 01:03 UTC
+ * Built 2026-09-28 10:57 UTC
  * ============================================================================
  */
 
@@ -1408,6 +1408,101 @@ function getImages() {
     }
   }
   return out;
+}
+
+// ── DIAGNOSTICS ────────────────────────────────────────────
+/**
+ * Run this from the Apps Script editor (Run > checkSetup) and read the
+ * execution log. It answers, in order, the questions that actually go wrong:
+ * is the access code saved, can the register be read, does it parse, and does
+ * each tab build.
+ *
+ * Script Properties are only stored once "Save script properties" is pressed;
+ * typing into the boxes and navigating away silently discards them, which
+ * looks identical to having set the value.
+ */
+function checkSetup() {
+  var out = [];
+  function say(line) { out.push(line); Logger.log(line); }
+
+  say('ED/PAC dashboard — setup check');
+  say('================================');
+
+  // 1. Access code
+  var code = prop_('ADMIN_PASSCODE');
+  if (code === null || code === '') {
+    say('[FAIL] ADMIN_PASSCODE is NOT set.');
+    say('       Project Settings > Script properties > Edit script properties');
+    say('       > add ADMIN_PASSCODE > Save script properties.');
+    say('       If you typed it in and did not press Save, it was not kept.');
+  } else {
+    say('[ ok ] ADMIN_PASSCODE is set (' + String(code).length + ' characters).');
+    if (/^\s|\s$/.test(String(code))) {
+      say('[WARN] It begins or ends with a space, which must be typed exactly.');
+    }
+  }
+
+  var emails = prop_('ADMIN_EMAILS');
+  say(emails ? '[ ok ] ADMIN_EMAILS is set: ' + emails
+             : '[note] ADMIN_EMAILS not set (optional; passcode is used).');
+
+  // 2. The register
+  var rows;
+  try {
+    rows = readRegister_();
+    say('[ ok ] Register readable — ' + rows.length + ' data rows.');
+  } catch (err) {
+    say('[FAIL] Cannot read the register: ' + (err && err.message || err));
+    say('       The script must be bound to the spreadsheet, or CSV_URL set.');
+    return out.join('\n');
+  }
+  if (!rows.length) {
+    say('[FAIL] No data rows. Data must start on row ' + FIRST_DATA_ROW +
+        ' with the header on row ' + HEADER_ROW + '.');
+    return out.join('\n');
+  }
+
+  // 3. Parsing
+  var recs, refInfo;
+  try {
+    recs = buildRecords_();
+    refInfo = resolveRefTime_(recs);
+    say('[ ok ] Parsed ' + recs.length + ' records.');
+    say('       Reference time: ' +
+        Utilities.formatDate(refInfo.ref, Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm') +
+        (refInfo.isSnapshot ? '  (historical snapshot — nothing in the last 24 h)' : '  (live)'));
+  } catch (err) {
+    say('[FAIL] Could not parse the register: ' + (err && err.message || err));
+    return out.join('\n');
+  }
+
+  var badBed = recs.filter(function (r) { return r.bedRaw && !r.bed.valid; });
+  say(badBed.length
+    ? '[WARN] ' + badBed.length + ' unrecognised bed codes, e.g. "' + badBed[0].bedRaw + '".'
+    : '[ ok ] All bed codes recognised.');
+
+  var noTriage = recs.filter(function (r) { return !r.triage; }).length;
+  if (noTriage) {
+    say('[WARN] ' + noTriage + ' rows have no readable triage time. Format the ' +
+        'column as date-time (dd/mm/yyyy hh:mm).');
+  }
+
+  // 4. Each tab
+  ['wcc', 'bu', 'pac', 'admin'].forEach(function (scope) {
+    try {
+      var p = buildScope_(scope, recs, refInfo);
+      say('[ ok ] ' + scope + ': ' + p.kpi.census + ' present, ' +
+          p.kpi.fundedOccupied + '/' + p.kpi.capacity + ' normal beds, ' +
+          p.kpi.crisisBeds + ' crisis beds, ' + p.kpi.waiting + ' waiting.');
+    } catch (err) {
+      say('[FAIL] ' + scope + ' failed to build: ' + (err && err.message || err));
+    }
+  });
+
+  say('================================');
+  say(code ? 'Open the Administrative tab and enter the access code above.'
+           : 'Set ADMIN_PASSCODE, then reload the web app.');
+  return out.join('\n');
 }
 
 // ── MAINTENANCE ────────────────────────────────────────────
@@ -3163,7 +3258,9 @@ var I18N = {
       enter:      'Masuk',
       badCode:    function (n) { return 'Kod tidak sah. Tinggal ' + n + ' cubaan.'; },
       rateLimited:'Terlalu banyak cubaan. Sila tunggu 15 minit.',
-      notConfig:  'Kod akses belum ditetapkan. Sila hubungi pentadbir sistem untuk menetapkan ADMIN_PASSCODE.',
+      notConfig:  'Kod akses belum ditetapkan. Dalam editor Apps Script: Project Settings → Script Properties → tambah ADMIN_PASSCODE, kemudian tekan Save script properties.',
+      lockedBody: 'Bahagian ini untuk kegunaan staf sahaja.',
+      openGate:   'Masukkan kod akses',
       unauth:     'Sesi tamat. Sila masukkan kod akses semula.'
     },
 
@@ -3420,7 +3517,9 @@ var I18N = {
       passcode: 'Access code', enter: 'Enter',
       badCode: function (n) { return 'Incorrect code. ' + n + ' attempts remaining.'; },
       rateLimited: 'Too many attempts. Please wait 15 minutes.',
-      notConfig: 'No access code has been set. Ask the system administrator to set ADMIN_PASSCODE.',
+      notConfig: 'No access code has been set. In the Apps Script editor: Project Settings → Script Properties → add ADMIN_PASSCODE, then press Save script properties.',
+      lockedBody: 'This section is for staff use only.',
+      openGate:  'Enter access code',
       unauth: 'Session expired. Please enter the access code again.'
     },
 
@@ -4473,6 +4572,8 @@ var Charts = (function () {
     data: {},          // scope -> payload
     stepIndex: {},     // scope -> last viewed step
     adminToken: null,
+    gateShown: false,
+    gateNote: '',
     illustrations: null,
     illustrationsLoading: false,
     busy: {},
@@ -5474,10 +5575,34 @@ var Charts = (function () {
     if (r) r.onclick = function () { loadTab(S.tab, true); };
   }
 
+  /** The administrative tab before an access code has been accepted. */
+  function showLocked() {
+    var c = $('content');
+    c.innerHTML =
+      '<div class="state" style="height:100%">' +
+        '<span class="state-icon">🔒</span>' +
+        '<span style="font-size:calc(15px * var(--s));font-weight:800;color:var(--ink)">' +
+          esc(t('admin.gateTitle')) + '</span>' +
+        '<span id="lockedMsg">' + esc(S.gateNote || t('admin.lockedBody')) + '</span>' +
+        '<button class="btn-go" id="lockedBtn" type="button" style="margin-top:calc(6px * var(--s))">' +
+          esc(t('admin.openGate')) + '</button>' +
+      '</div>';
+    $('pager').style.display = 'none';
+    $('lockedBtn').onclick = openGate;
+  }
+
   function renderTab() {
     var d = S.data[S.tab];
     renderStamp(d);
-    if (S.tab === 'admin' && !S.adminToken) { openGate(); }
+
+    // Locked: show a way back in rather than a spinner. Nothing has been
+    // requested, so a spinner would turn forever - which is exactly what it
+    // did whenever the access-code dialog was dismissed.
+    if (S.tab === 'admin' && !S.adminToken) {
+      showLocked();
+      if (!S.gateShown) { S.gateShown = true; openGate(); }
+      return;
+    }
     if (!d) { showState('load', t('loading')); return; }
     if (d.error) {
       showState('err', d.error === 'UNAUTHORISED' ? t('admin.unauth') : t('errBody'));
@@ -5601,6 +5726,7 @@ var Charts = (function () {
 
   function gotoTab(tab) {
     if (S.tab === tab) return;
+    if (tab === 'admin' && !S.adminToken) S.gateShown = false;
     S.stepIndex[S.tab] = S.step;
     S.tab = tab;
     S.step = S.stepIndex[tab] || 0;
@@ -5613,6 +5739,7 @@ var Charts = (function () {
      ══════════════════════════════════════════════════════════ */
   function openOv(id) {
     $(id).classList.add('is-open');
+    document.removeEventListener('keydown', escClose);
     document.addEventListener('keydown', escClose);
   }
   function closeOv(id) {
@@ -5711,6 +5838,11 @@ var Charts = (function () {
       if (res.reason === 'NOT_CONFIGURED') msg.textContent = t('admin.notConfig');
       else if (res.reason === 'RATE_LIMITED') msg.textContent = t('admin.rateLimited');
       else msg.textContent = tf('admin.badCode', res.remaining === undefined ? 0 : res.remaining);
+      // Carry the reason onto the locked screen, so dismissing the dialog does
+      // not lose the explanation.
+      S.gateNote = msg.textContent;
+      var lm = $('lockedMsg');
+      if (lm) lm.textContent = S.gateNote;
     });
   }
 

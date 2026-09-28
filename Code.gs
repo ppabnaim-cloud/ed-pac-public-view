@@ -1380,6 +1380,101 @@ function getImages() {
   return out;
 }
 
+// ── DIAGNOSTICS ────────────────────────────────────────────
+/**
+ * Run this from the Apps Script editor (Run > checkSetup) and read the
+ * execution log. It answers, in order, the questions that actually go wrong:
+ * is the access code saved, can the register be read, does it parse, and does
+ * each tab build.
+ *
+ * Script Properties are only stored once "Save script properties" is pressed;
+ * typing into the boxes and navigating away silently discards them, which
+ * looks identical to having set the value.
+ */
+function checkSetup() {
+  var out = [];
+  function say(line) { out.push(line); Logger.log(line); }
+
+  say('ED/PAC dashboard — setup check');
+  say('================================');
+
+  // 1. Access code
+  var code = prop_('ADMIN_PASSCODE');
+  if (code === null || code === '') {
+    say('[FAIL] ADMIN_PASSCODE is NOT set.');
+    say('       Project Settings > Script properties > Edit script properties');
+    say('       > add ADMIN_PASSCODE > Save script properties.');
+    say('       If you typed it in and did not press Save, it was not kept.');
+  } else {
+    say('[ ok ] ADMIN_PASSCODE is set (' + String(code).length + ' characters).');
+    if (/^\s|\s$/.test(String(code))) {
+      say('[WARN] It begins or ends with a space, which must be typed exactly.');
+    }
+  }
+
+  var emails = prop_('ADMIN_EMAILS');
+  say(emails ? '[ ok ] ADMIN_EMAILS is set: ' + emails
+             : '[note] ADMIN_EMAILS not set (optional; passcode is used).');
+
+  // 2. The register
+  var rows;
+  try {
+    rows = readRegister_();
+    say('[ ok ] Register readable — ' + rows.length + ' data rows.');
+  } catch (err) {
+    say('[FAIL] Cannot read the register: ' + (err && err.message || err));
+    say('       The script must be bound to the spreadsheet, or CSV_URL set.');
+    return out.join('\n');
+  }
+  if (!rows.length) {
+    say('[FAIL] No data rows. Data must start on row ' + FIRST_DATA_ROW +
+        ' with the header on row ' + HEADER_ROW + '.');
+    return out.join('\n');
+  }
+
+  // 3. Parsing
+  var recs, refInfo;
+  try {
+    recs = buildRecords_();
+    refInfo = resolveRefTime_(recs);
+    say('[ ok ] Parsed ' + recs.length + ' records.');
+    say('       Reference time: ' +
+        Utilities.formatDate(refInfo.ref, Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm') +
+        (refInfo.isSnapshot ? '  (historical snapshot — nothing in the last 24 h)' : '  (live)'));
+  } catch (err) {
+    say('[FAIL] Could not parse the register: ' + (err && err.message || err));
+    return out.join('\n');
+  }
+
+  var badBed = recs.filter(function (r) { return r.bedRaw && !r.bed.valid; });
+  say(badBed.length
+    ? '[WARN] ' + badBed.length + ' unrecognised bed codes, e.g. "' + badBed[0].bedRaw + '".'
+    : '[ ok ] All bed codes recognised.');
+
+  var noTriage = recs.filter(function (r) { return !r.triage; }).length;
+  if (noTriage) {
+    say('[WARN] ' + noTriage + ' rows have no readable triage time. Format the ' +
+        'column as date-time (dd/mm/yyyy hh:mm).');
+  }
+
+  // 4. Each tab
+  ['wcc', 'bu', 'pac', 'admin'].forEach(function (scope) {
+    try {
+      var p = buildScope_(scope, recs, refInfo);
+      say('[ ok ] ' + scope + ': ' + p.kpi.census + ' present, ' +
+          p.kpi.fundedOccupied + '/' + p.kpi.capacity + ' normal beds, ' +
+          p.kpi.crisisBeds + ' crisis beds, ' + p.kpi.waiting + ' waiting.');
+    } catch (err) {
+      say('[FAIL] ' + scope + ' failed to build: ' + (err && err.message || err));
+    }
+  });
+
+  say('================================');
+  say(code ? 'Open the Administrative tab and enter the access code above.'
+           : 'Set ADMIN_PASSCODE, then reload the web app.');
+  return out.join('\n');
+}
+
 // ── MAINTENANCE ────────────────────────────────────────────
 function clearCaches() {
   var c = CacheService.getScriptCache();

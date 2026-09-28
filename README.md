@@ -97,7 +97,7 @@ All optional unless stated. **Project Settings → Script Properties.**
 
 | Property | Effect |
 |----------|--------|
-| `ADMIN_PASSCODE` | **Required to open the Administrative tab.** Without it the tab reports that no code is set. |
+| `ADMIN_PASSCODE` | **Required to open the Administrative tab.** Without it the tab reports that no code is set. Script Properties are only stored once **Save script properties** is pressed — typing into the boxes and navigating away discards them silently. |
 | `ADMIN_EMAILS` | Comma-separated allow-list. Stronger than the passcode, but only works when the deployment executes as the accessing user. |
 | `CSV_URL` | Published-CSV fallback, used when the script is not bound to a spreadsheet. |
 | `UNIT_COST_PER_ATTENDANCE` | Enables the modelled-cost tile. Left unset, the tile says so rather than inventing a figure. |
@@ -303,6 +303,14 @@ These are reported honestly in the app rather than filled with proxies.
    reproduce them; if they exist in live data they need correcting at source.
 
 ---
+
+## Checking the setup
+
+Run **`checkSetup()`** from the Apps Script editor and read the execution log.
+It reports, in order: whether `ADMIN_PASSCODE` is actually saved, whether the
+register can be read and parsed, whether every bed code is recognised, and
+whether each tab builds — with the figures it produced. It is the quickest way
+to tell a configuration problem from a data problem.
 
 ## Maintenance
 

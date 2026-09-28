@@ -19,6 +19,8 @@
     data: {},          // scope -> payload
     stepIndex: {},     // scope -> last viewed step
     adminToken: null,
+    gateShown: false,
+    gateNote: '',
     illustrations: null,
     illustrationsLoading: false,
     busy: {},
@@ -1020,10 +1022,34 @@
     if (r) r.onclick = function () { loadTab(S.tab, true); };
   }
 
+  /** The administrative tab before an access code has been accepted. */
+  function showLocked() {
+    var c = $('content');
+    c.innerHTML =
+      '<div class="state" style="height:100%">' +
+        '<span class="state-icon">🔒</span>' +
+        '<span style="font-size:calc(15px * var(--s));font-weight:800;color:var(--ink)">' +
+          esc(t('admin.gateTitle')) + '</span>' +
+        '<span id="lockedMsg">' + esc(S.gateNote || t('admin.lockedBody')) + '</span>' +
+        '<button class="btn-go" id="lockedBtn" type="button" style="margin-top:calc(6px * var(--s))">' +
+          esc(t('admin.openGate')) + '</button>' +
+      '</div>';
+    $('pager').style.display = 'none';
+    $('lockedBtn').onclick = openGate;
+  }
+
   function renderTab() {
     var d = S.data[S.tab];
     renderStamp(d);
-    if (S.tab === 'admin' && !S.adminToken) { openGate(); }
+
+    // Locked: show a way back in rather than a spinner. Nothing has been
+    // requested, so a spinner would turn forever - which is exactly what it
+    // did whenever the access-code dialog was dismissed.
+    if (S.tab === 'admin' && !S.adminToken) {
+      showLocked();
+      if (!S.gateShown) { S.gateShown = true; openGate(); }
+      return;
+    }
     if (!d) { showState('load', t('loading')); return; }
     if (d.error) {
       showState('err', d.error === 'UNAUTHORISED' ? t('admin.unauth') : t('errBody'));
@@ -1147,6 +1173,7 @@
 
   function gotoTab(tab) {
     if (S.tab === tab) return;
+    if (tab === 'admin' && !S.adminToken) S.gateShown = false;
     S.stepIndex[S.tab] = S.step;
     S.tab = tab;
     S.step = S.stepIndex[tab] || 0;
@@ -1159,6 +1186,7 @@
      ══════════════════════════════════════════════════════════ */
   function openOv(id) {
     $(id).classList.add('is-open');
+    document.removeEventListener('keydown', escClose);
     document.addEventListener('keydown', escClose);
   }
   function closeOv(id) {
@@ -1257,6 +1285,11 @@
       if (res.reason === 'NOT_CONFIGURED') msg.textContent = t('admin.notConfig');
       else if (res.reason === 'RATE_LIMITED') msg.textContent = t('admin.rateLimited');
       else msg.textContent = tf('admin.badCode', res.remaining === undefined ? 0 : res.remaining);
+      // Carry the reason onto the locked screen, so dismissing the dialog does
+      // not lose the explanation.
+      S.gateNote = msg.textContent;
+      var lm = $('lockedMsg');
+      if (lm) lm.textContent = S.gateNote;
     });
   }
 
