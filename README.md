@@ -128,19 +128,26 @@ Malay; every visualisation sits behind the passcode.
 
 - **A search prompt**, front and centre, since finding a relative is why most
   people open the page at all.
-- **One card per zone**: how many patients are being cared for, against that
-  zone's normal bed count, with a fill bar and a state badge.
-- **A crisis alert** whenever escalation beds are open, naming how many — the
+- **One card per zone**, in fixed reading order — Red, Yellow, Observation Bay,
+  Asthma Bay, then Green Zone: how many patients are being cared for, against
+  that zone's normal bed count, with a fill bar and a state badge.
+- **A crisis alert** whenever crisis beds are activated, naming how many — the
   alert notification the specification asks for.
 - **The green zone across the full width**: how many are waiting, and the
   average time to be called, averaged over the last ten patients called in.
-- **Patients by stage of care** — under treatment, referred, waiting for a ward
-  bed, admitted, waiting to go home.
-- **Guidance in plain Malay**: why the sickest are seen first, what each zone
-  means, what happens while waiting for a ward bed.
+- **A standing notice** directing non-emergency cases to a Klinik Kesihatan.
+- **Guidance in plain Malay** on every public tab: why the sickest are seen
+  first, what each zone means, what happens while waiting for a ward bed, and
+  what belongs at a Klinik Kesihatan instead.
 
-The strip above the tabs carries the one thing the cards cannot — that turns are
-not given in order of arrival — and opens the full guidance when tapped.
+The strip above the tabs carries one standing message — that turns are given by
+how serious the condition is, not by arrival time.
+
+Deliberately **not** on the public tabs: patient counts by stage of care, and
+the running commentary on departmental workload and forecast arrivals that an
+earlier draft showed. Those are operational measures; they belong to the staff
+view. Public typography also runs a size up throughout, because these screens
+are read from several metres away in a waiting area.
 
 ### What the Administrative tab shows
 

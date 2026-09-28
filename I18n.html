@@ -34,24 +34,25 @@ var I18N = {
     public: {
       seekSub:     'Masukkan nombor kad pengenalan, nombor passport atau nombor MRN pesakit.',
       tapTitle:    'Pesakit paling kritikal dirawat dahulu.',
-      tapBody:     'Giliran bukan mengikut masa sampai. Ketik di sini untuk panduan lengkap.',
+      tapBody:     'Giliran bukan mengikut masa sampai, tetapi mengikut tahap kecemasan.',
       stepNow:     'Status zon sekarang',
       stepGuide:   'Panduan untuk keluarga',
       beds:        'katil',
       rooms:       'bilik doktor',
-      crisisBeds:  'katil tambahan',
+      crisisBeds:  'katil krisis diaktifkan',
       waitingNow:  'sedang menunggu',
       avgWait:     'Purata masa dipanggil:',
       avgWaitNone: 'Purata masa belum dapat dikira',
-      state: { ok: 'Ada ruang', busy: 'Sibuk', full: 'Penuh', crisis: 'Katil tambahan dibuka' },
+      state: { ok: 'Ada ruang', busy: 'Sibuk', full: 'Penuh', crisis: 'Krisis diaktifkan' },
       crisisTitle: 'Jabatan sangat sibuk.',
       crisisBody:  function (n) {
-        return 'Kami telah membuka ' + n + ' katil tambahan supaya semua pesakit dapat dirawat. ' +
+        return 'Kami telah mengaktifkan ' + n + ' katil krisis supaya semua pesakit dapat dirawat. ' +
                'Kami memohon maaf atas sebarang kelewatan.';
       },
-      stageTitle:  'Pesakit mengikut peringkat rawatan',
-      stageSub:    'Jumlah pesakit di jabatan ini sekarang',
       guideTitle:  'Perkara yang perlu anda tahu',
+      posterBtn:   'Lihat poster',
+      klinikTitle: 'Kes bukan kecemasan?',
+      klinikBody:  'Sila ke Klinik Kesihatan berdekatan. Jabatan Kecemasan adalah untuk kes yang mengancam nyawa. Ke Klinik Kesihatan bermakna anda dirawat lebih cepat, dan pesakit kritikal di sini dapat dibantu segera.',
       guide: [
         { icon: '🚑', title: 'Pesakit paling kritikal didahulukan',
           body: 'Giliran bukan mengikut masa sampai. Pesakit yang paling tenat akan dirawat dahulu. Ini bermakna orang yang datang kemudian mungkin dipanggil lebih awal.' },
@@ -63,6 +64,8 @@ var I18N = {
           body: 'Selepas doktor pakar memutuskan pesakit perlu masuk wad, pesakit menunggu katil kosong di wad. Masa menunggu bergantung pada katil yang ada.' },
         { icon: '🏠', title: 'Selepas dibenarkan pulang',
           body: 'Nama pesakit kekal dalam sistem selama 24 jam supaya keluarga masih boleh menyemak status.' },
+        { icon: '🏥', title: 'Kes bukan kecemasan? Ke Klinik Kesihatan',
+          body: 'Demam biasa, batuk, luka kecil, ubat berulang dan sijil sakit boleh dirawat di Klinik Kesihatan berdekatan, dengan masa menunggu yang jauh lebih singkat.' },
         { icon: '💬', title: 'Perlu bantuan segera?',
           body: 'Sila ke kaunter jururawat. Jangan tunggu di luar jika keadaan pesakit bertambah teruk.' }
       ]
@@ -321,24 +324,25 @@ var I18N = {
     public: {
       seekSub:     "Enter the patient's IC number, passport number or MRN.",
       tapTitle:    'The most seriously ill are treated first.',
-      tapBody:     'Turns are not given in order of arrival. Tap here for the full guidance.',
+      tapBody:     'Turns are given by how serious the condition is, not by arrival time.',
       stepNow:     'Zone status now',
       stepGuide:   'Guidance for families',
       beds:        'beds',
       rooms:       'consultation rooms',
-      crisisBeds:  'extra beds',
+      crisisBeds:  'bed crisis activated',
       waitingNow:  'waiting now',
       avgWait:     'Average time to be called:',
       avgWaitNone: 'Average not yet available',
-      state: { ok: 'Space available', busy: 'Busy', full: 'Full', crisis: 'Extra beds open' },
+      state: { ok: 'Space available', busy: 'Busy', full: 'Full', crisis: 'Crisis activated' },
       crisisTitle: 'The department is very busy.',
       crisisBody:  function (n) {
-        return 'We have opened ' + n + ' extra beds so that everyone can be treated. ' +
+        return 'We have activated ' + n + ' crisis beds so that everyone can be treated. ' +
                'We apologise for any delay.';
       },
-      stageTitle:  'Patients by stage of care',
-      stageSub:    'Everyone in this department right now',
       guideTitle:  'What you need to know',
+      posterBtn:   'View posters',
+      klinikTitle: 'Not an emergency?',
+      klinikBody:  'Please go to your nearest Klinik Kesihatan. The Emergency Department is for life-threatening conditions. Going to a Klinik Kesihatan means you are seen sooner, and critically ill patients here can be helped straight away.',
       guide: [
         { icon: '🚑', title: 'The most seriously ill are seen first',
           body: 'Turns are not given in order of arrival. The sickest patients are treated first, so someone who arrived after you may be called before you.' },
@@ -350,6 +354,8 @@ var I18N = {
           body: 'Once a specialist decides a patient needs admission, they wait for a bed to become free on the ward. How long depends on bed availability.' },
         { icon: '🏠', title: 'After discharge',
           body: 'The patient stays listed for 24 hours so family can still check their status.' },
+        { icon: '🏥', title: 'Not an emergency? Go to a Klinik Kesihatan',
+          body: 'Ordinary fever, cough, minor wounds, repeat medicines and sick certificates can be handled at your nearest Klinik Kesihatan, with a far shorter wait.' },
         { icon: '💬', title: 'Need help now?',
           body: 'Please go to the nursing counter. Do not wait outside if the patient becomes worse.' }
       ]

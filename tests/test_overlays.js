@@ -26,21 +26,29 @@ const { findChromium } = require('./chromium');
     if (r.bodyScroll) fails.push(`${vp.w}: page scrolls with search open`);
     await p.click('#ovSearch .ov-x'); await p.waitForTimeout(150);
 
-    // Help overlay
-    await p.click('#narr'); await p.waitForTimeout(350);
-    r = await p.evaluate(() => {
-      const c = document.querySelector('#ovHelp .ov-card').getBoundingClientRect();
-      return { open: document.getElementById('ovHelp').classList.contains('is-open'),
-               fits: c.bottom <= window.innerHeight + 1,
-               narrative: (document.getElementById('helpNarrative').textContent || '').length,
-               bodyScroll: document.body.scrollHeight > document.documentElement.clientHeight + 1 };
+    // The strip is a standing message now, not a way into an overlay, and it
+    // must not carry the operational commentary it used to.
+    const strip = await p.evaluate(() => {
+      const n = document.getElementById('narr');
+      return {
+        isButton: n.tagName === 'BUTTON',
+        text: (document.getElementById('narrText').textContent || '').trim(),
+        overlayOpen: document.getElementById('ovHelp').classList.contains('is-open')
+      };
     });
-    if (!r.open) fails.push(`${vp.w}: help overlay did not open`);
-    if (!r.fits) fails.push(`${vp.w}: help card does not fit`);
-    if (r.narrative < 40) fails.push(`${vp.w}: help narrative empty (${r.narrative} chars)`);
-    if (r.bodyScroll) fails.push(`${vp.w}: page scrolls with help open`);
+    if (strip.isButton) fails.push(`${vp.w}: the narrative strip is still a button`);
+    if (strip.text.length < 20) fails.push(`${vp.w}: narrative strip is empty`);
+    if (/\d+\s*(patients|pesakit)/i.test(strip.text)) {
+      fails.push(`${vp.w}: strip still carries operational figures: "${strip.text}"`);
+    }
     if (vp.w === 768) await p.screenshot({ path: '/home/user/ed-pac-public-view/tests/shots/ov-help.png' });
-    await p.click('#ovHelp .ov-x'); await p.waitForTimeout(150);
+
+    // The non-emergency notice must be on the first screen of every public tab.
+    const klinik = await p.evaluate(() =>
+      (document.querySelector('.klinik') || {}).textContent || '');
+    if (!/Klinik Kesihatan/.test(klinik)) {
+      fails.push(`${vp.w}: the Klinik Kesihatan notice is missing from the public screen`);
+    }
 
     // The public tabs must carry no charts at all — the analysis belongs on
     // the Administrative tab. Assert that, then go there for the table view.

@@ -37,13 +37,12 @@
     </button>
   </header>
 
-  <!-- PLAIN-LANGUAGE NARRATIVE FOR FAMILIES. Tapping it opens the help
-       overlay, so the explanatory material costs no vertical space. -->
-  <button class="narr" id="narr" type="button">
+  <!-- One standing message for families. Static: the guidance it used to
+       open now has its own place on every public tab. -->
+  <div class="narr" id="narr">
     <span class="narr-icon" id="narrIcon" aria-hidden="true">ℹ️</span>
-    <span class="narr-text" id="narrText"></span>
-    <span class="narr-more" id="narrMore" aria-hidden="true">›</span>
-  </button>
+    <p class="narr-text" id="narrText"></p>
+  </div>
 
   <!-- TABS -->
   <nav class="tabs" id="tabs" role="tablist" aria-label="Sections"></nav>
@@ -85,7 +84,7 @@
   </div>
 </div>
 
-<!-- HELP OVERLAY: plain-language guidance and illustrations -->
+<!-- POSTER OVERLAY: the reviewed illustrations, when any exist -->
 <div class="ov" id="ovHelp" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
   <div class="ov-card">
     <div class="ov-hd">
@@ -93,7 +92,6 @@
       <button class="ov-x" type="button" aria-label="Tutup">✕</button>
     </div>
     <div class="ov-bd">
-      <p class="hint" id="helpNarrative" style="margin:0 0 calc(12px * var(--s));font-size:calc(12px * var(--s));color:var(--ink-2)"></p>
       <div id="helpImages"></div>
     </div>
     <div class="ov-ft"><span id="helpCredit"></span></div>

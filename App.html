@@ -19,7 +19,6 @@
     data: {},          // scope -> payload
     stepIndex: {},     // scope -> last viewed step
     adminToken: null,
-    narrativeHtml: '',
     illustrations: null,
     illustrationsLoading: false,
     busy: {},
@@ -142,14 +141,6 @@
     el.textContent = data.refTime;
   }
 
-  function narrativeHtml(data) {
-    if (!data || !data.narrative) return '';
-    return data.narrative.map(function (n) {
-      var fn = t('narr.' + n.key);
-      return typeof fn === 'function' ? fn(n.params) : '';
-    }).filter(Boolean).join(' ');
-  }
-
   function renderNarrative(data) {
     var strip = $('narr'), txtEl = $('narrText'), icon = $('narrIcon');
     if (!data || !data.narrative) { strip.style.display = 'none'; return; }
@@ -158,30 +149,20 @@
     strip.className = 'narr' + (crisis ? ' is-crisis' : '');
     icon.textContent = crisis ? '⚠️' : 'ℹ️';
 
-    // The overlay keeps the full narrative; the strip itself carries only the
-    // line the cards do not, so nothing is said twice on one screen.
-    S.narrativeHtml = narrativeHtml(data);
+    // One standing message, not a running commentary on the department's
+    // workload: the zone cards and the crisis alert carry the numbers.
     txtEl.innerHTML = '<strong>' + esc(t('public.tapTitle')) + '</strong> ' +
                       esc(t('public.tapBody'));
   }
 
-  /* ── Help overlay: the full narrative plus the reviewed illustrations. ── */
-  function openHelp() {
-    $('helpTitle').textContent = S.lang === 'ms' ? 'Maklumat untuk anda' : 'Information for you';
-    $('helpNarrative').innerHTML = S.narrativeHtml || '';
+  /* ── Poster viewer. Shows the reviewed illustrations and nothing else: the
+        running commentary on the department's workload that used to open here
+        was operational detail a waiting family has no use for. ── */
+  function openPosters() {
+    $('helpTitle').textContent = t('public.posterBtn');
     $('helpCredit').textContent = t('footer');
+    paintHelpImages(S.illustrations || { items: [] });
     openOv('ovHelp');
-
-    var box = $('helpImages');
-    if (S.illustrations) { paintHelpImages(S.illustrations); return; }
-    if (S.illustrationsLoading) return;
-    S.illustrationsLoading = true;
-    box.innerHTML = '<div class="state"><div class="spin"></div></div>';
-    serverCall('getIllustrations', null, function (res) {
-      S.illustrationsLoading = false;
-      S.illustrations = (res && res.items) ? res : { items: [] };
-      paintHelpImages(S.illustrations);
-    });
   }
 
   function paintHelpImages(data) {
@@ -192,6 +173,17 @@
       return '<figure class="help-fig"><img src="' + it.dataUri + '" alt="' + esc(cap) +
              '" loading="lazy"/><figcaption>' + esc(cap) + '</figcaption></figure>';
     }).join('');
+  }
+
+  /** Fetched once; the guidance panel offers the posters only if any exist. */
+  function loadIllustrations() {
+    if (S.illustrations || S.illustrationsLoading) return;
+    S.illustrationsLoading = true;
+    serverCall('getIllustrations', null, function (res) {
+      S.illustrationsLoading = false;
+      S.illustrations = (res && res.items) ? res : { items: [] };
+      if (S.illustrations.items.length) renderTab();
+    });
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -750,10 +742,12 @@
     var wrap = node('div', 'zone-grid');
     wrap.style.gridArea = area;
 
-    // Bedded zones first, consultation rooms last: the green-zone card spans
-    // the full width and reads as the summary line it is.
+    // Fixed reading order, by rising acuity and then function: red, yellow,
+    // observation, asthma, PAC, and the green zone last because its card
+    // spans the full width and reads as the summary line.
+    var ORDER = ['rz', 'yz', 'ob', 'ab', 'pac', 'gz'];
     var zones = d.occupancy.filter(function (z) { return z.capacity > 0; })
-      .sort(function (a, b) { return (a.isRoomZone ? 1 : 0) - (b.isRoomZone ? 1 : 0); });
+      .sort(function (a, b) { return ORDER.indexOf(a.zone) - ORDER.indexOf(b.zone); });
 
     var bedded = zones.filter(function (z) { return !z.isRoomZone; }).length;
     var cols = bedded >= 5 ? 3 : bedded >= 3 ? 2 : 1;
@@ -818,34 +812,43 @@
     });
   }
 
+  /**
+   * Standing notice for non-emergency attendances. Kept on the first screen of
+   * every public tab: it is the message that actually shortens the queue.
+   */
+  function klinikNotice(area) {
+    var n = node('div', 'klinik');
+    n.style.gridArea = area;
+    n.innerHTML =
+      '<span class="klinik-ic" aria-hidden="true">🏥</span>' +
+      '<div><strong>' + esc(t('public.klinikTitle')) + '</strong>' +
+      '<p>' + esc(t('public.klinikBody')) + '</p></div>';
+    return n;
+  }
+
   /** Plain-language guidance: what the zones mean and what happens next. */
-  function guidePanel(d, area) {
+  /**
+   * @param compact  true on the single-screen PAC layout, where the guidance
+   *                 shares the screen with the zone card and the clinic notice
+   *                 and so cannot run at the full-page type size.
+   */
+  function guidePanel(d, area, compact) {
     var rows = t('public.guide');
-    var html = '<div class="guide">' + rows.map(function (g) {
+    var html = '<div class="guide' + (compact ? ' is-compact' : '') + '">' + rows.map(function (g) {
       return '<div class="guide-row"><span class="guide-ic" aria-hidden="true">' + esc(g.icon) +
              '</span><div><strong>' + esc(g.title) + '</strong><p>' + esc(g.body) + '</p></div></div>';
     }).join('') + '</div>';
     var p = panel({ area: area, title: t('public.guideTitle'), html: html });
+
+    // Posters appear only once an administrator has generated and reviewed
+    // them; without them there is nothing to open, so no button is offered.
+    if (S.illustrations && S.illustrations.items && S.illustrations.items.length) {
+      var btn = node('button', 'panel-tbl', esc(t('public.posterBtn')));
+      btn.type = 'button';
+      btn.onclick = openPosters;
+      p.querySelector('.panel-hd').appendChild(btn);
+    }
     return p;
-  }
-
-  /** Where each patient stands: how many are at each stage of care. */
-  function stagePanel(d, area) {
-    var k = d.kpi;
-    var stages = [
-      { key: 'ongoingtreatment', n: d.statusMix.reduce(function (a, x) {
-          return a + (x.key === 'ongoingtreatment' ? x.count : 0); }, 0) },
-      { key: 'referred',  n: k.referred },
-      { key: 'preadmit',  n: k.preadmit },
-      { key: 'admitted',  n: k.admitted },
-      { key: 'discharge', n: k.discharge }
-    ].filter(function (x) { return x.n > 0; });
-
-    var html = '<div class="stages">' + stages.map(function (x) {
-      return '<div class="stage"><span class="stage-n">' + x.n + '</span>' +
-             '<span class="stage-l">' + esc(statusName(x.key)) + '</span></div>';
-    }).join('') + '</div>';
-    return panel({ area: area, title: t('public.stageTitle'), sub: t('public.stageSub'), html: html });
   }
 
   function publicSteps(d) {
@@ -860,12 +863,12 @@
         rows: (hasCrisis ? 'auto auto auto auto minmax(0,1fr)' : 'auto auto auto minmax(0,1fr)'),
         cols: '1fr',
         areas: (hasCrisis
-          ? '"seek" "alert" "zones" "stage" "guide"'
-          : '"seek" "zones" "stage" "guide"'),
+          ? '"seek" "alert" "zones" "klinik" "guide"'
+          : '"seek" "zones" "klinik" "guide"'),
         build: function () {
           var out = [searchPrompt('seek')];
           if (hasCrisis) out.push(crisisBanner(d, 'alert'));
-          out.push(zoneCards(d, 'zones'), stagePanel(d, 'stage'), guidePanel(d, 'guide'));
+          out.push(zoneCards(d, 'zones'), klinikNotice('klinik'), guidePanel(d, 'guide', true));
           return out;
         }
       }];
@@ -876,11 +879,11 @@
         title: t('public.stepNow'),
         rows: hasCrisis ? 'auto auto minmax(0,1fr) auto' : 'auto minmax(0,1fr) auto',
         cols: '1fr',
-        areas: hasCrisis ? '"seek" "alert" "zones" "stage"' : '"seek" "zones" "stage"',
+        areas: hasCrisis ? '"seek" "alert" "zones" "klinik"' : '"seek" "zones" "klinik"',
         build: function () {
           var out = [searchPrompt('seek')];
           if (hasCrisis) out.push(crisisBanner(d, 'alert'));
-          out.push(zoneCards(d, 'zones'), stagePanel(d, 'stage'));
+          out.push(zoneCards(d, 'zones'), klinikNotice('klinik'));
           return out;
         }
       },
@@ -1300,7 +1303,6 @@
     $('searchInput').onkeydown = function (e) { if (e.key === 'Enter') doSearch(); };
     $('gateGo').onclick = submitGate;
     $('gateInput').onkeydown = function (e) { if (e.key === 'Enter') submitGate(); };
-    $('narr').onclick = openHelp;
     ['ovSearch', 'ovTable', 'ovGate', 'ovHelp'].forEach(function (id) {
       var ov = $(id);
       ov.addEventListener('click', function (e) { if (e.target === ov) closeOv(id); });
@@ -1317,6 +1319,7 @@
     window.addEventListener('orientationchange', onResize);
 
     loadTab(S.tab);
+    loadIllustrations();
     // Public tabs refresh on the same 5-minute cadence as the server cache.
     setInterval(function () {
       TABS.forEach(function (tab) {

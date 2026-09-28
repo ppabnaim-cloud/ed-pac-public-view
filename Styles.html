@@ -172,23 +172,17 @@ body {
   border-bottom: 1px solid var(--line);
   padding: calc(7px * var(--s)) calc(14px * var(--s));
   display: flex; align-items: center; gap: calc(9px * var(--s));
-  min-height: calc(40px * var(--s));
+  min-height: calc(44px * var(--s));
   overflow: hidden;
 }
 .narr-icon { font-size: calc(17px * var(--s)); flex: none; line-height: 1; }
 .narr-text {
-  font-size: calc(12px * var(--s)); color: var(--ink-2); font-weight: 500;
+  font-size: calc(14px * var(--s)); color: var(--ink-2); font-weight: 600;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden;
 }
 .narr-text strong { color: var(--ink); font-weight: 800; }
-.narr-more { font-size: calc(17px * var(--s)); color: var(--ink-3); flex: none; font-weight: 800 }
-button.narr {
-  width: 100%; text-align: left; font: inherit; border: 0;
-  border-bottom: 1px solid var(--line); cursor: pointer;
-}
-button.narr:hover { background: var(--surface-2) }
-button.narr:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px }
+
 .help-fig { margin-bottom: calc(12px * var(--s)) }
 .help-fig img {
   width: 100%; height: auto; display: block;
@@ -467,18 +461,18 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
 }
 .seek-copy { flex: 1; min-width: 0 }
 .seek-copy h2 {
-  font-size: calc(16px * var(--s)); font-weight: 800; line-height: 1.2;
+  font-size: calc(21px * var(--s)); font-weight: 800; line-height: 1.2;
   margin-bottom: calc(2px * var(--s));
 }
 .seek-copy p {
-  font-size: calc(11px * var(--s)); opacity: .86; font-weight: 500;
+  font-size: calc(14px * var(--s)); opacity: .9; font-weight: 500;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .seek-btn {
   flex: none; border: 0; cursor: pointer; font: inherit;
   background: var(--accent); color: #fff;
-  font-size: calc(13px * var(--s)); font-weight: 800;
-  border-radius: 999px; padding: calc(11px * var(--s)) calc(20px * var(--s));
+  font-size: calc(16px * var(--s)); font-weight: 800;
+  border-radius: 999px; padding: calc(13px * var(--s)) calc(24px * var(--s));
   white-space: nowrap; min-height: calc(44px * var(--s));
   box-shadow: 0 2px 10px rgba(0,0,0,.18);
 }
@@ -508,16 +502,19 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
 .zone-card.z-pac { border-left-color: var(--zone-pac) }
 .zone-card.is-full { background: #fffafa }
 
-.zc-head { display: flex; align-items: center; gap: calc(7px * var(--s)); min-width: 0 }
+.zc-head {
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: calc(5px * var(--s)); min-width: 0;
+}
 .zc-name {
-  font-size: calc(14px * var(--s)); font-weight: 800; flex: 1; min-width: 0;
+  font-size: calc(19px * var(--s)); font-weight: 800; width: 100%; min-width: 0;
   line-height: 1.2;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .zc-badge {
-  flex: none; font-size: calc(9.5px * var(--s)); font-weight: 800;
-  border-radius: 999px; padding: calc(3px * var(--s)) calc(9px * var(--s));
-  white-space: nowrap;
+  flex: none; max-width: 100%; font-size: calc(12px * var(--s)); font-weight: 800;
+  border-radius: 999px; padding: calc(5px * var(--s)) calc(12px * var(--s));
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .zc-badge.is-ok     { background: #e7f6e9; color: #14691a }
 .zc-badge.is-busy   { background: #fff4e0; color: #8a4b00 }
@@ -526,11 +523,11 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
 
 .zc-nums { display: flex; align-items: baseline; gap: calc(6px * var(--s)); min-width: 0 }
 .zc-big {
-  font-size: calc(46px * var(--s)); font-weight: 800; line-height: 1;
+  font-size: calc(54px * var(--s)); font-weight: 800; line-height: 1;
   letter-spacing: -.03em; font-variant-numeric: tabular-nums;
 }
 .zc-cap {
-  font-size: calc(12px * var(--s)); color: var(--ink-3); font-weight: 700;
+  font-size: calc(15px * var(--s)); color: var(--ink-2); font-weight: 700;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .zc-bar { background: #eef2f5; border-radius: 999px; height: calc(7px * var(--s)); overflow: hidden }
@@ -561,44 +558,60 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
 }
 .zone-card.is-wide .zc-gz-wait { margin-top: 0 }
 .zc-gz-n {
-  font-size: calc(38px * var(--s)); font-weight: 800; color: var(--zone-gz);
+  font-size: calc(44px * var(--s)); font-weight: 800; color: var(--zone-gz);
   line-height: 1; font-variant-numeric: tabular-nums;
 }
-.zc-gz-l { font-size: calc(12px * var(--s)); font-weight: 700; color: var(--ink-2) }
-.zc-gz-wait { font-size: calc(12px * var(--s)); color: var(--ink-2); margin-top: calc(3px * var(--s)) }
+.zc-gz-l { font-size: calc(15px * var(--s)); font-weight: 700; color: var(--ink-2) }
+.zc-gz-wait { font-size: calc(15px * var(--s)); color: var(--ink-2); margin-top: calc(3px * var(--s)) }
 .zc-gz-wait strong { color: var(--brand-dk) }
 .zc-muted { color: var(--ink-3); font-style: italic }
 
-/* Stage-of-care counts */
-.stages {
-  display: grid; gap: calc(8px * var(--s)); padding: 0 calc(10px * var(--s)) calc(8px * var(--s));
-  grid-template-columns: repeat(auto-fit, minmax(calc(120px * var(--s)), 1fr));
+/* The single-screen layout shares its height, so the guidance runs a size
+   down there rather than being clipped. */
+.guide.is-compact { gap: calc(7px * var(--s)) calc(16px * var(--s)); align-content: start }
+.guide.is-compact .guide-ic { font-size: calc(19px * var(--s)) }
+.guide.is-compact .guide-row strong { font-size: calc(13px * var(--s)) }
+.guide.is-compact .guide-row p { font-size: calc(12px * var(--s)); -webkit-line-clamp: 3 }
+
+/* Non-emergency notice: the message that actually shortens the queue, so it
+   is given its own standing band rather than a line inside the guidance. */
+.klinik {
+  display: flex; align-items: center; gap: calc(12px * var(--s));
+  background: #fff8e8; border: 1.5px solid #f0dcae; border-left: 6px solid var(--warn);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: calc(11px * var(--s)) calc(14px * var(--s));
+  min-width: 0; overflow: hidden;
 }
-.stage {
-  background: var(--surface-2); border: 1px solid var(--line-soft);
-  border-radius: 9px; padding: calc(7px * var(--s)) calc(9px * var(--s)); min-width: 0;
+.klinik-ic { font-size: calc(26px * var(--s)); flex: none; line-height: 1 }
+.klinik strong {
+  display: block; font-size: calc(16px * var(--s)); font-weight: 800; color: #7a5200;
+  margin-bottom: calc(2px * var(--s));
 }
-.stage-n {
-  display: block; font-size: calc(22px * var(--s)); font-weight: 800; line-height: 1.1;
-  font-variant-numeric: tabular-nums;
-}
-.stage-l {
-  display: block; font-size: calc(10px * var(--s)); font-weight: 700; color: var(--ink-2);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+.klinik p {
+  font-size: calc(13px * var(--s)); color: var(--ink-2); line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 
 /* Family guidance */
 .guide {
-  height: 100%; overflow: hidden; padding: 0 calc(10px * var(--s)) calc(8px * var(--s));
-  display: grid; gap: calc(7px * var(--s)); align-content: start;
-  grid-template-columns: repeat(auto-fit, minmax(calc(280px * var(--s)), 1fr));
+  height: 100%; overflow: hidden;
+  padding: calc(4px * var(--s)) calc(14px * var(--s)) calc(10px * var(--s));
+  display: grid; gap: calc(10px * var(--s)) calc(20px * var(--s));
+  /* Spread down the panel: this screen is nothing but guidance, so the rows
+     should use the height rather than huddle at the top. */
+  align-content: space-evenly;
+  grid-template-columns: repeat(auto-fit, minmax(calc(300px * var(--s)), 1fr));
 }
-.guide-row { display: flex; gap: calc(8px * var(--s)); min-width: 0 }
-.guide-ic { font-size: calc(17px * var(--s)); flex: none; line-height: 1.2 }
-.guide-row strong { font-size: calc(11.5px * var(--s)); font-weight: 800; display: block }
+.guide-row { display: flex; gap: calc(11px * var(--s)); min-width: 0; align-items: flex-start }
+.guide-ic { font-size: calc(24px * var(--s)); flex: none; line-height: 1.15 }
+.guide-row strong {
+  font-size: calc(15px * var(--s)); font-weight: 800; display: block;
+  margin-bottom: calc(2px * var(--s)); line-height: 1.25;
+}
 .guide-row p {
-  font-size: calc(10.5px * var(--s)); color: var(--ink-2); line-height: 1.4;
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  font-size: calc(13.5px * var(--s)); color: var(--ink-2); line-height: 1.45;
+  /* Four lines fits the longest entry whole; nothing here should trail off. */
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
 }
 
 @media (max-width: 700px) {

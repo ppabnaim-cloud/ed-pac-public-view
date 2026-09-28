@@ -26,7 +26,7 @@
  * The "ED/PAC Register" menu can generate a fresh register and a demonstration
  * scenario. Those items CLEAR Sheet1 — run them on a copy, never on live data.
  *
- * Built 2026-09-27 23:50 UTC
+ * Built 2026-09-28 00:30 UTC
  * ============================================================================
  */
 
@@ -2281,23 +2281,17 @@ body {
   border-bottom: 1px solid var(--line);
   padding: calc(7px * var(--s)) calc(14px * var(--s));
   display: flex; align-items: center; gap: calc(9px * var(--s));
-  min-height: calc(40px * var(--s));
+  min-height: calc(44px * var(--s));
   overflow: hidden;
 }
 .narr-icon { font-size: calc(17px * var(--s)); flex: none; line-height: 1; }
 .narr-text {
-  font-size: calc(12px * var(--s)); color: var(--ink-2); font-weight: 500;
+  font-size: calc(14px * var(--s)); color: var(--ink-2); font-weight: 600;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden;
 }
 .narr-text strong { color: var(--ink); font-weight: 800; }
-.narr-more { font-size: calc(17px * var(--s)); color: var(--ink-3); flex: none; font-weight: 800 }
-button.narr {
-  width: 100%; text-align: left; font: inherit; border: 0;
-  border-bottom: 1px solid var(--line); cursor: pointer;
-}
-button.narr:hover { background: var(--surface-2) }
-button.narr:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px }
+
 .help-fig { margin-bottom: calc(12px * var(--s)) }
 .help-fig img {
   width: 100%; height: auto; display: block;
@@ -2576,18 +2570,18 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
 }
 .seek-copy { flex: 1; min-width: 0 }
 .seek-copy h2 {
-  font-size: calc(16px * var(--s)); font-weight: 800; line-height: 1.2;
+  font-size: calc(21px * var(--s)); font-weight: 800; line-height: 1.2;
   margin-bottom: calc(2px * var(--s));
 }
 .seek-copy p {
-  font-size: calc(11px * var(--s)); opacity: .86; font-weight: 500;
+  font-size: calc(14px * var(--s)); opacity: .9; font-weight: 500;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .seek-btn {
   flex: none; border: 0; cursor: pointer; font: inherit;
   background: var(--accent); color: #fff;
-  font-size: calc(13px * var(--s)); font-weight: 800;
-  border-radius: 999px; padding: calc(11px * var(--s)) calc(20px * var(--s));
+  font-size: calc(16px * var(--s)); font-weight: 800;
+  border-radius: 999px; padding: calc(13px * var(--s)) calc(24px * var(--s));
   white-space: nowrap; min-height: calc(44px * var(--s));
   box-shadow: 0 2px 10px rgba(0,0,0,.18);
 }
@@ -2617,16 +2611,19 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
 .zone-card.z-pac { border-left-color: var(--zone-pac) }
 .zone-card.is-full { background: #fffafa }
 
-.zc-head { display: flex; align-items: center; gap: calc(7px * var(--s)); min-width: 0 }
+.zc-head {
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: calc(5px * var(--s)); min-width: 0;
+}
 .zc-name {
-  font-size: calc(14px * var(--s)); font-weight: 800; flex: 1; min-width: 0;
+  font-size: calc(19px * var(--s)); font-weight: 800; width: 100%; min-width: 0;
   line-height: 1.2;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .zc-badge {
-  flex: none; font-size: calc(9.5px * var(--s)); font-weight: 800;
-  border-radius: 999px; padding: calc(3px * var(--s)) calc(9px * var(--s));
-  white-space: nowrap;
+  flex: none; max-width: 100%; font-size: calc(12px * var(--s)); font-weight: 800;
+  border-radius: 999px; padding: calc(5px * var(--s)) calc(12px * var(--s));
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .zc-badge.is-ok     { background: #e7f6e9; color: #14691a }
 .zc-badge.is-busy   { background: #fff4e0; color: #8a4b00 }
@@ -2635,11 +2632,11 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
 
 .zc-nums { display: flex; align-items: baseline; gap: calc(6px * var(--s)); min-width: 0 }
 .zc-big {
-  font-size: calc(46px * var(--s)); font-weight: 800; line-height: 1;
+  font-size: calc(54px * var(--s)); font-weight: 800; line-height: 1;
   letter-spacing: -.03em; font-variant-numeric: tabular-nums;
 }
 .zc-cap {
-  font-size: calc(12px * var(--s)); color: var(--ink-3); font-weight: 700;
+  font-size: calc(15px * var(--s)); color: var(--ink-2); font-weight: 700;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .zc-bar { background: #eef2f5; border-radius: 999px; height: calc(7px * var(--s)); overflow: hidden }
@@ -2670,44 +2667,60 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
 }
 .zone-card.is-wide .zc-gz-wait { margin-top: 0 }
 .zc-gz-n {
-  font-size: calc(38px * var(--s)); font-weight: 800; color: var(--zone-gz);
+  font-size: calc(44px * var(--s)); font-weight: 800; color: var(--zone-gz);
   line-height: 1; font-variant-numeric: tabular-nums;
 }
-.zc-gz-l { font-size: calc(12px * var(--s)); font-weight: 700; color: var(--ink-2) }
-.zc-gz-wait { font-size: calc(12px * var(--s)); color: var(--ink-2); margin-top: calc(3px * var(--s)) }
+.zc-gz-l { font-size: calc(15px * var(--s)); font-weight: 700; color: var(--ink-2) }
+.zc-gz-wait { font-size: calc(15px * var(--s)); color: var(--ink-2); margin-top: calc(3px * var(--s)) }
 .zc-gz-wait strong { color: var(--brand-dk) }
 .zc-muted { color: var(--ink-3); font-style: italic }
 
-/* Stage-of-care counts */
-.stages {
-  display: grid; gap: calc(8px * var(--s)); padding: 0 calc(10px * var(--s)) calc(8px * var(--s));
-  grid-template-columns: repeat(auto-fit, minmax(calc(120px * var(--s)), 1fr));
+/* The single-screen layout shares its height, so the guidance runs a size
+   down there rather than being clipped. */
+.guide.is-compact { gap: calc(7px * var(--s)) calc(16px * var(--s)); align-content: start }
+.guide.is-compact .guide-ic { font-size: calc(19px * var(--s)) }
+.guide.is-compact .guide-row strong { font-size: calc(13px * var(--s)) }
+.guide.is-compact .guide-row p { font-size: calc(12px * var(--s)); -webkit-line-clamp: 3 }
+
+/* Non-emergency notice: the message that actually shortens the queue, so it
+   is given its own standing band rather than a line inside the guidance. */
+.klinik {
+  display: flex; align-items: center; gap: calc(12px * var(--s));
+  background: #fff8e8; border: 1.5px solid #f0dcae; border-left: 6px solid var(--warn);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: calc(11px * var(--s)) calc(14px * var(--s));
+  min-width: 0; overflow: hidden;
 }
-.stage {
-  background: var(--surface-2); border: 1px solid var(--line-soft);
-  border-radius: 9px; padding: calc(7px * var(--s)) calc(9px * var(--s)); min-width: 0;
+.klinik-ic { font-size: calc(26px * var(--s)); flex: none; line-height: 1 }
+.klinik strong {
+  display: block; font-size: calc(16px * var(--s)); font-weight: 800; color: #7a5200;
+  margin-bottom: calc(2px * var(--s));
 }
-.stage-n {
-  display: block; font-size: calc(22px * var(--s)); font-weight: 800; line-height: 1.1;
-  font-variant-numeric: tabular-nums;
-}
-.stage-l {
-  display: block; font-size: calc(10px * var(--s)); font-weight: 700; color: var(--ink-2);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+.klinik p {
+  font-size: calc(13px * var(--s)); color: var(--ink-2); line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 
 /* Family guidance */
 .guide {
-  height: 100%; overflow: hidden; padding: 0 calc(10px * var(--s)) calc(8px * var(--s));
-  display: grid; gap: calc(7px * var(--s)); align-content: start;
-  grid-template-columns: repeat(auto-fit, minmax(calc(280px * var(--s)), 1fr));
+  height: 100%; overflow: hidden;
+  padding: calc(4px * var(--s)) calc(14px * var(--s)) calc(10px * var(--s));
+  display: grid; gap: calc(10px * var(--s)) calc(20px * var(--s));
+  /* Spread down the panel: this screen is nothing but guidance, so the rows
+     should use the height rather than huddle at the top. */
+  align-content: space-evenly;
+  grid-template-columns: repeat(auto-fit, minmax(calc(300px * var(--s)), 1fr));
 }
-.guide-row { display: flex; gap: calc(8px * var(--s)); min-width: 0 }
-.guide-ic { font-size: calc(17px * var(--s)); flex: none; line-height: 1.2 }
-.guide-row strong { font-size: calc(11.5px * var(--s)); font-weight: 800; display: block }
+.guide-row { display: flex; gap: calc(11px * var(--s)); min-width: 0; align-items: flex-start }
+.guide-ic { font-size: calc(24px * var(--s)); flex: none; line-height: 1.15 }
+.guide-row strong {
+  font-size: calc(15px * var(--s)); font-weight: 800; display: block;
+  margin-bottom: calc(2px * var(--s)); line-height: 1.25;
+}
 .guide-row p {
-  font-size: calc(10.5px * var(--s)); color: var(--ink-2); line-height: 1.4;
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  font-size: calc(13.5px * var(--s)); color: var(--ink-2); line-height: 1.45;
+  /* Four lines fits the longest entry whole; nothing here should trail off. */
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
 }
 
 @media (max-width: 700px) {
@@ -2778,13 +2791,12 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
     </button>
   </header>
 
-  <!-- PLAIN-LANGUAGE NARRATIVE FOR FAMILIES. Tapping it opens the help
-       overlay, so the explanatory material costs no vertical space. -->
-  <button class="narr" id="narr" type="button">
+  <!-- One standing message for families. Static: the guidance it used to
+       open now has its own place on every public tab. -->
+  <div class="narr" id="narr">
     <span class="narr-icon" id="narrIcon" aria-hidden="true">ℹ️</span>
-    <span class="narr-text" id="narrText"></span>
-    <span class="narr-more" id="narrMore" aria-hidden="true">›</span>
-  </button>
+    <p class="narr-text" id="narrText"></p>
+  </div>
 
   <!-- TABS -->
   <nav class="tabs" id="tabs" role="tablist" aria-label="Sections"></nav>
@@ -2826,7 +2838,7 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
   </div>
 </div>
 
-<!-- HELP OVERLAY: plain-language guidance and illustrations -->
+<!-- POSTER OVERLAY: the reviewed illustrations, when any exist -->
 <div class="ov" id="ovHelp" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
   <div class="ov-card">
     <div class="ov-hd">
@@ -2834,7 +2846,6 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
       <button class="ov-x" type="button" aria-label="Tutup">✕</button>
     </div>
     <div class="ov-bd">
-      <p class="hint" id="helpNarrative" style="margin:0 0 calc(12px * var(--s));font-size:calc(12px * var(--s));color:var(--ink-2)"></p>
       <div id="helpImages"></div>
     </div>
     <div class="ov-ft"><span id="helpCredit"></span></div>
@@ -2909,24 +2920,25 @@ var I18N = {
     public: {
       seekSub:     'Masukkan nombor kad pengenalan, nombor passport atau nombor MRN pesakit.',
       tapTitle:    'Pesakit paling kritikal dirawat dahulu.',
-      tapBody:     'Giliran bukan mengikut masa sampai. Ketik di sini untuk panduan lengkap.',
+      tapBody:     'Giliran bukan mengikut masa sampai, tetapi mengikut tahap kecemasan.',
       stepNow:     'Status zon sekarang',
       stepGuide:   'Panduan untuk keluarga',
       beds:        'katil',
       rooms:       'bilik doktor',
-      crisisBeds:  'katil tambahan',
+      crisisBeds:  'katil krisis diaktifkan',
       waitingNow:  'sedang menunggu',
       avgWait:     'Purata masa dipanggil:',
       avgWaitNone: 'Purata masa belum dapat dikira',
-      state: { ok: 'Ada ruang', busy: 'Sibuk', full: 'Penuh', crisis: 'Katil tambahan dibuka' },
+      state: { ok: 'Ada ruang', busy: 'Sibuk', full: 'Penuh', crisis: 'Krisis diaktifkan' },
       crisisTitle: 'Jabatan sangat sibuk.',
       crisisBody:  function (n) {
-        return 'Kami telah membuka ' + n + ' katil tambahan supaya semua pesakit dapat dirawat. ' +
+        return 'Kami telah mengaktifkan ' + n + ' katil krisis supaya semua pesakit dapat dirawat. ' +
                'Kami memohon maaf atas sebarang kelewatan.';
       },
-      stageTitle:  'Pesakit mengikut peringkat rawatan',
-      stageSub:    'Jumlah pesakit di jabatan ini sekarang',
       guideTitle:  'Perkara yang perlu anda tahu',
+      posterBtn:   'Lihat poster',
+      klinikTitle: 'Kes bukan kecemasan?',
+      klinikBody:  'Sila ke Klinik Kesihatan berdekatan. Jabatan Kecemasan adalah untuk kes yang mengancam nyawa. Ke Klinik Kesihatan bermakna anda dirawat lebih cepat, dan pesakit kritikal di sini dapat dibantu segera.',
       guide: [
         { icon: '🚑', title: 'Pesakit paling kritikal didahulukan',
           body: 'Giliran bukan mengikut masa sampai. Pesakit yang paling tenat akan dirawat dahulu. Ini bermakna orang yang datang kemudian mungkin dipanggil lebih awal.' },
@@ -2938,6 +2950,8 @@ var I18N = {
           body: 'Selepas doktor pakar memutuskan pesakit perlu masuk wad, pesakit menunggu katil kosong di wad. Masa menunggu bergantung pada katil yang ada.' },
         { icon: '🏠', title: 'Selepas dibenarkan pulang',
           body: 'Nama pesakit kekal dalam sistem selama 24 jam supaya keluarga masih boleh menyemak status.' },
+        { icon: '🏥', title: 'Kes bukan kecemasan? Ke Klinik Kesihatan',
+          body: 'Demam biasa, batuk, luka kecil, ubat berulang dan sijil sakit boleh dirawat di Klinik Kesihatan berdekatan, dengan masa menunggu yang jauh lebih singkat.' },
         { icon: '💬', title: 'Perlu bantuan segera?',
           body: 'Sila ke kaunter jururawat. Jangan tunggu di luar jika keadaan pesakit bertambah teruk.' }
       ]
@@ -3196,24 +3210,25 @@ var I18N = {
     public: {
       seekSub:     "Enter the patient's IC number, passport number or MRN.",
       tapTitle:    'The most seriously ill are treated first.',
-      tapBody:     'Turns are not given in order of arrival. Tap here for the full guidance.',
+      tapBody:     'Turns are given by how serious the condition is, not by arrival time.',
       stepNow:     'Zone status now',
       stepGuide:   'Guidance for families',
       beds:        'beds',
       rooms:       'consultation rooms',
-      crisisBeds:  'extra beds',
+      crisisBeds:  'bed crisis activated',
       waitingNow:  'waiting now',
       avgWait:     'Average time to be called:',
       avgWaitNone: 'Average not yet available',
-      state: { ok: 'Space available', busy: 'Busy', full: 'Full', crisis: 'Extra beds open' },
+      state: { ok: 'Space available', busy: 'Busy', full: 'Full', crisis: 'Crisis activated' },
       crisisTitle: 'The department is very busy.',
       crisisBody:  function (n) {
-        return 'We have opened ' + n + ' extra beds so that everyone can be treated. ' +
+        return 'We have activated ' + n + ' crisis beds so that everyone can be treated. ' +
                'We apologise for any delay.';
       },
-      stageTitle:  'Patients by stage of care',
-      stageSub:    'Everyone in this department right now',
       guideTitle:  'What you need to know',
+      posterBtn:   'View posters',
+      klinikTitle: 'Not an emergency?',
+      klinikBody:  'Please go to your nearest Klinik Kesihatan. The Emergency Department is for life-threatening conditions. Going to a Klinik Kesihatan means you are seen sooner, and critically ill patients here can be helped straight away.',
       guide: [
         { icon: '🚑', title: 'The most seriously ill are seen first',
           body: 'Turns are not given in order of arrival. The sickest patients are treated first, so someone who arrived after you may be called before you.' },
@@ -3225,6 +3240,8 @@ var I18N = {
           body: 'Once a specialist decides a patient needs admission, they wait for a bed to become free on the ward. How long depends on bed availability.' },
         { icon: '🏠', title: 'After discharge',
           body: 'The patient stays listed for 24 hours so family can still check their status.' },
+        { icon: '🏥', title: 'Not an emergency? Go to a Klinik Kesihatan',
+          body: 'Ordinary fever, cough, minor wounds, repeat medicines and sick certificates can be handled at your nearest Klinik Kesihatan, with a far shorter wait.' },
         { icon: '💬', title: 'Need help now?',
           body: 'Please go to the nursing counter. Do not wait outside if the patient becomes worse.' }
       ]
@@ -4431,7 +4448,6 @@ var Charts = (function () {
     data: {},          // scope -> payload
     stepIndex: {},     // scope -> last viewed step
     adminToken: null,
-    narrativeHtml: '',
     illustrations: null,
     illustrationsLoading: false,
     busy: {},
@@ -4554,14 +4570,6 @@ var Charts = (function () {
     el.textContent = data.refTime;
   }
 
-  function narrativeHtml(data) {
-    if (!data || !data.narrative) return '';
-    return data.narrative.map(function (n) {
-      var fn = t('narr.' + n.key);
-      return typeof fn === 'function' ? fn(n.params) : '';
-    }).filter(Boolean).join(' ');
-  }
-
   function renderNarrative(data) {
     var strip = $('narr'), txtEl = $('narrText'), icon = $('narrIcon');
     if (!data || !data.narrative) { strip.style.display = 'none'; return; }
@@ -4570,30 +4578,20 @@ var Charts = (function () {
     strip.className = 'narr' + (crisis ? ' is-crisis' : '');
     icon.textContent = crisis ? '⚠️' : 'ℹ️';
 
-    // The overlay keeps the full narrative; the strip itself carries only the
-    // line the cards do not, so nothing is said twice on one screen.
-    S.narrativeHtml = narrativeHtml(data);
+    // One standing message, not a running commentary on the department's
+    // workload: the zone cards and the crisis alert carry the numbers.
     txtEl.innerHTML = '<strong>' + esc(t('public.tapTitle')) + '</strong> ' +
                       esc(t('public.tapBody'));
   }
 
-  /* ── Help overlay: the full narrative plus the reviewed illustrations. ── */
-  function openHelp() {
-    $('helpTitle').textContent = S.lang === 'ms' ? 'Maklumat untuk anda' : 'Information for you';
-    $('helpNarrative').innerHTML = S.narrativeHtml || '';
+  /* ── Poster viewer. Shows the reviewed illustrations and nothing else: the
+        running commentary on the department's workload that used to open here
+        was operational detail a waiting family has no use for. ── */
+  function openPosters() {
+    $('helpTitle').textContent = t('public.posterBtn');
     $('helpCredit').textContent = t('footer');
+    paintHelpImages(S.illustrations || { items: [] });
     openOv('ovHelp');
-
-    var box = $('helpImages');
-    if (S.illustrations) { paintHelpImages(S.illustrations); return; }
-    if (S.illustrationsLoading) return;
-    S.illustrationsLoading = true;
-    box.innerHTML = '<div class="state"><div class="spin"></div></div>';
-    serverCall('getIllustrations', null, function (res) {
-      S.illustrationsLoading = false;
-      S.illustrations = (res && res.items) ? res : { items: [] };
-      paintHelpImages(S.illustrations);
-    });
   }
 
   function paintHelpImages(data) {
@@ -4604,6 +4602,17 @@ var Charts = (function () {
       return '<figure class="help-fig"><img src="' + it.dataUri + '" alt="' + esc(cap) +
              '" loading="lazy"/><figcaption>' + esc(cap) + '</figcaption></figure>';
     }).join('');
+  }
+
+  /** Fetched once; the guidance panel offers the posters only if any exist. */
+  function loadIllustrations() {
+    if (S.illustrations || S.illustrationsLoading) return;
+    S.illustrationsLoading = true;
+    serverCall('getIllustrations', null, function (res) {
+      S.illustrationsLoading = false;
+      S.illustrations = (res && res.items) ? res : { items: [] };
+      if (S.illustrations.items.length) renderTab();
+    });
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -5162,10 +5171,12 @@ var Charts = (function () {
     var wrap = node('div', 'zone-grid');
     wrap.style.gridArea = area;
 
-    // Bedded zones first, consultation rooms last: the green-zone card spans
-    // the full width and reads as the summary line it is.
+    // Fixed reading order, by rising acuity and then function: red, yellow,
+    // observation, asthma, PAC, and the green zone last because its card
+    // spans the full width and reads as the summary line.
+    var ORDER = ['rz', 'yz', 'ob', 'ab', 'pac', 'gz'];
     var zones = d.occupancy.filter(function (z) { return z.capacity > 0; })
-      .sort(function (a, b) { return (a.isRoomZone ? 1 : 0) - (b.isRoomZone ? 1 : 0); });
+      .sort(function (a, b) { return ORDER.indexOf(a.zone) - ORDER.indexOf(b.zone); });
 
     var bedded = zones.filter(function (z) { return !z.isRoomZone; }).length;
     var cols = bedded >= 5 ? 3 : bedded >= 3 ? 2 : 1;
@@ -5230,34 +5241,43 @@ var Charts = (function () {
     });
   }
 
+  /**
+   * Standing notice for non-emergency attendances. Kept on the first screen of
+   * every public tab: it is the message that actually shortens the queue.
+   */
+  function klinikNotice(area) {
+    var n = node('div', 'klinik');
+    n.style.gridArea = area;
+    n.innerHTML =
+      '<span class="klinik-ic" aria-hidden="true">🏥</span>' +
+      '<div><strong>' + esc(t('public.klinikTitle')) + '</strong>' +
+      '<p>' + esc(t('public.klinikBody')) + '</p></div>';
+    return n;
+  }
+
   /** Plain-language guidance: what the zones mean and what happens next. */
-  function guidePanel(d, area) {
+  /**
+   * @param compact  true on the single-screen PAC layout, where the guidance
+   *                 shares the screen with the zone card and the clinic notice
+   *                 and so cannot run at the full-page type size.
+   */
+  function guidePanel(d, area, compact) {
     var rows = t('public.guide');
-    var html = '<div class="guide">' + rows.map(function (g) {
+    var html = '<div class="guide' + (compact ? ' is-compact' : '') + '">' + rows.map(function (g) {
       return '<div class="guide-row"><span class="guide-ic" aria-hidden="true">' + esc(g.icon) +
              '</span><div><strong>' + esc(g.title) + '</strong><p>' + esc(g.body) + '</p></div></div>';
     }).join('') + '</div>';
     var p = panel({ area: area, title: t('public.guideTitle'), html: html });
+
+    // Posters appear only once an administrator has generated and reviewed
+    // them; without them there is nothing to open, so no button is offered.
+    if (S.illustrations && S.illustrations.items && S.illustrations.items.length) {
+      var btn = node('button', 'panel-tbl', esc(t('public.posterBtn')));
+      btn.type = 'button';
+      btn.onclick = openPosters;
+      p.querySelector('.panel-hd').appendChild(btn);
+    }
     return p;
-  }
-
-  /** Where each patient stands: how many are at each stage of care. */
-  function stagePanel(d, area) {
-    var k = d.kpi;
-    var stages = [
-      { key: 'ongoingtreatment', n: d.statusMix.reduce(function (a, x) {
-          return a + (x.key === 'ongoingtreatment' ? x.count : 0); }, 0) },
-      { key: 'referred',  n: k.referred },
-      { key: 'preadmit',  n: k.preadmit },
-      { key: 'admitted',  n: k.admitted },
-      { key: 'discharge', n: k.discharge }
-    ].filter(function (x) { return x.n > 0; });
-
-    var html = '<div class="stages">' + stages.map(function (x) {
-      return '<div class="stage"><span class="stage-n">' + x.n + '</span>' +
-             '<span class="stage-l">' + esc(statusName(x.key)) + '</span></div>';
-    }).join('') + '</div>';
-    return panel({ area: area, title: t('public.stageTitle'), sub: t('public.stageSub'), html: html });
   }
 
   function publicSteps(d) {
@@ -5272,12 +5292,12 @@ var Charts = (function () {
         rows: (hasCrisis ? 'auto auto auto auto minmax(0,1fr)' : 'auto auto auto minmax(0,1fr)'),
         cols: '1fr',
         areas: (hasCrisis
-          ? '"seek" "alert" "zones" "stage" "guide"'
-          : '"seek" "zones" "stage" "guide"'),
+          ? '"seek" "alert" "zones" "klinik" "guide"'
+          : '"seek" "zones" "klinik" "guide"'),
         build: function () {
           var out = [searchPrompt('seek')];
           if (hasCrisis) out.push(crisisBanner(d, 'alert'));
-          out.push(zoneCards(d, 'zones'), stagePanel(d, 'stage'), guidePanel(d, 'guide'));
+          out.push(zoneCards(d, 'zones'), klinikNotice('klinik'), guidePanel(d, 'guide', true));
           return out;
         }
       }];
@@ -5288,11 +5308,11 @@ var Charts = (function () {
         title: t('public.stepNow'),
         rows: hasCrisis ? 'auto auto minmax(0,1fr) auto' : 'auto minmax(0,1fr) auto',
         cols: '1fr',
-        areas: hasCrisis ? '"seek" "alert" "zones" "stage"' : '"seek" "zones" "stage"',
+        areas: hasCrisis ? '"seek" "alert" "zones" "klinik"' : '"seek" "zones" "klinik"',
         build: function () {
           var out = [searchPrompt('seek')];
           if (hasCrisis) out.push(crisisBanner(d, 'alert'));
-          out.push(zoneCards(d, 'zones'), stagePanel(d, 'stage'));
+          out.push(zoneCards(d, 'zones'), klinikNotice('klinik'));
           return out;
         }
       },
@@ -5712,7 +5732,6 @@ var Charts = (function () {
     $('searchInput').onkeydown = function (e) { if (e.key === 'Enter') doSearch(); };
     $('gateGo').onclick = submitGate;
     $('gateInput').onkeydown = function (e) { if (e.key === 'Enter') submitGate(); };
-    $('narr').onclick = openHelp;
     ['ovSearch', 'ovTable', 'ovGate', 'ovHelp'].forEach(function (id) {
       var ov = $(id);
       ov.addEventListener('click', function (e) { if (e.target === ov) closeOv(id); });
@@ -5729,6 +5748,7 @@ var Charts = (function () {
     window.addEventListener('orientationchange', onResize);
 
     loadTab(S.tab);
+    loadIllustrations();
     // Public tabs refresh on the same 5-minute cadence as the server cache.
     setInterval(function () {
       TABS.forEach(function (tab) {

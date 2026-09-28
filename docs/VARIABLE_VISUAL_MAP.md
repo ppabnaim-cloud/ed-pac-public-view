@@ -79,12 +79,14 @@ PAC has a single zone, so a second screen would be half empty; it carries everyt
 |------|--------|------|-----------|
 | 1 — Zone status now | Patient search prompt | Call to action | 3, 5, 6 via the search overlay |
 | | Crisis alert (when escalation beds are open) | Conditional banner | Bed code (10) |
-| | **One card per zone** — patients being cared for against the zone's normal bed count, a state badge, and a fill bar | **Big numbers** | Bed code (10), Zone (9) |
+| | **One card per zone**, in fixed order (Red, Yellow, Observation, Asthma, Green) — patients being cared for against the zone's normal bed count, a state badge, and a fill bar | **Big numbers** | Bed code (10), Zone (9) |
 | | Green-zone card (full width) — queue length and average time to be called | **Big numbers** | Queue No. (14), Called into GZ (15), Triage (2) |
-| | Patients by stage of care | **Big numbers** | Status (12) |
-| 2 — Guidance for families | Why the sickest are seen first, what each zone means, what happens while waiting for a ward bed | Plain-language text | — |
+| | Non-emergency notice directing minor cases to a Klinik Kesihatan | Standing banner | — |
+| 2 — Guidance for families | Why the sickest are seen first, what each zone means, what happens while waiting for a ward bed, what belongs at a Klinik Kesihatan | Plain-language text | — |
 
-The narrative strip above the tabs carries the one message the cards do not — that turns are not given in order of arrival — and opens the full guidance when tapped.
+The strip above the tabs carries one standing message: turns are given by how serious the condition is, not by arrival time.
+
+**Excluded from the public view by design:** patient counts by stage of care, and any commentary on departmental workload or forecast arrivals. Both are operational measures for the staff view. Public typography runs a size up throughout, since these screens are read from several metres away.
 
 ### Tab 4 — Administrative (gated)
 
