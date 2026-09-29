@@ -29,6 +29,11 @@
 
   var TABS = ['wcc', 'bu', 'pac', 'admin'];
 
+  /* How often the page re-reads the register. Matches CACHE_SECS in Code.gs,
+     so a refresh normally costs a cache read rather than a re-read of the
+     whole sheet. */
+  var REFRESH_MS = 15 * 60 * 1000;
+
   // ── i18n ─────────────────────────────────────────────────
   function dict() { return I18N[S.lang] || I18N.ms; }
   function t(path) {
@@ -252,13 +257,6 @@
 
     if (def.html) { bd.innerHTML = def.html; }
     else if (def.chart) { S.specs.push({ el: bd, spec: def.chart }); }
-    return p;
-  }
-
-  function bannerPanel(def) {
-    var p = node('div', 'banner is-' + (def.tone || 'info'));
-    p.style.gridArea = def.area;
-    p.innerHTML = '<span>' + esc(def.icon || 'ℹ️') + '</span><span>' + def.html + '</span>';
     return p;
   }
 
@@ -763,12 +761,20 @@
     wrap.innerHTML = zones.map(function (z) {
       var total = z.funded + z.crisis;
       var isRoom = z.isRoomZone;
-      var full = z.crisis > 0 || total >= z.capacity;
-      var pct = z.capacity > 0 ? Math.min(100, Math.round(total / z.capacity * 100)) : 0;
-      var state = z.crisis > 0 ? 'crisis' : (total >= z.capacity ? 'full' : (pct >= 70 ? 'busy' : 'ok'));
 
-      var badge = z.crisis > 0
-        ? '<span class="zc-badge is-crisis">' + z.crisis + ' ' + esc(t('public.crisisBeds')) + '</span>'
+      // Beds beyond the normal establishment, derived from the two numbers on
+      // the card. Counting bed codes instead can disagree with what the reader
+      // can see - a patient in a crisis bed while a normal bed stands empty -
+      // and a public screen that does not add up is not worth showing. The
+      // Administrative tab keeps the coded count and flags that difference as
+      // a step-down opportunity.
+      var over = Math.max(0, total - z.capacity);
+      var full = total >= z.capacity;
+      var pct = z.capacity > 0 ? Math.min(100, Math.round(total / z.capacity * 100)) : 0;
+      var state = over > 0 ? 'crisis' : (full ? 'full' : (pct >= 70 ? 'busy' : 'ok'));
+
+      var badge = over > 0
+        ? '<span class="zc-badge is-crisis">' + over + ' ' + esc(t('public.crisisBeds')) + '</span>'
         : '<span class="zc-badge is-' + state + '">' + esc(t('public.state.' + state)) + '</span>';
 
       // The green zone carries the two figures families ask about most.
@@ -796,17 +802,6 @@
       '</div>';
     }).join('');
     return wrap;
-  }
-
-  /** The crisis alert the specification asks for, in plain language. */
-  function crisisBanner(d, area) {
-    var k = d.kpi;
-    if (!k.crisisBeds) return null;
-    return bannerPanel({
-      area: area, tone: 'critical', icon: '⚠️',
-      html: '<strong>' + esc(t('public.crisisTitle')) + '</strong> ' +
-            esc(tf('public.crisisBody', k.crisisBeds))
-    });
   }
 
   /**
@@ -862,24 +857,14 @@
    * prompt, the non-emergency notice and the guidance together.
    */
   function publicSteps(d) {
-    var hasCrisis = d.kpi.crisisBeds > 0;
     return [{
       title: t('public.stepNow'),
-      // Seven guidance entries need slightly more room than five zone cards,
-      // which are a number and a label however much height they are given.
-      rows: hasCrisis
-        ? 'auto minmax(0,1fr) auto minmax(0,1.2fr)'
-        : 'minmax(0,1fr) auto minmax(0,1.2fr)',
+      rows: 'minmax(0,1fr) auto minmax(0,1.2fr)',
       cols: '1.15fr 1fr',
-      areas: hasCrisis
-        ? '"alert alert" "zones zones" "seek klinik" "guide guide"'
-        : '"zones zones" "seek klinik" "guide guide"',
+      areas: '"zones zones" "seek klinik" "guide guide"',
       build: function () {
-        var out = [];
-        if (hasCrisis) out.push(crisisBanner(d, 'alert'));
-        out.push(zoneCards(d, 'zones'), searchPrompt('seek'),
-                 klinikNotice('klinik'), guidePanel(d, 'guide', true));
-        return out;
+        return [zoneCards(d, 'zones'), searchPrompt('seek'),
+                klinikNotice('klinik'), guidePanel(d, 'guide', true)];
       }
     }];
   }
@@ -1158,9 +1143,10 @@
     if (S.busy[tab] && !force) return;
     if (tab === 'admin' && !S.adminToken) { renderTab(); return; }
     S.busy[tab] = true;
-    if (!S.data[tab] || force) {
-      if (tab === S.tab) showState('load', t('loading'));
-    }
+    // Only when there is nothing to show. A refresh keeps the current figures
+    // on screen and swaps them when the new ones arrive, rather than blanking
+    // the page to a spinner on every cycle.
+    if (!S.data[tab] && tab === S.tab) showState('load', t('loading'));
     var fn = tab === 'admin' ? 'getAdminDashboard' : 'getDashboard';
     var arg = tab === 'admin' ? S.adminToken : tab;
     serverCall(fn, arg, function (res) {
@@ -1340,16 +1326,22 @@
 
     loadTab(S.tab);
     loadIllustrations();
-    // Public tabs refresh on the same 5-minute cadence as the server cache.
+    // Refresh quietly on the same cadence as the server cache. Only the tab
+    // being looked at is refreshed: fetching the other three costs a round
+    // trip each and nobody is reading them.
     setInterval(function () {
-      TABS.forEach(function (tab) {
-        if (tab === 'admin' && !S.adminToken) return;
-        if (tab === S.tab || S.data[tab]) loadTab(tab, true);
-      });
-    }, 300000);
+      if (S.tab === 'admin' && !S.adminToken) return;
+      loadTab(S.tab, true);
+    }, REFRESH_MS);
   }
 
-  window.EDPAC = { state: S, boot: boot, render: renderTab, t: t };
+  // Small surface for diagnostics and for the tests: `reload` is what the
+  // refresh timer calls, so a test can prove a refresh does not blank the page.
+  window.EDPAC = {
+    state: S, boot: boot, render: renderTab, t: t,
+    reload: function () { loadTab(S.tab, true); },
+    refreshMs: REFRESH_MS
+  };
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);
   } else { boot(); }

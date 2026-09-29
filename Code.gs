@@ -20,7 +20,11 @@ var FIRST_DATA_ROW = 3;
 var N_COLS = 20;
 var N_COLS_MAX = 21;           // column 21 (Discharge Date/Time) is optional
 
-var CACHE_SECS = 300;          // 5 minutes, matches the stated refresh cadence
+var CACHE_SECS = 900;          // 15 minutes, matching the page's refresh cadence.
+                               // Longer than it needs to be for freshness, but
+                               // each miss re-reads and re-aggregates the whole
+                               // register, so a short window buys nothing a
+                               // waiting family can perceive.
 var ADMIT_WINDOW_H = 24;       // admitted patients stay visible this long
 var FORECAST_HORIZON = 4;      // hours projected forward
 var MIN_N_WAIT = 10;

@@ -139,11 +139,18 @@ screen. The step pager exists only on the Administrative tab.
   a second layer: the sequence is the escalation ladder, and reading it across
   is the point. Each card carries how many patients are being cared for against
   that zone's normal bed count, a fill bar and a state badge.
-- **A crisis alert** whenever crisis beds are activated, naming how many — the
-  alert notification the specification asks for.
+- **A crisis badge on the zone itself** whenever patients exceed that zone's
+  normal bed count, naming how many crisis beds that implies. The figure is
+  derived from the two numbers printed on the card — patients minus normal
+  capacity — so what a reader can see always adds up. The Administrative tab
+  keeps the count of beds actually *coded* `crisis`; where the two differ,
+  patients are sitting in crisis beds while normal beds stand empty, which the
+  data-quality panel reports as a step-down opportunity.
 - **The green zone across the full width**: how many are waiting, and the
   average time to be called, averaged over the last ten patients called in.
-- **A standing notice** directing non-emergency cases to a Klinik Kesihatan.
+- **A standing notice** directing non-emergency cases to a Klinik Kesihatan or
+  GP clinic, naming what belongs there, and pointing Skim Perubatan MADANI
+  holders to a registered GP clinic.
 - **Guidance in plain Malay** on every public tab: why the sickest are seen
   first, what each zone means, what happens while waiting for a ward bed, and
   what belongs at a Klinik Kesihatan instead.
@@ -314,7 +321,7 @@ to tell a configuration problem from a data problem.
 
 ## Maintenance
 
-- `clearCaches()` — force a refresh of the public dashboards (they cache for 5 minutes).
+- `clearCaches()` — force a refresh of the public dashboards (they cache for 15 minutes).
 - `clearRegisterData()` — empty the data rows, keeping structure and validation.
 - `generateIllustrations()` — regenerate the public illustrations; review the
   Drive folder afterwards, then `clearIllustrationCache()`.

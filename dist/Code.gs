@@ -26,7 +26,7 @@
  * The "ED/PAC Register" menu can generate a fresh register and a demonstration
  * scenario. Those items CLEAR Sheet1 — run them on a copy, never on live data.
  *
- * Built 2026-09-28 10:57 UTC
+ * Built 2026-09-29 01:00 UTC
  * ============================================================================
  */
 
@@ -53,7 +53,11 @@ var FIRST_DATA_ROW = 3;
 var N_COLS = 20;
 var N_COLS_MAX = 21;           // column 21 (Discharge Date/Time) is optional
 
-var CACHE_SECS = 300;          // 5 minutes, matches the stated refresh cadence
+var CACHE_SECS = 900;          // 15 minutes, matching the page's refresh cadence.
+                               // Longer than it needs to be for freshness, but
+                               // each miss re-reads and re-aggregates the whole
+                               // register, so a short window buys nothing a
+                               // waiting family can perceive.
 var ADMIT_WINDOW_H = 24;       // admitted patients stay visible this long
 var FORECAST_HORIZON = 4;      // hours projected forward
 var MIN_N_WAIT = 10;
@@ -2825,7 +2829,7 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
 .guide.is-compact .guide-ic { font-size: calc(17px * var(--s)) }
 .guide.is-compact .guide-row { gap: calc(8px * var(--s)) }
 .guide.is-compact .guide-row strong { font-size: calc(12.5px * var(--s)); line-height: 1.2 }
-.guide.is-compact .guide-row p { font-size: calc(11.5px * var(--s)); -webkit-line-clamp: 3; line-height: 1.35 }
+.guide.is-compact .guide-row p { font-size: calc(11.5px * var(--s)); -webkit-line-clamp: 4; line-height: 1.35 }
 @media (min-width: 1100px) { .guide.is-compact { grid-template-columns: repeat(3, minmax(0, 1fr)) } }
 /* On a wall display four columns puts the seven entries on two rows instead
    of three, which buys the height the larger type needs. At this width each
@@ -3055,9 +3059,9 @@ var I18N = {
       },
       guideTitle:  'Perkara yang perlu anda tahu',
       posterBtn:   'Lihat poster',
-      klinikTitle: 'Bukan kecemasan? Tidak mengancam nyawa?',
-      klinikBody:  'Sila ke Klinik Kesihatan atau klinik GP berdekatan. Sakit tekak, demam ringan, batuk ringan dan luka kecil dirawat dengan lebih cepat.',
-      klinikMadani:'Skim Perubatan MADANI meliputi rawatan di klinik swasta yang menyertai skim.',
+      klinikTitle: 'Bukan kecemasan? Ke Klinik Kesihatan atau klinik GP',
+      klinikBody:  'Sakit tekak, demam ringan, hidung berair, batuk ringan dan luka kecil bukan kes kecemasan. Sila ke Klinik Kesihatan atau klinik GP berdekatan.',
+      klinikMadani:'Jika anda dilindungi Skim Perubatan MADANI, sila ke klinik GP yang berdaftar.',
       guide: [
         { icon: '🚑', title: 'Pesakit paling kritikal didahulukan',
           body: 'Pesakit dipanggil mengikut tahap kecemasan, bukan masa pendaftaran. Pesakit yang tiba selepas anda mungkin dipanggil dahulu.' },
@@ -3066,11 +3070,9 @@ var I18N = {
         { icon: '🟩', title: 'Zon Hijau',
           body: 'Untuk kes kurang kritikal. Pesakit diberi nombor giliran dan menunggu sehingga dipanggil ke bilik rawatan.' },
         { icon: '🛏️', title: 'Menunggu katil wad',
-          body: 'Setelah pegawai perubatan atau pakar memutuskan pesakit perlu masuk wad, pesakit menunggu di sini sehingga ada katil kosong.' },
+          body: 'Setelah pegawai perubatan atau pakar memutuskan pesakit perlu dimasukkan ke wad, pesakit menunggu di sini sehingga katil wad tersedia.' },
         { icon: '🏠', title: 'Selepas discaj',
           body: 'Nama pesakit kekal dalam sistem selama 24 jam selepas discaj, supaya keluarga masih boleh menyemak status.' },
-        { icon: '🏥', title: 'Bukan kecemasan? Ke Klinik Kesihatan atau klinik GP',
-          body: 'Sakit tekak, demam ringan, hidung berair, batuk ringan dan luka kecil dirawat lebih cepat di Klinik Kesihatan atau klinik GP.' },
         { icon: '💬', title: 'Keadaan pesakit bertambah teruk?',
           body: 'Terus ke kaunter jururawat dengan segera. Jangan menunggu di luar.' }
       ]
@@ -3303,7 +3305,7 @@ var I18N = {
       admit: 'Masa masuk wad', bwt: 'BWT', twt: 'TWT', gzwt: 'GZWT'
     },
 
-    footer: 'Data dikemas kini setiap 5 minit. Untuk pertanyaan segera, sila ke kaunter jururawat.',
+    footer: 'Data dikemas kini setiap 15 minit. Untuk pertanyaan segera, sila ke kaunter jururawat.',
     credit: 'Dibangunkan oleh Dr Naim AI Team, HTPN'
   },
 
@@ -3348,9 +3350,9 @@ var I18N = {
       },
       guideTitle:  'What you need to know',
       posterBtn:   'View posters',
-      klinikTitle: 'Not an emergency? Not life-threatening?',
-      klinikBody:  'Go to your nearest Klinik Kesihatan or GP clinic. Sore throat, mild fever, cough and minor wounds are treated far sooner.',
-      klinikMadani:'Skim Perubatan MADANI covers treatment at participating private clinics.',
+      klinikTitle: 'Not an emergency? Go to a Klinik Kesihatan or GP clinic',
+      klinikBody:  'Sore throat, mild fever, runny nose, mild cough and minor wounds are not emergencies. Please go to your nearest Klinik Kesihatan or GP clinic.',
+      klinikMadani:'If you are covered by Skim Perubatan MADANI, please go to a registered GP clinic.',
       guide: [
         { icon: '🚑', title: 'The most seriously ill are seen first',
           body: 'Patients are seen in order of clinical urgency, not arrival. Someone who arrives after you may be seen first.' },
@@ -3359,11 +3361,9 @@ var I18N = {
         { icon: '🟩', title: 'Green Zone',
           body: 'For less urgent conditions. Patients are given a queue number and wait until called to a consultation room.' },
         { icon: '🛏️', title: 'Waiting for a ward bed',
-          body: 'Once a medical officer or specialist decides admission is required, the patient waits here until a ward bed is free.' },
+          body: 'Once a medical officer or specialist decides that admission is required, the patient waits here until a ward bed becomes available.' },
         { icon: '🏠', title: 'After discharge',
           body: 'The patient remains listed here for 24 hours after discharge, so that family can still check their status.' },
-        { icon: '🏥', title: 'Not an emergency? Go to a Klinik Kesihatan or GP',
-          body: 'Sore throat, mild fever, runny nose, mild cough and minor wounds are treated far sooner at a Klinik Kesihatan or GP clinic.' },
         { icon: '💬', title: 'Is the patient getting worse?',
           body: 'Go to the nursing counter immediately. Do not wait outside.' }
       ]
@@ -3561,7 +3561,7 @@ var I18N = {
       admit: 'Admission time', bwt: 'BWT', twt: 'TWT', gzwt: 'GZWT'
     },
 
-    footer: 'Data refreshes every 5 minutes. For urgent enquiries please go to the nursing counter.',
+    footer: 'Data refreshes every 15 minutes. For urgent enquiries please go to the nursing counter.',
     credit: 'Developed by Dr Naim AI Team, HTPN'
   }
 };
@@ -4582,6 +4582,11 @@ var Charts = (function () {
 
   var TABS = ['wcc', 'bu', 'pac', 'admin'];
 
+  /* How often the page re-reads the register. Matches CACHE_SECS in Code.gs,
+     so a refresh normally costs a cache read rather than a re-read of the
+     whole sheet. */
+  var REFRESH_MS = 15 * 60 * 1000;
+
   // ── i18n ─────────────────────────────────────────────────
   function dict() { return I18N[S.lang] || I18N.ms; }
   function t(path) {
@@ -4805,13 +4810,6 @@ var Charts = (function () {
 
     if (def.html) { bd.innerHTML = def.html; }
     else if (def.chart) { S.specs.push({ el: bd, spec: def.chart }); }
-    return p;
-  }
-
-  function bannerPanel(def) {
-    var p = node('div', 'banner is-' + (def.tone || 'info'));
-    p.style.gridArea = def.area;
-    p.innerHTML = '<span>' + esc(def.icon || 'ℹ️') + '</span><span>' + def.html + '</span>';
     return p;
   }
 
@@ -5316,12 +5314,20 @@ var Charts = (function () {
     wrap.innerHTML = zones.map(function (z) {
       var total = z.funded + z.crisis;
       var isRoom = z.isRoomZone;
-      var full = z.crisis > 0 || total >= z.capacity;
-      var pct = z.capacity > 0 ? Math.min(100, Math.round(total / z.capacity * 100)) : 0;
-      var state = z.crisis > 0 ? 'crisis' : (total >= z.capacity ? 'full' : (pct >= 70 ? 'busy' : 'ok'));
 
-      var badge = z.crisis > 0
-        ? '<span class="zc-badge is-crisis">' + z.crisis + ' ' + esc(t('public.crisisBeds')) + '</span>'
+      // Beds beyond the normal establishment, derived from the two numbers on
+      // the card. Counting bed codes instead can disagree with what the reader
+      // can see - a patient in a crisis bed while a normal bed stands empty -
+      // and a public screen that does not add up is not worth showing. The
+      // Administrative tab keeps the coded count and flags that difference as
+      // a step-down opportunity.
+      var over = Math.max(0, total - z.capacity);
+      var full = total >= z.capacity;
+      var pct = z.capacity > 0 ? Math.min(100, Math.round(total / z.capacity * 100)) : 0;
+      var state = over > 0 ? 'crisis' : (full ? 'full' : (pct >= 70 ? 'busy' : 'ok'));
+
+      var badge = over > 0
+        ? '<span class="zc-badge is-crisis">' + over + ' ' + esc(t('public.crisisBeds')) + '</span>'
         : '<span class="zc-badge is-' + state + '">' + esc(t('public.state.' + state)) + '</span>';
 
       // The green zone carries the two figures families ask about most.
@@ -5349,17 +5355,6 @@ var Charts = (function () {
       '</div>';
     }).join('');
     return wrap;
-  }
-
-  /** The crisis alert the specification asks for, in plain language. */
-  function crisisBanner(d, area) {
-    var k = d.kpi;
-    if (!k.crisisBeds) return null;
-    return bannerPanel({
-      area: area, tone: 'critical', icon: '⚠️',
-      html: '<strong>' + esc(t('public.crisisTitle')) + '</strong> ' +
-            esc(tf('public.crisisBody', k.crisisBeds))
-    });
   }
 
   /**
@@ -5415,24 +5410,14 @@ var Charts = (function () {
    * prompt, the non-emergency notice and the guidance together.
    */
   function publicSteps(d) {
-    var hasCrisis = d.kpi.crisisBeds > 0;
     return [{
       title: t('public.stepNow'),
-      // Seven guidance entries need slightly more room than five zone cards,
-      // which are a number and a label however much height they are given.
-      rows: hasCrisis
-        ? 'auto minmax(0,1fr) auto minmax(0,1.2fr)'
-        : 'minmax(0,1fr) auto minmax(0,1.2fr)',
+      rows: 'minmax(0,1fr) auto minmax(0,1.2fr)',
       cols: '1.15fr 1fr',
-      areas: hasCrisis
-        ? '"alert alert" "zones zones" "seek klinik" "guide guide"'
-        : '"zones zones" "seek klinik" "guide guide"',
+      areas: '"zones zones" "seek klinik" "guide guide"',
       build: function () {
-        var out = [];
-        if (hasCrisis) out.push(crisisBanner(d, 'alert'));
-        out.push(zoneCards(d, 'zones'), searchPrompt('seek'),
-                 klinikNotice('klinik'), guidePanel(d, 'guide', true));
-        return out;
+        return [zoneCards(d, 'zones'), searchPrompt('seek'),
+                klinikNotice('klinik'), guidePanel(d, 'guide', true)];
       }
     }];
   }
@@ -5711,9 +5696,10 @@ var Charts = (function () {
     if (S.busy[tab] && !force) return;
     if (tab === 'admin' && !S.adminToken) { renderTab(); return; }
     S.busy[tab] = true;
-    if (!S.data[tab] || force) {
-      if (tab === S.tab) showState('load', t('loading'));
-    }
+    // Only when there is nothing to show. A refresh keeps the current figures
+    // on screen and swaps them when the new ones arrive, rather than blanking
+    // the page to a spinner on every cycle.
+    if (!S.data[tab] && tab === S.tab) showState('load', t('loading'));
     var fn = tab === 'admin' ? 'getAdminDashboard' : 'getDashboard';
     var arg = tab === 'admin' ? S.adminToken : tab;
     serverCall(fn, arg, function (res) {
@@ -5893,16 +5879,22 @@ var Charts = (function () {
 
     loadTab(S.tab);
     loadIllustrations();
-    // Public tabs refresh on the same 5-minute cadence as the server cache.
+    // Refresh quietly on the same cadence as the server cache. Only the tab
+    // being looked at is refreshed: fetching the other three costs a round
+    // trip each and nobody is reading them.
     setInterval(function () {
-      TABS.forEach(function (tab) {
-        if (tab === 'admin' && !S.adminToken) return;
-        if (tab === S.tab || S.data[tab]) loadTab(tab, true);
-      });
-    }, 300000);
+      if (S.tab === 'admin' && !S.adminToken) return;
+      loadTab(S.tab, true);
+    }, REFRESH_MS);
   }
 
-  window.EDPAC = { state: S, boot: boot, render: renderTab, t: t };
+  // Small surface for diagnostics and for the tests: \`reload\` is what the
+  // refresh timer calls, so a test can prove a refresh does not blank the page.
+  window.EDPAC = {
+    state: S, boot: boot, render: renderTab, t: t,
+    reload: function () { loadTab(S.tab, true); },
+    refreshMs: REFRESH_MS
+  };
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);
   } else { boot(); }
