@@ -1,0 +1,222 @@
+<script>
+/* ============================================================
+   HEALTH-PROMOTION RAIL  —  "5 Peranan Rakyat ke arah Negara Sehat"
+
+   Shown only in wall-display mode (?mode=tv) and hidden on phones. A
+   waiting hall is captive, high-dwell attention, which is exactly what
+   health promotion normally cannot buy; a family member checking a
+   relative on their own phone wants one answer and nothing else.
+
+   Editorial rules applied to this content, deliberately:
+     - No third-party embeds. Nothing here loads from Instagram, Threads
+       or any other site: a hospital display must not render content that
+       can be edited by someone else after the hospital has endorsed it,
+       and must not track the people standing in front of it. Facts are
+       restated in our own words and the source is named as plain text.
+     - Every clinical claim has to survive a clinician reading it. Claims
+       that cannot be supported were dropped rather than softened, because
+       one indefensible line discredits the defensible ones beside it.
+     - Each card ends in something a member of the public can do today.
+       Advocacy aimed at other parties does not belong on this screen.
+   ============================================================ */
+var Banner = (function () {
+  'use strict';
+
+  var PERIOD_MS = 12000;   // long enough to read a card from across a hall
+
+  var ITEMS = [
+    {
+      id: 'intro', tone: 'intro', icon: '\ud83c\uddf2\ud83c\uddfe', no: '',
+      title: { ms: '5 Peranan Rakyat ke arah Negara Sehat',
+               en: 'Five Roles Towards a Healthier Nation' },
+      lead:  { ms: 'Setiap satu mengurangkan kesesakan hospital \u2014 dan memanjangkan hayat anda.',
+               en: 'Each one eases hospital crowding \u2014 and lengthens your own life.' },
+      points: [],
+      action: { ms: 'Paparan ini bertukar setiap beberapa saat.',
+                en: 'This panel changes every few seconds.' },
+      source: { ms: 'Jabatan Kecemasan & PAC, HTPN Kajang',
+                en: 'Emergency Department & PAC, HTPN Kajang' }
+    },
+    {
+      id: 'p1', tone: 'move', icon: '\ud83d\udc5f', no: '1',
+      title: { ms: 'Bergerak setiap hari', en: 'Move every day' },
+      lead:  { ms: 'Cabaran Langkah Sehat. Mula dari paras anda, bukan paras orang lain.',
+               en: 'The healthy-steps challenge. Start from where you are.' },
+      points: [
+        { ms: '5,000 langkah untuk permulaan. 7,000\u20138,000 untuk manfaat penuh.',
+          en: '5,000 steps to start. 7,000\u20138,000 for the full benefit.' },
+        { ms: 'Manfaat terbesar pada yang paling kurang bergerak.',
+          en: 'The biggest gains go to those who move least.' },
+        { ms: 'Menurunkan risiko kencing manis, darah tinggi dan strok.',
+          en: 'Lowers the risk of diabetes, high blood pressure and stroke.' },
+        { ms: 'Mengurangkan beban pada sendi.',
+          en: 'Eases the load on your joints.' }
+      ],
+      action: { ms: 'Jadikan langkah harian KPI jabatan anda. Mula hari ini.',
+                en: 'Make daily steps your department\u2019s KPI. Start today.' },
+      source: { ms: 'Garis panduan aktiviti fizikal WHO, 2020',
+                en: 'WHO physical activity guidelines, 2020' }
+    },
+    {
+      id: 'p2', tone: 'sugar', icon: '\ud83e\udd64', no: '2',
+      title: { ms: 'Kurangkan gula', en: 'Cut down on sugar' },
+      lead:  { ms: 'Manis itu membunuh. Kencing manis yang tidak terkawal memusnahkan organ satu demi satu.',
+               en: 'Sweetness kills. Uncontrolled diabetes destroys the organs one by one.' },
+      points: [
+        { ms: 'Mata: retinopati, punca utama kebutaan.',
+          en: 'Eyes: retinopathy, a leading cause of blindness.' },
+        { ms: 'Buah pinggang: punca utama dialisis di Malaysia.',
+          en: 'Kidneys: the leading cause of dialysis in Malaysia.' },
+        { ms: 'Kaki: luka yang tidak sembuh, lalu potong kaki.',
+          en: 'Feet: wounds that will not heal, then amputation.' },
+        { ms: 'Jantung: serangan jantung dan strok lebih awal.',
+          en: 'Heart: heart attack and stroke, earlier in life.' }
+      ],
+      action: { ms: 'Baca label; pilih Logo Pilihan Sihat KKM. Berat turun hanya apabila kalori digunakan melebihi yang dimakan.',
+                en: 'Read the label; look for the MOH Healthier Choice logo. Weight falls only when calories used exceed calories eaten.' },
+      source: { ms: 'CPG Pengurusan Obesiti (MEMS, 2023); Logo Pilihan Sihat, KKM',
+                en: 'CPG Management of Obesity (MEMS, 2023); Healthier Choice Logo, MOH' }
+    },
+    {
+      id: 'p3', tone: 'meds', icon: '\u26a0\ufe0f', no: '3',
+      title: { ms: 'Berhenti suplemen terlebih janji',
+               en: 'Stop over-claimed supplements' },
+      lead:  { ms: '\u201cSemula jadi\u201d bukan bermakna selamat. Wad dialisis kami menanggung akibatnya.',
+               en: '\u201cNatural\u201d does not mean safe. Our dialysis wards carry the cost.' },
+      points: [
+        { ms: 'Kecederaan buah pinggang akut, lalu dialisis seumur hidup.',
+          en: 'Acute kidney injury, then lifelong dialysis.' },
+        { ms: 'Kecederaan hati akibat herba tidak berdaftar.',
+          en: 'Liver injury from unregistered herbal products.' },
+        { ms: 'Steroid tersembunyi: nampak pulih, penyakit bertambah buruk.',
+          en: 'Hidden steroids: looks better, gets worse.' },
+        { ms: 'Jangan berhenti ubat doktor kerana pujukan penjual.',
+          en: 'Never stop a prescribed medicine on a seller\u2019s word.' }
+      ],
+      action: { ms: 'Semak nombor MAL dan hologram Meditag di portal NPRA sebelum membeli. Lapor produk tanpa pendaftaran.',
+                en: 'Check the MAL number and Meditag hologram on the NPRA portal before buying. Report unregistered products.' },
+      source: { ms: 'Bahagian Regulatori Farmasi Negara (NPRA), KKM',
+                en: 'National Pharmaceutical Regulatory Agency (NPRA), MOH' }
+    },
+    {
+      id: 'p4', tone: 'smoke', icon: '\ud83d\udead', no: '4',
+      title: { ms: 'Lapor merokok di kawasan larangan',
+               en: 'Report smoking where it is banned' },
+      lead:  { ms: 'Asap orang lain adalah masalah kesihatan anda.',
+               en: 'Someone else\u2019s smoke is your health problem.' },
+      points: [
+        { ms: 'Asap tangan kedua mencetuskan asma pada kanak-kanak.',
+          en: 'Second-hand smoke triggers asthma in children.' },
+        { ms: 'Punca utama penyakit paru-paru, kanser dan serangan jantung.',
+          en: 'A leading cause of lung disease, cancer and heart attack.' },
+        { ms: 'Klinik Berhenti Merokok: di Klinik Kesihatan, tanpa bayaran.',
+          en: 'Quit clinics: at any Klinik Kesihatan, free of charge.' }
+      ],
+      action: { ms: 'Ambil gambar sebagai bukti, kemudian lapor kepada Pejabat Kesihatan Daerah.',
+                en: 'Photograph it as evidence, then report it to your District Health Office.' },
+      source: { ms: 'Akta Kawalan Produk Merokok untuk Kesihatan Awam 2024',
+                en: 'Control of Smoking Products for Public Health Act 2024' }
+    },
+    {
+      id: 'p5', tone: 'use', icon: '\ud83c\udfe5', no: '5',
+      title: { ms: 'Guna perkhidmatan yang betul',
+               en: 'Use the right service' },
+      lead:  { ms: 'Kesesakan di Jabatan Kecemasan bermula di luar pintu ini.',
+               en: 'Crowding in the Emergency Department begins outside these doors.' },
+      points: [
+        { ms: 'Sakit tekak, demam ringan, luka kecil: ke Klinik Kesihatan atau GP.',
+          en: 'Sore throat, mild fever, minor wounds: a Klinik Kesihatan or GP.' },
+        { ms: 'Hadir setiap temujanji susulan.',
+          en: 'Keep every follow-up appointment.' },
+        { ms: 'Bawa senarai ubat anda setiap kali.',
+          en: 'Bring your list of medicines every time.' },
+        { ms: 'Periksa tekanan darah, gula dan BMI di Klinik Kesihatan.',
+          en: 'Have your blood pressure, glucose and BMI checked.' }
+      ],
+      action: { ms: 'Dilindungi Skim Perubatan MADANI? Sila ke klinik GP yang berdaftar.',
+                en: 'Covered by Skim Perubatan MADANI? Go to a registered GP clinic.' },
+      source: { ms: 'Jabatan Kecemasan & PAC, HTPN Kajang',
+                en: 'Emergency Department & PAC, HTPN Kajang' }
+    }
+  ];
+
+  var st = { i: 0, timer: null, el: null, langFn: null };
+
+  function esc(s) {
+    return String(s === null || s === undefined ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+  function pick(v, lang) {
+    if (!v) return '';
+    return v[lang] || v.ms || '';
+  }
+  function lang() { return (st.langFn && st.langFn()) || 'ms'; }
+
+  function cardHtml(it, lg) {
+    var pts = (it.points || []).map(function (p) {
+      return '<li>' + esc(pick(p, lg)) + '</li>';
+    }).join('');
+    var head = it.no
+      ? '<span class="rail-no">' + esc(lg === 'ms' ? 'Peranan ' + it.no : 'Role ' + it.no) + '</span>'
+      : '';
+    return '' +
+      '<div class="rail-card is-' + esc(it.tone) + '">' +
+        '<div class="rail-top">' +
+          '<span class="rail-icon" aria-hidden="true">' + esc(it.icon) + '</span>' +
+          head +
+        '</div>' +
+        '<h3 class="rail-title">' + esc(pick(it.title, lg)) + '</h3>' +
+        '<p class="rail-lead">' + esc(pick(it.lead, lg)) + '</p>' +
+        (pts ? '<ul class="rail-pts">' + pts + '</ul>' : '') +
+        '<p class="rail-action">' + esc(pick(it.action, lg)) + '</p>' +
+        '<p class="rail-src">' + esc(pick(it.source, lg)) + '</p>' +
+      '</div>';
+  }
+
+  function dotsHtml() {
+    var out = '';
+    for (var i = 0; i < ITEMS.length; i++) {
+      out += '<span class="rail-dot' + (i === st.i ? ' is-on' : '') + '"></span>';
+    }
+    return '<div class="rail-dots">' + out + '</div>';
+  }
+
+  /** Draws the current card. Safe to call at any time, including on a
+      language change, without disturbing the rotation. */
+  function render() {
+    if (!st.el) return;
+    var lg = lang();
+    st.el.innerHTML = cardHtml(ITEMS[st.i], lg) + dotsHtml();
+    // Restart the fade so a newly drawn card reads as a new card.
+    var card = st.el.querySelector('.rail-card');
+    if (card) {
+      card.classList.remove('is-in');
+      /* jshint -W030 */
+      void card.offsetWidth;
+      card.classList.add('is-in');
+    }
+  }
+
+  function next() { st.i = (st.i + 1) % ITEMS.length; render(); }
+
+  function mount(el, langFn) {
+    if (!el) return;
+    st.el = el;
+    st.langFn = langFn || null;
+    st.i = 0;
+    render();
+    if (st.timer) clearInterval(st.timer);
+    st.timer = setInterval(next, PERIOD_MS);
+  }
+
+  function stop() { if (st.timer) { clearInterval(st.timer); st.timer = null; } }
+
+  return {
+    mount: mount, render: render, next: next, stop: stop,
+    items: ITEMS, count: ITEMS.length,
+    index: function () { return st.i; },
+    period: PERIOD_MS
+  };
+})();
+</script>

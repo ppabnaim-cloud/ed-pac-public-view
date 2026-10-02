@@ -121,6 +121,142 @@ body {
 .content { grid-area: content }
 .pager   { grid-area: pager }
 
+/* ── WALL-DISPLAY MODE (?mode=tv) ─────────────────────────
+   A vertical rail of rotating public-health cards beside the zone board.
+   Only ever on a wide screen: a hall display has an audience with forty
+   minutes of nothing else to look at, whereas a family member on a phone
+   wants one answer and health promotion beside it reads as the hospital
+   changing the subject. Hidden below 1000px for that reason, which is the
+   same threshold the type scale treats as a wall display. */
+.rail { display: none }
+
+body.is-tv #app {
+  grid-template-columns: minmax(0, 1fr) clamp(320px, 23vw, 480px);
+  grid-template-areas:
+    "hdr     rail"
+    "narr    rail"
+    "tabs    rail"
+    "content rail"
+    "pager   rail";
+}
+body.is-tv .rail {
+  grid-area: rail;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: calc(10px * var(--s));
+  padding: calc(14px * var(--s));
+  background: var(--surface-2);
+  border-left: 1px solid var(--line);
+  overflow: hidden;
+}
+
+/* Below the wall-display threshold the rail is dropped and the shell
+   returns to its single column, so ?mode=tv degrades rather than breaks. */
+@media (max-width: 999px) {
+  body.is-tv #app {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "hdr" "narr" "tabs" "content" "pager";
+  }
+  body.is-tv .rail { display: none }
+}
+
+.rail-card {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(8px * var(--s));
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: calc(6px * var(--s)) solid var(--rail-tone, var(--brand));
+  border-radius: var(--radius);
+  padding: calc(16px * var(--s));
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(calc(8px * var(--s)));
+  transition: opacity .5s ease, transform .5s ease;
+}
+.rail-card.is-in { opacity: 1; transform: none }
+
+/* Tones are deliberately drawn from outside the triage palette. Red, amber
+   and green mean a clinical acuity on this screen and must not also mean
+   "health promotion topic" two hundred millimetres away. */
+.rail-card.is-intro { --rail-tone: var(--brand) }
+.rail-card.is-move  { --rail-tone: #2a78d6 }
+.rail-card.is-sugar { --rail-tone: #4a3aa7 }
+.rail-card.is-meds  { --rail-tone: #8a3fa8 }
+.rail-card.is-smoke { --rail-tone: #4a5763 }
+.rail-card.is-use   { --rail-tone: var(--brand-dk) }
+
+.rail-top { display: flex; align-items: center; gap: calc(10px * var(--s)); flex: none }
+.rail-icon { font-size: calc(30px * var(--s)); line-height: 1 }
+.rail-no {
+  font-size: calc(13px * var(--s)); font-weight: 800; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--rail-tone, var(--brand));
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 999px; padding: calc(3px * var(--s)) calc(10px * var(--s));
+}
+.rail-title {
+  flex: none; margin: 0;
+  font-size: calc(27px * var(--s)); line-height: 1.14; font-weight: 800;
+  color: var(--ink); letter-spacing: -.01em;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+.rail-lead {
+  flex: none; margin: 0;
+  font-size: calc(17px * var(--s)); line-height: 1.38; font-weight: 700;
+  color: var(--ink-2);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5;
+  overflow: hidden;
+}
+.rail-pts {
+  margin: 0; padding: 0; list-style: none;
+  display: flex; flex-direction: column; gap: calc(8px * var(--s));
+  min-height: 0; overflow: hidden;
+}
+.rail-pts li {
+  position: relative;
+  padding-left: calc(18px * var(--s));
+  font-size: calc(15.5px * var(--s)); line-height: 1.4; font-weight: 600;
+  color: var(--ink);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+.rail-pts li::before {
+  content: ''; position: absolute;
+  left: 0; top: calc(9px * var(--s));
+  width: calc(7px * var(--s)); height: calc(7px * var(--s));
+  border-radius: 50%; background: var(--rail-tone, var(--brand));
+}
+.rail-action {
+  /* margin-top:auto drops this and the source line to the foot of the card,
+     so a short card reads as composed rather than as one that ran out. */
+  flex: none; margin: auto 0 0;
+  background: var(--surface-2);
+  border-left: calc(4px * var(--s)) solid var(--rail-tone, var(--brand));
+  border-radius: calc(6px * var(--s));
+  padding: calc(10px * var(--s)) calc(12px * var(--s));
+  font-size: calc(16px * var(--s)); line-height: 1.36; font-weight: 700;
+  color: var(--ink);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5;
+  overflow: hidden;
+}
+.rail-src {
+  flex: none; margin: 0;
+  font-size: calc(12px * var(--s)); line-height: 1.3; font-weight: 600;
+  color: var(--ink-3);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.rail-dots { flex: none; display: flex; justify-content: center; gap: calc(7px * var(--s)) }
+.rail-dot {
+  width: calc(8px * var(--s)); height: calc(8px * var(--s));
+  border-radius: 50%; background: var(--line);
+}
+.rail-dot.is-on { background: var(--brand) }
+
 /* ── HEADER ──────────────────────────────────────────────── */
 .hdr {
   background: linear-gradient(135deg, var(--brand-dk), var(--brand));
@@ -628,6 +764,13 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
    column is still some 450px, so it is not the narrow strip a fully fluid
    grid would produce. */
 @media (min-width: 1500px) { .guide.is-compact { grid-template-columns: repeat(4, minmax(0, 1fr)) } }
+/* These thresholds measure the viewport, but in wall-display mode the rail
+   takes some 440px off the content column before the guide ever sees it. On a
+   1080p television that left four columns sharing 1478px and cost two entries
+   their last line. Shift the threshold by the rail's width instead. */
+@media (min-width: 1500px) and (max-width: 1959px) {
+  body.is-tv .guide.is-compact { grid-template-columns: repeat(3, minmax(0, 1fr)) }
+}
 
 /* Phones: the cards stack in the same order, top to bottom. */
 @media (max-width: 620px) {

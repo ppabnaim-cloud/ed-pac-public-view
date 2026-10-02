@@ -108,8 +108,11 @@ var AGE_BANDS = [
 
 // ── ENTRY POINT ────────────────────────────────────────────
 function doGet(e) {
+  var p = (e && e.parameter) || {};
   var t = HtmlService.createTemplateFromFile('Index');
-  t.bootScope = (e && e.parameter && e.parameter.tab) || 'wcc';
+  t.bootScope = bootScope_(p.tab);
+  t.bootMode = bootMode_(p.mode);
+  t.bootData = bootData_();
   return t.evaluate()
     .setTitle('Status Pesakit — Jabatan Kecemasan & PAC | HTPN Kajang')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no')
@@ -123,6 +126,42 @@ function include(name) {
 function prop_(key) {
   try { return PropertiesService.getScriptProperties().getProperty(key); }
   catch (err) { return null; }
+}
+
+// -- BOOT PAYLOAD ------------------------------------------
+/**
+ * Serialises an object for embedding straight into a <script> block. The
+ * angle brackets and the ampersand are escaped so that no value can close the
+ * script element early, and U+2028/9 because they are line terminators to a
+ * JavaScript parser but legal inside a JSON string.
+ */
+function jsonForScript_(obj) {
+  return JSON.stringify(obj)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
+
+function bootScope_(v) { return (v && SCOPES[v]) ? v : 'wcc'; }
+
+/** 'tv' turns on the wall-display layout and the health-promotion rail. */
+function bootMode_(v) { return v === 'tv' ? 'tv' : ''; }
+
+/**
+ * The public payloads inlined into the page, taken from the cache ONLY.
+ *
+ * Deliberately never builds. doGet has to return the HTML as fast as it can,
+ * and a cold cache here would make every visitor wait on a full register read
+ * before a single pixel appeared. With warmCache running on its trigger the
+ * cache is always warm, so this is a cache read and the page arrives with its
+ * figures already in it -- no first round trip at all. When the cache is cold
+ * this returns {} and the page fetches exactly as it used to.
+ */
+function bootData_() {
+  try { return jsonForScript_(cachedPublicPayloads_()); }
+  catch (err) { return '{}'; }
 }
 
 // ── DATA ACCESS ────────────────────────────────────────────
@@ -1132,23 +1171,83 @@ function dataQuality_(recs, refTime) {
 }
 
 // ── CLIENT API ─────────────────────────────────────────────
+var PUBLIC_SCOPES = ['wcc', 'bu', 'pac'];
+var DASH_CACHE_V = 'dash_v3_';
+
+function dashKey_(scopeKey) { return DASH_CACHE_V + scopeKey; }
+
+/**
+ * Builds every public scope from ONE register read and caches each separately.
+ *
+ * The register is the expensive part: reading and parsing it costs the same
+ * whether one tab or three are wanted, so doing it once for all three is very
+ * nearly free compared with three separate invocations. Each payload is cached
+ * under its own key because CacheService refuses a single entry over 100 KB.
+ */
+function buildPublicPayloads_() {
+  var recs = buildRecords_();
+  var refInfo = resolveRefTime_(recs);
+  var stamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
+  var out = {}, store = {};
+  for (var i = 0; i < PUBLIC_SCOPES.length; i++) {
+    var k = PUBLIC_SCOPES[i];
+    var payload = buildScope_(k, recs, refInfo);
+    payload.generatedAt = stamp;
+    out[k] = payload;
+    store[dashKey_(k)] = JSON.stringify(payload);
+  }
+  try {
+    CacheService.getScriptCache().putAll(store, CACHE_SECS);
+  } catch (err) { /* oversize entry: serve this call uncached */ }
+  return out;
+}
+
+/**
+ * Reads whatever public payloads are already cached. Returns only the ones
+ * present, so the caller can tell a warm cache from a cold one without paying
+ * for a register read to find out.
+ */
+function cachedPublicPayloads_() {
+  var out = {};
+  try {
+    var keys = [];
+    for (var i = 0; i < PUBLIC_SCOPES.length; i++) keys.push(dashKey_(PUBLIC_SCOPES[i]));
+    var hit = CacheService.getScriptCache().getAll(keys) || {};
+    for (var j = 0; j < PUBLIC_SCOPES.length; j++) {
+      var raw = hit[dashKey_(PUBLIC_SCOPES[j])];
+      if (raw) out[PUBLIC_SCOPES[j]] = JSON.parse(raw);
+    }
+  } catch (err) { /* treat any cache fault as a cold cache */ }
+  return out;
+}
+
+/**
+ * All three public tabs in one call.
+ *
+ * Every google.script.run call is a cold server invocation — the runtime starts
+ * and the whole script is parsed before a line of this runs — so the round trip
+ * dominates, not the work. Shipping all three tabs together means the page
+ * switches tabs with no further server call at all.
+ */
+function getPublicDashboards() {
+  var cached = cachedPublicPayloads_();
+  if (Object.keys(cached).length === PUBLIC_SCOPES.length) return cached;
+  try {
+    return buildPublicPayloads_();
+  } catch (err) {
+    return { error: 'SERVER_ERROR', message: String(err && err.message || err) };
+  }
+}
+
+/** One public tab. Retained for the page's per-tab refresh path. */
 function getDashboard(scopeKey) {
   scopeKey = SCOPES[scopeKey] ? scopeKey : 'wcc';
   if (scopeKey === 'admin') return { error: 'ADMIN_REQUIRES_TOKEN' };
-  var cache = CacheService.getScriptCache();
-  var key = 'dash_v2_' + scopeKey;
+  var cached = cachedPublicPayloads_();
+  if (cached[scopeKey]) return cached[scopeKey];
   try {
-    var hit = cache.get(key);
-    if (hit) return JSON.parse(hit);
-  } catch (err) { /* cache miss or oversize entry — fall through and recompute */ }
-
-  try {
-    var recs = buildRecords_();
-    var refInfo = resolveRefTime_(recs);
-    var payload = buildScope_(scopeKey, recs, refInfo);
-    payload.generatedAt = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
-    try { cache.put(key, JSON.stringify(payload), CACHE_SECS); } catch (e2) { /* > 100KB: serve uncached */ }
-    return payload;
+    var all = buildPublicPayloads_();
+    return all[scopeKey];
   } catch (err) {
     return { error: 'SERVER_ERROR', message: String(err && err.message || err) };
   }
@@ -1479,9 +1578,56 @@ function checkSetup() {
   return out.join('\n');
 }
 
-// ── MAINTENANCE ────────────────────────────────────────────
+// ── MAINTENANCE ────────────────────────────────
 function clearCaches() {
-  var c = CacheService.getScriptCache();
-  c.removeAll(['dash_v2_wcc', 'dash_v2_bu', 'dash_v2_pac']);
+  var keys = [];
+  for (var i = 0; i < PUBLIC_SCOPES.length; i++) keys.push(dashKey_(PUBLIC_SCOPES[i]));
+  CacheService.getScriptCache().removeAll(keys);
   return 'cleared';
+}
+
+/**
+ * Recomputes every public payload and puts it back in the cache.
+ *
+ * Driven by a time-driven trigger (see installWarmTrigger) so that no visitor
+ * ever pays for the register read. With this running, a visitor's doGet finds
+ * the figures already built and inlines them into the page: the first paint
+ * carries real numbers and the first server round trip disappears entirely.
+ */
+function warmCache() {
+  var t0 = new Date().getTime();
+  var all = buildPublicPayloads_();
+  var msg = 'warmCache: ' + Object.keys(all).length + ' public payloads rebuilt in ' +
+            (new Date().getTime() - t0) + ' ms';
+  try { Logger.log(msg); } catch (err) { /* no logger outside the editor */ }
+  return msg;
+}
+
+/**
+ * Installs the warming trigger. Run once from the editor (Run >
+ * installWarmTrigger) and authorise when prompted — this needs the
+ * script.scriptapp scope, which the dashboard did not previously use.
+ *
+ * Ten minutes against a fifteen-minute cache leaves five minutes of overlap,
+ * so an entry is always replaced before it expires and the cache never goes
+ * cold under a visitor.
+ */
+function installWarmTrigger() {
+  var existing = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < existing.length; i++) {
+    if (existing[i].getHandlerFunction() === 'warmCache') ScriptApp.deleteTrigger(existing[i]);
+  }
+  ScriptApp.newTrigger('warmCache').timeBased().everyMinutes(10).create();
+  warmCache();
+  return 'warmCache installed: every 10 minutes. Cache primed now.';
+}
+
+/** Removes the warming trigger. */
+function removeWarmTrigger() {
+  var existing = ScriptApp.getProjectTriggers();
+  var n = 0;
+  for (var i = 0; i < existing.length; i++) {
+    if (existing[i].getHandlerFunction() === 'warmCache') { ScriptApp.deleteTrigger(existing[i]); n++; }
+  }
+  return 'removed ' + n + ' warming trigger(s)';
 }

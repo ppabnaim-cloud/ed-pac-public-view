@@ -11,11 +11,24 @@ global.PropertiesService = { getScriptProperties: () => ({ getProperty: k => (k 
 global.CacheService = {
   getScriptCache: () => ({
     get: k => (k in _cache ? _cache[k] : null),
+    getAll: ks => { const o = {}; ks.forEach(k => { if (k in _cache) o[k] = _cache[k]; }); return o; },
     put: (k, v) => { _cache[k] = v; },
+    putAll: obj => { Object.keys(obj).forEach(k => { _cache[k] = obj[k]; }); },
     remove: k => { delete _cache[k]; },
     removeAll: ks => ks.forEach(k => delete _cache[k])
   })
 };
+global.__CACHE__ = _cache;
+const _triggers = [];
+global.ScriptApp = {
+  getProjectTriggers: () => _triggers.slice(),
+  deleteTrigger: tr => { const i = _triggers.indexOf(tr); if (i >= 0) _triggers.splice(i, 1); },
+  newTrigger: fn => {
+    const tr = { getHandlerFunction: () => fn, _every: null };
+    return { timeBased: () => ({ everyMinutes: m => ({ create: () => { tr._every = m; _triggers.push(tr); return tr; } }) }) };
+  }
+};
+global.Logger = { log: () => {} };
 function pad(n, w) { return ('000' + n).slice(-w); }
 global.Utilities = {
   formatDate: (d, tz, fmt) => fmt

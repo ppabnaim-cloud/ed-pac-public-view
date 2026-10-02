@@ -50,6 +50,9 @@
   <!-- CONTENT: exactly one step visible, never scrolled -->
   <main class="content" id="content" role="tabpanel"></main>
 
+  <!-- HEALTH-PROMOTION RAIL: wall-display mode only, never on a phone -->
+  <aside class="rail" id="rail" aria-label="Peranan Rakyat ke arah Negara Sehat"></aside>
+
   <!-- STEP PAGER -->
   <footer class="pager" id="pager">
     <button class="pager-btn" id="pgPrev" type="button">‹</button>
@@ -129,8 +132,15 @@
 
 <div id="tip" role="status" aria-live="polite"></div>
 
-<script>window.BOOT_SCOPE = '<?= bootScope ?>';</script>
+<script>
+window.BOOT_SCOPE = '<?= bootScope ?>';
+window.BOOT_MODE = '<?= bootMode ?>';
+/* Public figures, already built, inlined by doGet from the warm cache. Saves
+   the page a cold server round trip before it can show a single number. */
+window.BOOT_DATA = <?!= bootData ?>;
+</script>
 <?!= include('I18n') ?>
+<?!= include('Banner') ?>
 <?!= include('Charts') ?>
 <?!= include('App') ?>
 </body>

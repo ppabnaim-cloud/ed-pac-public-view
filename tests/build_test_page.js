@@ -5,11 +5,23 @@ const R = require('path').join(__dirname, '..') + '/';
 let html = fs.readFileSync(R + 'Index.html', 'utf8');
 html = html.replace(/<\?!=\s*include\('(\w+)'\)\s*\?>/g, (_, name) => fs.readFileSync(R + name + '.html', 'utf8'));
 html = html.replace(/<\?=\s*bootScope\s*\?>/g, 'wcc');
+// The test page is opened as a file:// URL, so it can read its own query
+// string; the real page cannot (it runs inside Apps Script's sandbox iframe)
+// and has these templated in by doGet instead.
+html = html.replace(/'<\?=\s*bootMode\s*\?>'/g,
+  "(new URLSearchParams(location.search)).get('mode') || ''");
+// Empty by default: the tests exercise the fetch path, and a dedicated test
+// sets window.BOOT_DATA itself to exercise the inlined path.
+html = html.replace(/<\?!=\s*bootData\s*\?>/g, '{}');
 const payloads = JSON.parse(fs.readFileSync(require('path').join(__dirname, 'fixtures', 'payloads.json'), 'utf8'));
 const mock = `
 <script>
 window.__MOCK__ = {
   getDashboard: function (scope) { return window.__PAYLOADS__[scope]; },
+  getPublicDashboards: function () {
+    return { wcc: window.__PAYLOADS__.wcc, bu: window.__PAYLOADS__.bu, pac: window.__PAYLOADS__.pac };
+  },
+  getIllustrations: function () { return { items: [] }; },
   getAdminDashboard: function () { return window.__PAYLOADS__.admin; },
   verifyAdmin: function () { return { ok: true, token: 'test-token', via: 'passcode' }; },
   getPatientStatus: function () {
@@ -23,6 +35,7 @@ window.__MOCK__ = {
 };
 window.__PAYLOADS__ = ${JSON.stringify(payloads)};
 </script>`;
-html = html.replace('<script>window.BOOT_SCOPE', mock + '\n<script>window.BOOT_SCOPE');
+html = html.replace('<script>\nwindow.BOOT_SCOPE', mock + '\n<script>\nwindow.BOOT_SCOPE');
+if (html.indexOf('__MOCK__') < 0) throw new Error('mock was not injected: boot script anchor changed');
 fs.writeFileSync(require('path').join(__dirname, 'dashboard_test.html'), html);
 console.log('dashboard_test.html written,', html.length, 'bytes');

@@ -53,6 +53,10 @@ not, so **you do not need to rebuild the sheet to deploy.** Add
 `ADMIN_PASSCODE` under Script Properties or the Administrative tab will not
 open, and re-authorise when prompted: the scopes have changed.
 
+Then run **`installWarmTrigger()`** once from the editor. See
+[Making it load quickly](#making-it-load-quickly) — without it the dashboard
+still works, but every visitor pays for a register read.
+
 Rebuild it after editing any source file:
 
 ```bash
@@ -311,6 +315,95 @@ These are reported honestly in the app rather than filled with proxies.
 
 ---
 
+## Making it load quickly
+
+Apps Script is slow in a specific way, and it is worth knowing which part. The
+page itself is one download. Everything after that is `google.script.run`, and
+**every one of those calls is a cold server invocation**: the runtime starts
+and the whole script is parsed before a line of your code runs. A round trip
+costs seconds whether it does real work or returns a cached string. So the
+number of calls is what a visitor feels, not the amount of work in them.
+
+Three things remove calls rather than shortening them.
+
+**1. `installWarmTrigger()` — run this once.** It installs a time-driven
+trigger that runs `warmCache()` every ten minutes, rebuilding all three public
+payloads and putting them in the script cache. Ten minutes against a
+fifteen-minute cache leaves five minutes of overlap, so an entry is always
+replaced before it expires and the cache never goes cold under a visitor. It
+needs the `script.scriptapp` scope, so authorise when prompted. Remove it again
+with `removeWarmTrigger()`.
+
+**2. The figures are inlined into the page.** `doGet` reads the warm cache and
+writes the payloads straight into the HTML, so the first paint carries real
+numbers and the first round trip disappears entirely. `doGet` never *builds*
+the payloads — only reads what is cached — because a cold cache there would
+make every visitor wait on a full register read before a single pixel appeared.
+With no warm cache it inlines nothing and the page fetches as it used to.
+
+**3. All three public tabs come down in one call.** `getPublicDashboards()`
+reads the register once and builds all three. Switching tabs afterwards costs
+no server call at all.
+
+Beyond that the page keeps a last-known snapshot in `localStorage`, so a
+returning visitor sees figures immediately rather than a spinner — stamped with
+the time they were generated, and discarded beyond two hours, because an old
+figure shown without comment is worse than no figure. Illustrations load after
+the figures are on screen, not before.
+
+**The ceiling.** Even with all of this, the Apps Script sandbox iframe and its
+bootstrap cost roughly one to two seconds that nothing here can remove. If the
+wall display needs to be genuinely instant, the page has to move off Apps
+Script — serving it from a CDN while Apps Script continues to supply
+*aggregates only* over a narrow endpoint. Never a build that ships the register
+itself to the browser: that downloads every name, IC and MRN to every visitor,
+masking becomes cosmetic and the search rate limit unenforceable.
+
+## Wall-display mode
+
+Add `?mode=tv` to the deployment URL for a hall or lobby television:
+
+```
+https://script.google.com/.../exec?mode=tv
+```
+
+It keeps the zone board and adds a vertical rail of rotating public-health
+cards — *5 Peranan Rakyat ke arah Negara Sehat* — changing every twelve
+seconds and following the language toggle. The content lives in `Banner.html`,
+one object per card.
+
+The rail is deliberately **absent below 1000px**, so `?mode=tv` opened on a
+phone or a 10-inch tablet degrades to the ordinary view. A waiting hall is
+captive attention with nothing else to look at, which is exactly what health
+promotion normally cannot buy; a family member checking a relative on their own
+phone wants one answer, and promotion beside it reads as the hospital changing
+the subject.
+
+Three editorial rules are applied to the card content and should survive any
+edit:
+
+- **No third-party embeds.** Nothing loads from Instagram, Threads or anywhere
+  else. A hospital display must not render content someone else can edit after
+  the hospital has endorsed it, and must not track the people standing in front
+  of it. Facts are restated in our own words with the source named as plain text.
+- **Every clinical claim has to survive a clinician reading it.** Claims that
+  could not be supported were dropped rather than softened: one indefensible
+  line discredits the defensible ones beside it. Step targets are tiered
+  (5,000 to begin, 7,000–8,000 for the full benefit) rather than the
+  conventional 10,000, which has no strong evidence base and tells the
+  sedentary and elderly — who stand to gain most — that the challenge is not
+  for them.
+- **Each card ends in something a member of the public can do today.** Advocacy
+  aimed at other parties does not belong on this screen.
+
+Card tones are drawn from outside the triage palette on purpose. Red, amber and
+green mean a clinical acuity on this screen and must not also mean "health
+promotion topic" two hundred millimetres away.
+
+Two citations to confirm against current policy before this goes live: the
+front-of-pack scheme named on the sugar card (*Logo Pilihan Sihat*) and the
+smoking legislation named on the smoking card.
+
 ## Checking the setup
 
 Run **`checkSetup()`** from the Apps Script editor and read the execution log.
@@ -322,6 +415,9 @@ to tell a configuration problem from a data problem.
 ## Maintenance
 
 - `clearCaches()` — force a refresh of the public dashboards (they cache for 15 minutes).
+- `warmCache()` — rebuild and re-cache all three public payloads now.
+- `installWarmTrigger()` / `removeWarmTrigger()` — add or remove the ten-minute
+  warming trigger. Run `installWarmTrigger()` once after deploying.
 - `clearRegisterData()` — empty the data rows, keeping structure and validation.
 - `generateIllustrations()` — regenerate the public illustrations; review the
   Drive folder afterwards, then `clearIllustrationCache()`.

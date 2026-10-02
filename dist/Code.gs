@@ -26,7 +26,7 @@
  * The "ED/PAC Register" menu can generate a fresh register and a demonstration
  * scenario. Those items CLEAR Sheet1 — run them on a copy, never on live data.
  *
- * Built 2026-09-29 01:00 UTC
+ * Built 2026-10-02 16:44 UTC
  * ============================================================================
  */
 
@@ -141,9 +141,16 @@ var AGE_BANDS = [
 
 // ── ENTRY POINT ────────────────────────────────────────────
 function doGet(e) {
-  var scope = (e && e.parameter && e.parameter.tab) || 'wcc';
-  if (['wcc', 'bu', 'pac', 'admin'].indexOf(scope) < 0) scope = 'wcc';
-  var html = PAGE_HTML.replace('__BOOT_SCOPE__', scope);
+  var p = (e && e.parameter) || {};
+  var scope = bootScope_(p.tab);
+  var mode = bootMode_(p.mode);
+  var data = bootData_();
+  // Function replacements, because a dollar sign followed by a quote or an
+  // ampersand in the payload would otherwise be read as a back-reference.
+  var html = PAGE_HTML
+    .replace('__BOOT_SCOPE__', function () { return scope; })
+    .replace('__BOOT_MODE__', function () { return mode; })
+    .replace('__BOOT_DATA__', function () { return data; });
   return HtmlService.createHtmlOutput(html)
     .setTitle('Status Pesakit \u2014 Jabatan Kecemasan & PAC | HTPN Kajang')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no')
@@ -153,6 +160,42 @@ function doGet(e) {
 function prop_(key) {
   try { return PropertiesService.getScriptProperties().getProperty(key); }
   catch (err) { return null; }
+}
+
+// -- BOOT PAYLOAD ------------------------------------------
+/**
+ * Serialises an object for embedding straight into a <script> block. The
+ * angle brackets and the ampersand are escaped so that no value can close the
+ * script element early, and U+2028/9 because they are line terminators to a
+ * JavaScript parser but legal inside a JSON string.
+ */
+function jsonForScript_(obj) {
+  return JSON.stringify(obj)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
+
+function bootScope_(v) { return (v && SCOPES[v]) ? v : 'wcc'; }
+
+/** 'tv' turns on the wall-display layout and the health-promotion rail. */
+function bootMode_(v) { return v === 'tv' ? 'tv' : ''; }
+
+/**
+ * The public payloads inlined into the page, taken from the cache ONLY.
+ *
+ * Deliberately never builds. doGet has to return the HTML as fast as it can,
+ * and a cold cache here would make every visitor wait on a full register read
+ * before a single pixel appeared. With warmCache running on its trigger the
+ * cache is always warm, so this is a cache read and the page arrives with its
+ * figures already in it -- no first round trip at all. When the cache is cold
+ * this returns {} and the page fetches exactly as it used to.
+ */
+function bootData_() {
+  try { return jsonForScript_(cachedPublicPayloads_()); }
+  catch (err) { return '{}'; }
 }
 
 // ── DATA ACCESS ────────────────────────────────────────────
@@ -1162,23 +1205,83 @@ function dataQuality_(recs, refTime) {
 }
 
 // ── CLIENT API ─────────────────────────────────────────────
+var PUBLIC_SCOPES = ['wcc', 'bu', 'pac'];
+var DASH_CACHE_V = 'dash_v3_';
+
+function dashKey_(scopeKey) { return DASH_CACHE_V + scopeKey; }
+
+/**
+ * Builds every public scope from ONE register read and caches each separately.
+ *
+ * The register is the expensive part: reading and parsing it costs the same
+ * whether one tab or three are wanted, so doing it once for all three is very
+ * nearly free compared with three separate invocations. Each payload is cached
+ * under its own key because CacheService refuses a single entry over 100 KB.
+ */
+function buildPublicPayloads_() {
+  var recs = buildRecords_();
+  var refInfo = resolveRefTime_(recs);
+  var stamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
+  var out = {}, store = {};
+  for (var i = 0; i < PUBLIC_SCOPES.length; i++) {
+    var k = PUBLIC_SCOPES[i];
+    var payload = buildScope_(k, recs, refInfo);
+    payload.generatedAt = stamp;
+    out[k] = payload;
+    store[dashKey_(k)] = JSON.stringify(payload);
+  }
+  try {
+    CacheService.getScriptCache().putAll(store, CACHE_SECS);
+  } catch (err) { /* oversize entry: serve this call uncached */ }
+  return out;
+}
+
+/**
+ * Reads whatever public payloads are already cached. Returns only the ones
+ * present, so the caller can tell a warm cache from a cold one without paying
+ * for a register read to find out.
+ */
+function cachedPublicPayloads_() {
+  var out = {};
+  try {
+    var keys = [];
+    for (var i = 0; i < PUBLIC_SCOPES.length; i++) keys.push(dashKey_(PUBLIC_SCOPES[i]));
+    var hit = CacheService.getScriptCache().getAll(keys) || {};
+    for (var j = 0; j < PUBLIC_SCOPES.length; j++) {
+      var raw = hit[dashKey_(PUBLIC_SCOPES[j])];
+      if (raw) out[PUBLIC_SCOPES[j]] = JSON.parse(raw);
+    }
+  } catch (err) { /* treat any cache fault as a cold cache */ }
+  return out;
+}
+
+/**
+ * All three public tabs in one call.
+ *
+ * Every google.script.run call is a cold server invocation — the runtime starts
+ * and the whole script is parsed before a line of this runs — so the round trip
+ * dominates, not the work. Shipping all three tabs together means the page
+ * switches tabs with no further server call at all.
+ */
+function getPublicDashboards() {
+  var cached = cachedPublicPayloads_();
+  if (Object.keys(cached).length === PUBLIC_SCOPES.length) return cached;
+  try {
+    return buildPublicPayloads_();
+  } catch (err) {
+    return { error: 'SERVER_ERROR', message: String(err && err.message || err) };
+  }
+}
+
+/** One public tab. Retained for the page's per-tab refresh path. */
 function getDashboard(scopeKey) {
   scopeKey = SCOPES[scopeKey] ? scopeKey : 'wcc';
   if (scopeKey === 'admin') return { error: 'ADMIN_REQUIRES_TOKEN' };
-  var cache = CacheService.getScriptCache();
-  var key = 'dash_v2_' + scopeKey;
+  var cached = cachedPublicPayloads_();
+  if (cached[scopeKey]) return cached[scopeKey];
   try {
-    var hit = cache.get(key);
-    if (hit) return JSON.parse(hit);
-  } catch (err) { /* cache miss or oversize entry — fall through and recompute */ }
-
-  try {
-    var recs = buildRecords_();
-    var refInfo = resolveRefTime_(recs);
-    var payload = buildScope_(scopeKey, recs, refInfo);
-    payload.generatedAt = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
-    try { cache.put(key, JSON.stringify(payload), CACHE_SECS); } catch (e2) { /* > 100KB: serve uncached */ }
-    return payload;
+    var all = buildPublicPayloads_();
+    return all[scopeKey];
   } catch (err) {
     return { error: 'SERVER_ERROR', message: String(err && err.message || err) };
   }
@@ -1509,11 +1612,58 @@ function checkSetup() {
   return out.join('\n');
 }
 
-// ── MAINTENANCE ────────────────────────────────────────────
+// ── MAINTENANCE ────────────────────────────────
 function clearCaches() {
-  var c = CacheService.getScriptCache();
-  c.removeAll(['dash_v2_wcc', 'dash_v2_bu', 'dash_v2_pac']);
+  var keys = [];
+  for (var i = 0; i < PUBLIC_SCOPES.length; i++) keys.push(dashKey_(PUBLIC_SCOPES[i]));
+  CacheService.getScriptCache().removeAll(keys);
   return 'cleared';
+}
+
+/**
+ * Recomputes every public payload and puts it back in the cache.
+ *
+ * Driven by a time-driven trigger (see installWarmTrigger) so that no visitor
+ * ever pays for the register read. With this running, a visitor's doGet finds
+ * the figures already built and inlines them into the page: the first paint
+ * carries real numbers and the first server round trip disappears entirely.
+ */
+function warmCache() {
+  var t0 = new Date().getTime();
+  var all = buildPublicPayloads_();
+  var msg = 'warmCache: ' + Object.keys(all).length + ' public payloads rebuilt in ' +
+            (new Date().getTime() - t0) + ' ms';
+  try { Logger.log(msg); } catch (err) { /* no logger outside the editor */ }
+  return msg;
+}
+
+/**
+ * Installs the warming trigger. Run once from the editor (Run >
+ * installWarmTrigger) and authorise when prompted — this needs the
+ * script.scriptapp scope, which the dashboard did not previously use.
+ *
+ * Ten minutes against a fifteen-minute cache leaves five minutes of overlap,
+ * so an entry is always replaced before it expires and the cache never goes
+ * cold under a visitor.
+ */
+function installWarmTrigger() {
+  var existing = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < existing.length; i++) {
+    if (existing[i].getHandlerFunction() === 'warmCache') ScriptApp.deleteTrigger(existing[i]);
+  }
+  ScriptApp.newTrigger('warmCache').timeBased().everyMinutes(10).create();
+  warmCache();
+  return 'warmCache installed: every 10 minutes. Cache primed now.';
+}
+
+/** Removes the warming trigger. */
+function removeWarmTrigger() {
+  var existing = ScriptApp.getProjectTriggers();
+  var n = 0;
+  for (var i = 0; i < existing.length; i++) {
+    if (existing[i].getHandlerFunction() === 'warmCache') { ScriptApp.deleteTrigger(existing[i]); n++; }
+  }
+  return 'removed ' + n + ' warming trigger(s)';
 }
 
 
@@ -2329,6 +2479,142 @@ body {
 .content { grid-area: content }
 .pager   { grid-area: pager }
 
+/* ── WALL-DISPLAY MODE (?mode=tv) ─────────────────────────
+   A vertical rail of rotating public-health cards beside the zone board.
+   Only ever on a wide screen: a hall display has an audience with forty
+   minutes of nothing else to look at, whereas a family member on a phone
+   wants one answer and health promotion beside it reads as the hospital
+   changing the subject. Hidden below 1000px for that reason, which is the
+   same threshold the type scale treats as a wall display. */
+.rail { display: none }
+
+body.is-tv #app {
+  grid-template-columns: minmax(0, 1fr) clamp(320px, 23vw, 480px);
+  grid-template-areas:
+    "hdr     rail"
+    "narr    rail"
+    "tabs    rail"
+    "content rail"
+    "pager   rail";
+}
+body.is-tv .rail {
+  grid-area: rail;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: calc(10px * var(--s));
+  padding: calc(14px * var(--s));
+  background: var(--surface-2);
+  border-left: 1px solid var(--line);
+  overflow: hidden;
+}
+
+/* Below the wall-display threshold the rail is dropped and the shell
+   returns to its single column, so ?mode=tv degrades rather than breaks. */
+@media (max-width: 999px) {
+  body.is-tv #app {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "hdr" "narr" "tabs" "content" "pager";
+  }
+  body.is-tv .rail { display: none }
+}
+
+.rail-card {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(8px * var(--s));
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: calc(6px * var(--s)) solid var(--rail-tone, var(--brand));
+  border-radius: var(--radius);
+  padding: calc(16px * var(--s));
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(calc(8px * var(--s)));
+  transition: opacity .5s ease, transform .5s ease;
+}
+.rail-card.is-in { opacity: 1; transform: none }
+
+/* Tones are deliberately drawn from outside the triage palette. Red, amber
+   and green mean a clinical acuity on this screen and must not also mean
+   "health promotion topic" two hundred millimetres away. */
+.rail-card.is-intro { --rail-tone: var(--brand) }
+.rail-card.is-move  { --rail-tone: #2a78d6 }
+.rail-card.is-sugar { --rail-tone: #4a3aa7 }
+.rail-card.is-meds  { --rail-tone: #8a3fa8 }
+.rail-card.is-smoke { --rail-tone: #4a5763 }
+.rail-card.is-use   { --rail-tone: var(--brand-dk) }
+
+.rail-top { display: flex; align-items: center; gap: calc(10px * var(--s)); flex: none }
+.rail-icon { font-size: calc(30px * var(--s)); line-height: 1 }
+.rail-no {
+  font-size: calc(13px * var(--s)); font-weight: 800; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--rail-tone, var(--brand));
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 999px; padding: calc(3px * var(--s)) calc(10px * var(--s));
+}
+.rail-title {
+  flex: none; margin: 0;
+  font-size: calc(27px * var(--s)); line-height: 1.14; font-weight: 800;
+  color: var(--ink); letter-spacing: -.01em;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+.rail-lead {
+  flex: none; margin: 0;
+  font-size: calc(17px * var(--s)); line-height: 1.38; font-weight: 700;
+  color: var(--ink-2);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5;
+  overflow: hidden;
+}
+.rail-pts {
+  margin: 0; padding: 0; list-style: none;
+  display: flex; flex-direction: column; gap: calc(8px * var(--s));
+  min-height: 0; overflow: hidden;
+}
+.rail-pts li {
+  position: relative;
+  padding-left: calc(18px * var(--s));
+  font-size: calc(15.5px * var(--s)); line-height: 1.4; font-weight: 600;
+  color: var(--ink);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+.rail-pts li::before {
+  content: ''; position: absolute;
+  left: 0; top: calc(9px * var(--s));
+  width: calc(7px * var(--s)); height: calc(7px * var(--s));
+  border-radius: 50%; background: var(--rail-tone, var(--brand));
+}
+.rail-action {
+  /* margin-top:auto drops this and the source line to the foot of the card,
+     so a short card reads as composed rather than as one that ran out. */
+  flex: none; margin: auto 0 0;
+  background: var(--surface-2);
+  border-left: calc(4px * var(--s)) solid var(--rail-tone, var(--brand));
+  border-radius: calc(6px * var(--s));
+  padding: calc(10px * var(--s)) calc(12px * var(--s));
+  font-size: calc(16px * var(--s)); line-height: 1.36; font-weight: 700;
+  color: var(--ink);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5;
+  overflow: hidden;
+}
+.rail-src {
+  flex: none; margin: 0;
+  font-size: calc(12px * var(--s)); line-height: 1.3; font-weight: 600;
+  color: var(--ink-3);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.rail-dots { flex: none; display: flex; justify-content: center; gap: calc(7px * var(--s)) }
+.rail-dot {
+  width: calc(8px * var(--s)); height: calc(8px * var(--s));
+  border-radius: 50%; background: var(--line);
+}
+.rail-dot.is-on { background: var(--brand) }
+
 /* ── HEADER ──────────────────────────────────────────────── */
 .hdr {
   background: linear-gradient(135deg, var(--brand-dk), var(--brand));
@@ -2836,6 +3122,13 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
    column is still some 450px, so it is not the narrow strip a fully fluid
    grid would produce. */
 @media (min-width: 1500px) { .guide.is-compact { grid-template-columns: repeat(4, minmax(0, 1fr)) } }
+/* These thresholds measure the viewport, but in wall-display mode the rail
+   takes some 440px off the content column before the guide ever sees it. On a
+   1080p television that left four columns sharing 1478px and cost two entries
+   their last line. Shift the threshold by the rail's width instead. */
+@media (min-width: 1500px) and (max-width: 1959px) {
+  body.is-tv .guide.is-compact { grid-template-columns: repeat(3, minmax(0, 1fr)) }
+}
 
 /* Phones: the cards stack in the same order, top to bottom. */
 @media (max-width: 620px) {
@@ -2926,6 +3219,9 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
   <!-- CONTENT: exactly one step visible, never scrolled -->
   <main class="content" id="content" role="tabpanel"></main>
 
+  <!-- HEALTH-PROMOTION RAIL: wall-display mode only, never on a phone -->
+  <aside class="rail" id="rail" aria-label="Peranan Rakyat ke arah Negara Sehat"></aside>
+
   <!-- STEP PAGER -->
   <footer class="pager" id="pager">
     <button class="pager-btn" id="pgPrev" type="button">‹</button>
@@ -3005,7 +3301,13 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
 
 <div id="tip" role="status" aria-live="polite"></div>
 
-<script>window.BOOT_SCOPE = '__BOOT_SCOPE__';</script>
+<script>
+window.BOOT_SCOPE = '__BOOT_SCOPE__';
+window.BOOT_MODE = '__BOOT_MODE__';
+/* Public figures, already built, inlined by doGet from the warm cache. Saves
+   the page a cold server round trip before it can show a single number. */
+window.BOOT_DATA = __BOOT_DATA__;
+</script>
 <script>
 /* ============================================================
    BILINGUAL STRINGS — Bahasa Malaysia (default) and English.
@@ -3565,6 +3867,229 @@ var I18N = {
     credit: 'Developed by Dr Naim AI Team, HTPN'
   }
 };
+</script>
+
+<script>
+/* ============================================================
+   HEALTH-PROMOTION RAIL  —  "5 Peranan Rakyat ke arah Negara Sehat"
+
+   Shown only in wall-display mode (?mode=tv) and hidden on phones. A
+   waiting hall is captive, high-dwell attention, which is exactly what
+   health promotion normally cannot buy; a family member checking a
+   relative on their own phone wants one answer and nothing else.
+
+   Editorial rules applied to this content, deliberately:
+     - No third-party embeds. Nothing here loads from Instagram, Threads
+       or any other site: a hospital display must not render content that
+       can be edited by someone else after the hospital has endorsed it,
+       and must not track the people standing in front of it. Facts are
+       restated in our own words and the source is named as plain text.
+     - Every clinical claim has to survive a clinician reading it. Claims
+       that cannot be supported were dropped rather than softened, because
+       one indefensible line discredits the defensible ones beside it.
+     - Each card ends in something a member of the public can do today.
+       Advocacy aimed at other parties does not belong on this screen.
+   ============================================================ */
+var Banner = (function () {
+  'use strict';
+
+  var PERIOD_MS = 12000;   // long enough to read a card from across a hall
+
+  var ITEMS = [
+    {
+      id: 'intro', tone: 'intro', icon: '\\ud83c\\uddf2\\ud83c\\uddfe', no: '',
+      title: { ms: '5 Peranan Rakyat ke arah Negara Sehat',
+               en: 'Five Roles Towards a Healthier Nation' },
+      lead:  { ms: 'Setiap satu mengurangkan kesesakan hospital \\u2014 dan memanjangkan hayat anda.',
+               en: 'Each one eases hospital crowding \\u2014 and lengthens your own life.' },
+      points: [],
+      action: { ms: 'Paparan ini bertukar setiap beberapa saat.',
+                en: 'This panel changes every few seconds.' },
+      source: { ms: 'Jabatan Kecemasan & PAC, HTPN Kajang',
+                en: 'Emergency Department & PAC, HTPN Kajang' }
+    },
+    {
+      id: 'p1', tone: 'move', icon: '\\ud83d\\udc5f', no: '1',
+      title: { ms: 'Bergerak setiap hari', en: 'Move every day' },
+      lead:  { ms: 'Cabaran Langkah Sehat. Mula dari paras anda, bukan paras orang lain.',
+               en: 'The healthy-steps challenge. Start from where you are.' },
+      points: [
+        { ms: '5,000 langkah untuk permulaan. 7,000\\u20138,000 untuk manfaat penuh.',
+          en: '5,000 steps to start. 7,000\\u20138,000 for the full benefit.' },
+        { ms: 'Manfaat terbesar pada yang paling kurang bergerak.',
+          en: 'The biggest gains go to those who move least.' },
+        { ms: 'Menurunkan risiko kencing manis, darah tinggi dan strok.',
+          en: 'Lowers the risk of diabetes, high blood pressure and stroke.' },
+        { ms: 'Mengurangkan beban pada sendi.',
+          en: 'Eases the load on your joints.' }
+      ],
+      action: { ms: 'Jadikan langkah harian KPI jabatan anda. Mula hari ini.',
+                en: 'Make daily steps your department\\u2019s KPI. Start today.' },
+      source: { ms: 'Garis panduan aktiviti fizikal WHO, 2020',
+                en: 'WHO physical activity guidelines, 2020' }
+    },
+    {
+      id: 'p2', tone: 'sugar', icon: '\\ud83e\\udd64', no: '2',
+      title: { ms: 'Kurangkan gula', en: 'Cut down on sugar' },
+      lead:  { ms: 'Manis itu membunuh. Kencing manis yang tidak terkawal memusnahkan organ satu demi satu.',
+               en: 'Sweetness kills. Uncontrolled diabetes destroys the organs one by one.' },
+      points: [
+        { ms: 'Mata: retinopati, punca utama kebutaan.',
+          en: 'Eyes: retinopathy, a leading cause of blindness.' },
+        { ms: 'Buah pinggang: punca utama dialisis di Malaysia.',
+          en: 'Kidneys: the leading cause of dialysis in Malaysia.' },
+        { ms: 'Kaki: luka yang tidak sembuh, lalu potong kaki.',
+          en: 'Feet: wounds that will not heal, then amputation.' },
+        { ms: 'Jantung: serangan jantung dan strok lebih awal.',
+          en: 'Heart: heart attack and stroke, earlier in life.' }
+      ],
+      action: { ms: 'Baca label; pilih Logo Pilihan Sihat KKM. Berat turun hanya apabila kalori digunakan melebihi yang dimakan.',
+                en: 'Read the label; look for the MOH Healthier Choice logo. Weight falls only when calories used exceed calories eaten.' },
+      source: { ms: 'CPG Pengurusan Obesiti (MEMS, 2023); Logo Pilihan Sihat, KKM',
+                en: 'CPG Management of Obesity (MEMS, 2023); Healthier Choice Logo, MOH' }
+    },
+    {
+      id: 'p3', tone: 'meds', icon: '\\u26a0\\ufe0f', no: '3',
+      title: { ms: 'Berhenti suplemen terlebih janji',
+               en: 'Stop over-claimed supplements' },
+      lead:  { ms: '\\u201cSemula jadi\\u201d bukan bermakna selamat. Wad dialisis kami menanggung akibatnya.',
+               en: '\\u201cNatural\\u201d does not mean safe. Our dialysis wards carry the cost.' },
+      points: [
+        { ms: 'Kecederaan buah pinggang akut, lalu dialisis seumur hidup.',
+          en: 'Acute kidney injury, then lifelong dialysis.' },
+        { ms: 'Kecederaan hati akibat herba tidak berdaftar.',
+          en: 'Liver injury from unregistered herbal products.' },
+        { ms: 'Steroid tersembunyi: nampak pulih, penyakit bertambah buruk.',
+          en: 'Hidden steroids: looks better, gets worse.' },
+        { ms: 'Jangan berhenti ubat doktor kerana pujukan penjual.',
+          en: 'Never stop a prescribed medicine on a seller\\u2019s word.' }
+      ],
+      action: { ms: 'Semak nombor MAL dan hologram Meditag di portal NPRA sebelum membeli. Lapor produk tanpa pendaftaran.',
+                en: 'Check the MAL number and Meditag hologram on the NPRA portal before buying. Report unregistered products.' },
+      source: { ms: 'Bahagian Regulatori Farmasi Negara (NPRA), KKM',
+                en: 'National Pharmaceutical Regulatory Agency (NPRA), MOH' }
+    },
+    {
+      id: 'p4', tone: 'smoke', icon: '\\ud83d\\udead', no: '4',
+      title: { ms: 'Lapor merokok di kawasan larangan',
+               en: 'Report smoking where it is banned' },
+      lead:  { ms: 'Asap orang lain adalah masalah kesihatan anda.',
+               en: 'Someone else\\u2019s smoke is your health problem.' },
+      points: [
+        { ms: 'Asap tangan kedua mencetuskan asma pada kanak-kanak.',
+          en: 'Second-hand smoke triggers asthma in children.' },
+        { ms: 'Punca utama penyakit paru-paru, kanser dan serangan jantung.',
+          en: 'A leading cause of lung disease, cancer and heart attack.' },
+        { ms: 'Klinik Berhenti Merokok: di Klinik Kesihatan, tanpa bayaran.',
+          en: 'Quit clinics: at any Klinik Kesihatan, free of charge.' }
+      ],
+      action: { ms: 'Ambil gambar sebagai bukti, kemudian lapor kepada Pejabat Kesihatan Daerah.',
+                en: 'Photograph it as evidence, then report it to your District Health Office.' },
+      source: { ms: 'Akta Kawalan Produk Merokok untuk Kesihatan Awam 2024',
+                en: 'Control of Smoking Products for Public Health Act 2024' }
+    },
+    {
+      id: 'p5', tone: 'use', icon: '\\ud83c\\udfe5', no: '5',
+      title: { ms: 'Guna perkhidmatan yang betul',
+               en: 'Use the right service' },
+      lead:  { ms: 'Kesesakan di Jabatan Kecemasan bermula di luar pintu ini.',
+               en: 'Crowding in the Emergency Department begins outside these doors.' },
+      points: [
+        { ms: 'Sakit tekak, demam ringan, luka kecil: ke Klinik Kesihatan atau GP.',
+          en: 'Sore throat, mild fever, minor wounds: a Klinik Kesihatan or GP.' },
+        { ms: 'Hadir setiap temujanji susulan.',
+          en: 'Keep every follow-up appointment.' },
+        { ms: 'Bawa senarai ubat anda setiap kali.',
+          en: 'Bring your list of medicines every time.' },
+        { ms: 'Periksa tekanan darah, gula dan BMI di Klinik Kesihatan.',
+          en: 'Have your blood pressure, glucose and BMI checked.' }
+      ],
+      action: { ms: 'Dilindungi Skim Perubatan MADANI? Sila ke klinik GP yang berdaftar.',
+                en: 'Covered by Skim Perubatan MADANI? Go to a registered GP clinic.' },
+      source: { ms: 'Jabatan Kecemasan & PAC, HTPN Kajang',
+                en: 'Emergency Department & PAC, HTPN Kajang' }
+    }
+  ];
+
+  var st = { i: 0, timer: null, el: null, langFn: null };
+
+  function esc(s) {
+    return String(s === null || s === undefined ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+  function pick(v, lang) {
+    if (!v) return '';
+    return v[lang] || v.ms || '';
+  }
+  function lang() { return (st.langFn && st.langFn()) || 'ms'; }
+
+  function cardHtml(it, lg) {
+    var pts = (it.points || []).map(function (p) {
+      return '<li>' + esc(pick(p, lg)) + '</li>';
+    }).join('');
+    var head = it.no
+      ? '<span class="rail-no">' + esc(lg === 'ms' ? 'Peranan ' + it.no : 'Role ' + it.no) + '</span>'
+      : '';
+    return '' +
+      '<div class="rail-card is-' + esc(it.tone) + '">' +
+        '<div class="rail-top">' +
+          '<span class="rail-icon" aria-hidden="true">' + esc(it.icon) + '</span>' +
+          head +
+        '</div>' +
+        '<h3 class="rail-title">' + esc(pick(it.title, lg)) + '</h3>' +
+        '<p class="rail-lead">' + esc(pick(it.lead, lg)) + '</p>' +
+        (pts ? '<ul class="rail-pts">' + pts + '</ul>' : '') +
+        '<p class="rail-action">' + esc(pick(it.action, lg)) + '</p>' +
+        '<p class="rail-src">' + esc(pick(it.source, lg)) + '</p>' +
+      '</div>';
+  }
+
+  function dotsHtml() {
+    var out = '';
+    for (var i = 0; i < ITEMS.length; i++) {
+      out += '<span class="rail-dot' + (i === st.i ? ' is-on' : '') + '"></span>';
+    }
+    return '<div class="rail-dots">' + out + '</div>';
+  }
+
+  /** Draws the current card. Safe to call at any time, including on a
+      language change, without disturbing the rotation. */
+  function render() {
+    if (!st.el) return;
+    var lg = lang();
+    st.el.innerHTML = cardHtml(ITEMS[st.i], lg) + dotsHtml();
+    // Restart the fade so a newly drawn card reads as a new card.
+    var card = st.el.querySelector('.rail-card');
+    if (card) {
+      card.classList.remove('is-in');
+      /* jshint -W030 */
+      void card.offsetWidth;
+      card.classList.add('is-in');
+    }
+  }
+
+  function next() { st.i = (st.i + 1) % ITEMS.length; render(); }
+
+  function mount(el, langFn) {
+    if (!el) return;
+    st.el = el;
+    st.langFn = langFn || null;
+    st.i = 0;
+    render();
+    if (st.timer) clearInterval(st.timer);
+    st.timer = setInterval(next, PERIOD_MS);
+  }
+
+  function stop() { if (st.timer) { clearInterval(st.timer); st.timer = null; } }
+
+  return {
+    mount: mount, render: render, next: next, stop: stop,
+    items: ITEMS, count: ITEMS.length,
+    index: function () { return st.i; },
+    period: PERIOD_MS
+  };
+})();
 </script>
 
 <script>
@@ -4568,8 +5093,11 @@ var Charts = (function () {
     lang: 'ms',
     tab: (window.BOOT_SCOPE && ['wcc', 'bu', 'pac', 'admin'].indexOf(window.BOOT_SCOPE) >= 0)
            ? window.BOOT_SCOPE : 'wcc',
+    mode: window.BOOT_MODE === 'tv' ? 'tv' : '',
     step: 0,
     data: {},          // scope -> payload
+    stale: {},         // scope -> true while showing a restored snapshot
+    publicLoading: false,
     stepIndex: {},     // scope -> last viewed step
     adminToken: null,
     gateShown: false,
@@ -4586,6 +5114,63 @@ var Charts = (function () {
      so a refresh normally costs a cache read rather than a re-read of the
      whole sheet. */
   var REFRESH_MS = 15 * 60 * 1000;
+
+  var PUBLIC_TABS = ['wcc', 'bu', 'pac'];
+
+  /* Last-known figures, kept per browser. A returning visitor sees real
+     numbers immediately -- stamped with the time they were generated, so a
+     stale set reads as stale -- instead of a spinner. Discarded beyond this
+     age: an old figure shown without comment is worse than no figure. */
+  var SNAP_KEY = 'edpac_snap_v1';
+  var SNAP_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+
+  function readSnapshot() {
+    try {
+      var raw = localStorage.getItem(SNAP_KEY);
+      if (!raw) return null;
+      var o = JSON.parse(raw);
+      if (!o || !o.savedAt || !o.data) return null;
+      if (Date.now() - o.savedAt > SNAP_MAX_AGE_MS) { localStorage.removeItem(SNAP_KEY); return null; }
+      return o.data;
+    } catch (e) { return null; }
+  }
+
+  function writeSnapshot() {
+    try {
+      var out = {};
+      for (var i = 0; i < PUBLIC_TABS.length; i++) {
+        var d = S.data[PUBLIC_TABS[i]];
+        if (d && !d.error) out[PUBLIC_TABS[i]] = d;
+      }
+      if (!Object.keys(out).length) return;
+      localStorage.setItem(SNAP_KEY, JSON.stringify({ savedAt: Date.now(), data: out }));
+    } catch (e) { /* quota or private mode: the snapshot is a nicety */ }
+  }
+
+  /* Figures inlined by doGet from the warm server cache: the first paint can
+     show real numbers with no server round trip at all. Falls back to the
+     browser's own snapshot, then to fetching. */
+  function seedData() {
+    var inlined = window.BOOT_DATA;
+    var seeded = false;
+    if (inlined && typeof inlined === 'object') {
+      for (var i = 0; i < PUBLIC_TABS.length; i++) {
+        var k = PUBLIC_TABS[i];
+        if (inlined[k] && !inlined[k].error) { S.data[k] = inlined[k]; seeded = true; }
+      }
+    }
+    if (seeded) return 'inline';
+
+    var snap = readSnapshot();
+    if (snap) {
+      for (var j = 0; j < PUBLIC_TABS.length; j++) {
+        var sk = PUBLIC_TABS[j];
+        if (snap[sk]) { S.data[sk] = snap[sk]; S.stale[sk] = true; }
+      }
+      if (Object.keys(S.data).length) return 'snapshot';
+    }
+    return 'none';
+  }
 
   // ── i18n ─────────────────────────────────────────────────
   function dict() { return I18N[S.lang] || I18N.ms; }
@@ -4652,6 +5237,14 @@ var Charts = (function () {
 
     s = Math.max(0.78, Math.min(1.75, s));
     document.documentElement.style.setProperty('--s', String(Math.round(s * 1000) / 1000));
+  }
+
+  /** Runs fn once the browser is idle, or after ms at the latest. */
+  function deferIdle(fn, ms) {
+    var done = false;
+    function go() { if (done) return; done = true; fn(); }
+    if (window.requestIdleCallback) window.requestIdleCallback(go, { timeout: ms });
+    setTimeout(go, ms);
   }
 
   // ── DOM helpers ──────────────────────────────────────────
@@ -5412,7 +6005,12 @@ var Charts = (function () {
   function publicSteps(d) {
     return [{
       title: t('public.stepNow'),
-      rows: 'minmax(0,1fr) auto minmax(0,1.2fr)',
+      // The zone board is the reason anyone opened this page, so it takes the
+      // larger share. It also needs it: the green-zone card carries one block
+      // more than the others (those waiting, and their average wait) and is
+      // the first to run short when the column narrows, as it does beside the
+      // wall-display rail.
+      rows: 'minmax(0,1.2fr) auto minmax(0,1fr)',
       cols: '1.15fr 1fr',
       areas: '"zones zones" "seek klinik" "guide guide"',
       build: function () {
@@ -5692,21 +6290,52 @@ var Charts = (function () {
       })[fn](arg);
   }
 
+  /**
+   * Fetches a tab's figures.
+   *
+   * Every google.script.run call is a cold server invocation, so the round trip
+   * dominates and the number of calls is what matters. The three public tabs
+   * therefore come down together in one call: switching between them costs
+   * nothing afterwards, and a refresh renews all three at once.
+   */
   function loadTab(tab, force) {
-    if (S.busy[tab] && !force) return;
-    if (tab === 'admin' && !S.adminToken) { renderTab(); return; }
-    S.busy[tab] = true;
-    // Only when there is nothing to show. A refresh keeps the current figures
-    // on screen and swaps them when the new ones arrive, rather than blanking
-    // the page to a spinner on every cycle.
-    if (!S.data[tab] && tab === S.tab) showState('load', t('loading'));
-    var fn = tab === 'admin' ? 'getAdminDashboard' : 'getDashboard';
-    var arg = tab === 'admin' ? S.adminToken : tab;
-    serverCall(fn, arg, function (res) {
-      S.busy[tab] = false;
-      if (res && res.error === 'UNAUTHORISED') { S.adminToken = null; }
-      S.data[tab] = res;
-      if (tab === S.tab) renderTab();
+    if (tab === 'admin') { loadAdmin(force); return; }
+    loadPublic(force);
+  }
+
+  function loadPublic(force) {
+    if (S.publicLoading && !force) return;
+    S.publicLoading = true;
+    // A spinner only when there is genuinely nothing to show. A refresh keeps
+    // the current figures on screen and swaps them when the new ones arrive,
+    // rather than blanking the page on every cycle.
+    if (!S.data[S.tab] && S.tab !== 'admin') showState('load', t('loading'));
+    serverCall('getPublicDashboards', null, function (res) {
+      S.publicLoading = false;
+      if (!res || res.error) {
+        // Keep whatever is on screen; only an empty tab shows the error.
+        if (!S.data[S.tab] && S.tab !== 'admin') { S.data[S.tab] = res || { error: 'SERVER_ERROR' }; renderTab(); }
+        return;
+      }
+      for (var i = 0; i < PUBLIC_TABS.length; i++) {
+        var k = PUBLIC_TABS[i];
+        if (res[k]) { S.data[k] = res[k]; S.stale[k] = false; }
+      }
+      writeSnapshot();
+      if (S.tab !== 'admin') renderTab();
+    });
+  }
+
+  function loadAdmin(force) {
+    if (!S.adminToken) { renderTab(); return; }
+    if (S.busy.admin && !force) return;
+    S.busy.admin = true;
+    if (!S.data.admin && S.tab === 'admin') showState('load', t('loading'));
+    serverCall('getAdminDashboard', S.adminToken, function (res) {
+      S.busy.admin = false;
+      if (res && res.error === 'UNAUTHORISED') S.adminToken = null;
+      S.data.admin = res;
+      if (S.tab === 'admin') renderTab();
     });
   }
 
@@ -5840,6 +6469,7 @@ var Charts = (function () {
     try { localStorage.setItem('edpac_lang', S.lang); } catch (e) { /* private mode */ }
     renderChrome();
     renderTab();
+    if (S.mode === 'tv') Banner.render();
     if (S.illustrations) paintHelpImages(S.illustrations);
   }
 
@@ -5849,9 +6479,13 @@ var Charts = (function () {
       if (saved === 'ms' || saved === 'en') S.lang = saved;
     } catch (e) { /* storage unavailable — default stands */ }
 
+    if (S.mode === 'tv') document.body.classList.add('is-tv');
+
+    S.seededFrom = seedData();
     setScale();
     Charts.initTooltip();
     renderChrome();
+    if (S.mode === 'tv') Banner.mount($('rail'), function () { return S.lang; });
 
     $('langBtn').onclick = toggleLang;
     $('searchBtn').onclick = function () {
@@ -5877,11 +6511,16 @@ var Charts = (function () {
     window.addEventListener('resize', onResize);
     window.addEventListener('orientationchange', onResize);
 
+    // Already-seeded figures render immediately; the fetch then renews them
+    // in the background without blanking anything.
+    if (S.data[S.tab]) renderTab();
     loadTab(S.tab);
-    loadIllustrations();
-    // Refresh quietly on the same cadence as the server cache. Only the tab
-    // being looked at is refreshed: fetching the other three costs a round
-    // trip each and nobody is reading them.
+
+    // Illustrations are decoration and each one is a base64 image on a second
+    // cold round trip. They wait until the figures are on screen.
+    deferIdle(loadIllustrations, 2500);
+
+    // Refresh quietly on the same cadence as the server cache.
     setInterval(function () {
       if (S.tab === 'admin' && !S.adminToken) return;
       loadTab(S.tab, true);
@@ -5893,6 +6532,8 @@ var Charts = (function () {
   window.EDPAC = {
     state: S, boot: boot, render: renderTab, t: t,
     reload: function () { loadTab(S.tab, true); },
+    seededFrom: function () { return S.seededFrom; },
+    banner: typeof Banner === 'undefined' ? null : Banner,
     refreshMs: REFRESH_MS
   };
   if (document.readyState === 'loading') {

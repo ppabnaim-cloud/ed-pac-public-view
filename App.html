@@ -15,8 +15,11 @@
     lang: 'ms',
     tab: (window.BOOT_SCOPE && ['wcc', 'bu', 'pac', 'admin'].indexOf(window.BOOT_SCOPE) >= 0)
            ? window.BOOT_SCOPE : 'wcc',
+    mode: window.BOOT_MODE === 'tv' ? 'tv' : '',
     step: 0,
     data: {},          // scope -> payload
+    stale: {},         // scope -> true while showing a restored snapshot
+    publicLoading: false,
     stepIndex: {},     // scope -> last viewed step
     adminToken: null,
     gateShown: false,
@@ -33,6 +36,63 @@
      so a refresh normally costs a cache read rather than a re-read of the
      whole sheet. */
   var REFRESH_MS = 15 * 60 * 1000;
+
+  var PUBLIC_TABS = ['wcc', 'bu', 'pac'];
+
+  /* Last-known figures, kept per browser. A returning visitor sees real
+     numbers immediately -- stamped with the time they were generated, so a
+     stale set reads as stale -- instead of a spinner. Discarded beyond this
+     age: an old figure shown without comment is worse than no figure. */
+  var SNAP_KEY = 'edpac_snap_v1';
+  var SNAP_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+
+  function readSnapshot() {
+    try {
+      var raw = localStorage.getItem(SNAP_KEY);
+      if (!raw) return null;
+      var o = JSON.parse(raw);
+      if (!o || !o.savedAt || !o.data) return null;
+      if (Date.now() - o.savedAt > SNAP_MAX_AGE_MS) { localStorage.removeItem(SNAP_KEY); return null; }
+      return o.data;
+    } catch (e) { return null; }
+  }
+
+  function writeSnapshot() {
+    try {
+      var out = {};
+      for (var i = 0; i < PUBLIC_TABS.length; i++) {
+        var d = S.data[PUBLIC_TABS[i]];
+        if (d && !d.error) out[PUBLIC_TABS[i]] = d;
+      }
+      if (!Object.keys(out).length) return;
+      localStorage.setItem(SNAP_KEY, JSON.stringify({ savedAt: Date.now(), data: out }));
+    } catch (e) { /* quota or private mode: the snapshot is a nicety */ }
+  }
+
+  /* Figures inlined by doGet from the warm server cache: the first paint can
+     show real numbers with no server round trip at all. Falls back to the
+     browser's own snapshot, then to fetching. */
+  function seedData() {
+    var inlined = window.BOOT_DATA;
+    var seeded = false;
+    if (inlined && typeof inlined === 'object') {
+      for (var i = 0; i < PUBLIC_TABS.length; i++) {
+        var k = PUBLIC_TABS[i];
+        if (inlined[k] && !inlined[k].error) { S.data[k] = inlined[k]; seeded = true; }
+      }
+    }
+    if (seeded) return 'inline';
+
+    var snap = readSnapshot();
+    if (snap) {
+      for (var j = 0; j < PUBLIC_TABS.length; j++) {
+        var sk = PUBLIC_TABS[j];
+        if (snap[sk]) { S.data[sk] = snap[sk]; S.stale[sk] = true; }
+      }
+      if (Object.keys(S.data).length) return 'snapshot';
+    }
+    return 'none';
+  }
 
   // ── i18n ─────────────────────────────────────────────────
   function dict() { return I18N[S.lang] || I18N.ms; }
@@ -99,6 +159,14 @@
 
     s = Math.max(0.78, Math.min(1.75, s));
     document.documentElement.style.setProperty('--s', String(Math.round(s * 1000) / 1000));
+  }
+
+  /** Runs fn once the browser is idle, or after ms at the latest. */
+  function deferIdle(fn, ms) {
+    var done = false;
+    function go() { if (done) return; done = true; fn(); }
+    if (window.requestIdleCallback) window.requestIdleCallback(go, { timeout: ms });
+    setTimeout(go, ms);
   }
 
   // ── DOM helpers ──────────────────────────────────────────
@@ -859,7 +927,12 @@
   function publicSteps(d) {
     return [{
       title: t('public.stepNow'),
-      rows: 'minmax(0,1fr) auto minmax(0,1.2fr)',
+      // The zone board is the reason anyone opened this page, so it takes the
+      // larger share. It also needs it: the green-zone card carries one block
+      // more than the others (those waiting, and their average wait) and is
+      // the first to run short when the column narrows, as it does beside the
+      // wall-display rail.
+      rows: 'minmax(0,1.2fr) auto minmax(0,1fr)',
       cols: '1.15fr 1fr',
       areas: '"zones zones" "seek klinik" "guide guide"',
       build: function () {
@@ -1139,21 +1212,52 @@
       })[fn](arg);
   }
 
+  /**
+   * Fetches a tab's figures.
+   *
+   * Every google.script.run call is a cold server invocation, so the round trip
+   * dominates and the number of calls is what matters. The three public tabs
+   * therefore come down together in one call: switching between them costs
+   * nothing afterwards, and a refresh renews all three at once.
+   */
   function loadTab(tab, force) {
-    if (S.busy[tab] && !force) return;
-    if (tab === 'admin' && !S.adminToken) { renderTab(); return; }
-    S.busy[tab] = true;
-    // Only when there is nothing to show. A refresh keeps the current figures
-    // on screen and swaps them when the new ones arrive, rather than blanking
-    // the page to a spinner on every cycle.
-    if (!S.data[tab] && tab === S.tab) showState('load', t('loading'));
-    var fn = tab === 'admin' ? 'getAdminDashboard' : 'getDashboard';
-    var arg = tab === 'admin' ? S.adminToken : tab;
-    serverCall(fn, arg, function (res) {
-      S.busy[tab] = false;
-      if (res && res.error === 'UNAUTHORISED') { S.adminToken = null; }
-      S.data[tab] = res;
-      if (tab === S.tab) renderTab();
+    if (tab === 'admin') { loadAdmin(force); return; }
+    loadPublic(force);
+  }
+
+  function loadPublic(force) {
+    if (S.publicLoading && !force) return;
+    S.publicLoading = true;
+    // A spinner only when there is genuinely nothing to show. A refresh keeps
+    // the current figures on screen and swaps them when the new ones arrive,
+    // rather than blanking the page on every cycle.
+    if (!S.data[S.tab] && S.tab !== 'admin') showState('load', t('loading'));
+    serverCall('getPublicDashboards', null, function (res) {
+      S.publicLoading = false;
+      if (!res || res.error) {
+        // Keep whatever is on screen; only an empty tab shows the error.
+        if (!S.data[S.tab] && S.tab !== 'admin') { S.data[S.tab] = res || { error: 'SERVER_ERROR' }; renderTab(); }
+        return;
+      }
+      for (var i = 0; i < PUBLIC_TABS.length; i++) {
+        var k = PUBLIC_TABS[i];
+        if (res[k]) { S.data[k] = res[k]; S.stale[k] = false; }
+      }
+      writeSnapshot();
+      if (S.tab !== 'admin') renderTab();
+    });
+  }
+
+  function loadAdmin(force) {
+    if (!S.adminToken) { renderTab(); return; }
+    if (S.busy.admin && !force) return;
+    S.busy.admin = true;
+    if (!S.data.admin && S.tab === 'admin') showState('load', t('loading'));
+    serverCall('getAdminDashboard', S.adminToken, function (res) {
+      S.busy.admin = false;
+      if (res && res.error === 'UNAUTHORISED') S.adminToken = null;
+      S.data.admin = res;
+      if (S.tab === 'admin') renderTab();
     });
   }
 
@@ -1287,6 +1391,7 @@
     try { localStorage.setItem('edpac_lang', S.lang); } catch (e) { /* private mode */ }
     renderChrome();
     renderTab();
+    if (S.mode === 'tv') Banner.render();
     if (S.illustrations) paintHelpImages(S.illustrations);
   }
 
@@ -1296,9 +1401,13 @@
       if (saved === 'ms' || saved === 'en') S.lang = saved;
     } catch (e) { /* storage unavailable — default stands */ }
 
+    if (S.mode === 'tv') document.body.classList.add('is-tv');
+
+    S.seededFrom = seedData();
     setScale();
     Charts.initTooltip();
     renderChrome();
+    if (S.mode === 'tv') Banner.mount($('rail'), function () { return S.lang; });
 
     $('langBtn').onclick = toggleLang;
     $('searchBtn').onclick = function () {
@@ -1324,11 +1433,16 @@
     window.addEventListener('resize', onResize);
     window.addEventListener('orientationchange', onResize);
 
+    // Already-seeded figures render immediately; the fetch then renews them
+    // in the background without blanking anything.
+    if (S.data[S.tab]) renderTab();
     loadTab(S.tab);
-    loadIllustrations();
-    // Refresh quietly on the same cadence as the server cache. Only the tab
-    // being looked at is refreshed: fetching the other three costs a round
-    // trip each and nobody is reading them.
+
+    // Illustrations are decoration and each one is a base64 image on a second
+    // cold round trip. They wait until the figures are on screen.
+    deferIdle(loadIllustrations, 2500);
+
+    // Refresh quietly on the same cadence as the server cache.
     setInterval(function () {
       if (S.tab === 'admin' && !S.adminToken) return;
       loadTab(S.tab, true);
@@ -1340,6 +1454,8 @@
   window.EDPAC = {
     state: S, boot: boot, render: renderTab, t: t,
     reload: function () { loadTab(S.tab, true); },
+    seededFrom: function () { return S.seededFrom; },
+    banner: typeof Banner === 'undefined' ? null : Banner,
     refreshMs: REFRESH_MS
   };
   if (document.readyState === 'loading') {
