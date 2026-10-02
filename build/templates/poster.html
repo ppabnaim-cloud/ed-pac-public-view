@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="color-scheme" content="light"/>
+<title>Poster — Status Jabatan Kecemasan &amp; PAC | HTPN Kajang</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet"/>
+<style>
+{{TOKENS}}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  background: var(--page); color: var(--ink); line-height: 1.4;
+}
+
+/* ── Screen chrome, never printed ───────────────────────── */
+.bar {
+  position: sticky; top: 0; z-index: 10;
+  background: linear-gradient(135deg, var(--brand-dk), var(--brand)); color: #fff;
+  padding: 12px 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.bar h1 { font-size: 15px; font-weight: 800; flex: 1; min-width: 0 }
+.bar p { font-size: 12px; opacity: .85; font-weight: 600; width: 100%; order: 10 }
+.bar button {
+  font: inherit; font-size: 13px; font-weight: 800; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.45); background: rgba(255,255,255,.14);
+  color: #fff; border-radius: 999px; padding: 8px 16px; min-height: 40px;
+}
+.bar button:hover { background: rgba(255,255,255,.26) }
+.sheets { padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 20px }
+
+/* ── The sheet: A4 portrait ─────────────────────────────── */
+@page { size: A4 portrait; margin: 0 }
+.sheet {
+  width: 210mm; height: 297mm; flex: none;
+  background: #fff; color: var(--ink);
+  padding: 16mm 15mm 13mm;
+  display: flex; flex-direction: column; gap: 6mm;
+  box-shadow: 0 4px 24px rgba(20,32,42,.16);
+  overflow: hidden; position: relative;
+}
+.sheet::before {
+  content: ''; position: absolute; inset: 0 0 auto 0; height: 7mm;
+  background: var(--tone, var(--brand));
+}
+
+.ph { display: flex; align-items: flex-start; gap: 5mm; padding-top: 3mm }
+.ph-id { flex: 1; min-width: 0 }
+.ph-id h2 { font-size: 13pt; font-weight: 800; line-height: 1.15; letter-spacing: -.01em }
+.ph-id p { font-size: 9.5pt; font-weight: 600; color: var(--ink-2); margin-top: 1mm }
+.ph-no {
+  flex: none; font-size: 9pt; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  color: #fff; background: var(--tone, var(--brand));
+  border-radius: 999px; padding: 2mm 5mm;
+}
+
+.p-title {
+  font-size: 34pt; font-weight: 800; line-height: 1.02; letter-spacing: -.03em;
+}
+.p-title.is-small { font-size: 26pt }
+.p-sub { font-size: 13pt; font-weight: 700; color: var(--ink-2); line-height: 1.3 }
+.p-lead { font-size: 14pt; font-weight: 700; line-height: 1.32 }
+
+.p-pts { list-style: none; display: flex; flex-direction: column; gap: 3mm }
+.p-pts li {
+  position: relative; padding-left: 8mm;
+  font-size: 12.5pt; font-weight: 600; line-height: 1.3;
+}
+.p-pts li::before {
+  content: ''; position: absolute; left: 0; top: 2.2mm;
+  width: 3.5mm; height: 3.5mm; border-radius: 50%; background: var(--tone, var(--brand));
+}
+
+.p-act {
+  background: var(--surface-2); border-left: 2mm solid var(--tone, var(--brand));
+  border-radius: 2mm; padding: 4mm 5mm;
+  font-size: 12pt; font-weight: 800; line-height: 1.3;
+}
+
+/* The English block: present on every sheet, set smaller so the Malay reads
+   first from across a corridor without the sheet becoming two posters. */
+.p-en {
+  margin-top: auto;
+  border-top: 0.4mm dashed var(--line); padding-top: 4mm;
+  display: flex; flex-direction: column; gap: 2.5mm;
+}
+.p-en h3 { font-size: 13pt; font-weight: 800; line-height: 1.15 }
+.p-en p { font-size: 10pt; font-weight: 600; color: var(--ink-2); line-height: 1.32 }
+.p-en ul { list-style: none; display: flex; flex-direction: column; gap: 1.5mm }
+.p-en li { position: relative; padding-left: 5mm; font-size: 9.5pt; font-weight: 600; line-height: 1.3 }
+.p-en li::before {
+  content: ''; position: absolute; left: 0; top: 1.6mm;
+  width: 2mm; height: 2mm; border-radius: 50%; background: var(--ink-3);
+}
+.p-en .act { font-size: 10pt; font-weight: 800; color: var(--ink) }
+
+.p-foot {
+  margin-top: auto; border-top: 0.4mm solid var(--line); padding-top: 4mm;
+  display: flex; align-items: flex-end; gap: 5mm;
+}
+.p-foot-copy { flex: 1; min-width: 0 }
+.p-foot-copy strong { display: block; font-size: 10.5pt; font-weight: 800; line-height: 1.2 }
+.p-foot-copy span { display: block; font-size: 8.5pt; font-weight: 600; color: var(--ink-2); margin-top: 1mm }
+.p-src { font-size: 8pt; font-weight: 600; color: var(--ink-3); line-height: 1.25; margin-top: 2mm }
+.qr { flex: none; text-align: center }
+.qr svg { display: block; width: 30mm; height: 30mm }
+.qr.is-big svg { width: 58mm; height: 58mm }
+.qr figcaption {
+  font-size: 7.5pt; font-weight: 700; color: var(--ink-2);
+  margin-top: 1.5mm; max-width: 34mm; line-height: 1.2;
+}
+.qr.is-big figcaption { max-width: 62mm; font-size: 9pt }
+.url {
+  font-family: 'IBM Plex Mono', monospace; font-size: 8pt; font-weight: 700;
+  color: var(--brand-dk); word-break: break-all; margin-top: 1mm;
+}
+
+/* Status sheet specifics */
+.sheet.is-status { gap: 4mm }
+.sheet.is-status .p-title { font-size: 27pt }
+.sheet.is-status .p-sub { font-size: 12pt }
+.sheet.is-status .p-pts li { font-size: 11.5pt }
+.sheet.is-status .qr.is-big svg { width: 46mm; height: 46mm }
+.sheet.is-status .p-en { margin-top: 0 }
+.s-hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 3mm; margin-top: 1mm }
+.s-zones { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2.5mm; margin-top: 2mm }
+.s-zone {
+  border: 0.4mm solid var(--line); border-top: 2mm solid currentColor;
+  border-radius: 2mm; padding: 3mm 2mm; text-align: center;
+}
+.s-zone b { display: block; font-size: 9.5pt; font-weight: 800; color: var(--ink); line-height: 1.15 }
+.z-rz{color:var(--zone-rz)} .z-yz{color:var(--zone-yz)} .z-gz{color:var(--zone-gz)}
+.z-ob{color:var(--zone-ob)} .z-ab{color:var(--zone-ab)}
+
+@media print {
+  body { background: #fff }
+  .noprint { display: none !important }
+  .sheets { padding: 0; gap: 0 }
+  .sheet { box-shadow: none; break-after: page; page-break-after: always }
+  .sheet:last-child { break-after: auto; page-break-after: auto }
+}
+</style>
+</head>
+<body>
+
+<div class="bar noprint">
+  <h1>Poster — Jabatan Kecemasan &amp; PAC, HTPN Kajang</h1>
+  <button id="printBtn" type="button">🖨️ Cetak / Print</button>
+  <p>6 helaian A4: satu papan status, lima Peranan Rakyat. Kod QR menunjuk ke
+     <span class="mono" id="barUrl"></span> — cetak selepas halaman ini dimuatkan sepenuhnya.</p>
+</div>
+
+<div class="sheets" id="sheets">
+
+  <!-- Sheet 1 — the status board -->
+  <section class="sheet is-status" style="--tone: var(--brand)">
+    <div class="ph">
+      <div class="ph-id">
+        <h2>Jabatan Kecemasan &amp; Pusat Penilaian Pesakit</h2>
+        <p>Hospital Tengku Permaisuri Norashikin, Kajang</p>
+      </div>
+      <span class="ph-no">Status</span>
+    </div>
+
+    <div class="s-hero">
+      <div class="p-title">Lihat status zon sebelum anda menunggu</div>
+      <div class="p-sub">See the zone status before you wait</div>
+      <figure class="qr is-big" data-qr>
+        <figcaption>Imbas kod ini dengan kamera telefon anda<br>Scan this code with your phone camera</figcaption>
+      </figure>
+      <div class="url" data-url></div>
+    </div>
+
+    <div class="s-zones">
+      <div class="s-zone z-rz"><b>Zon Merah</b></div>
+      <div class="s-zone z-yz"><b>Zon Kuning</b></div>
+      <div class="s-zone z-ob"><b>Bilik Pemerhatian</b></div>
+      <div class="s-zone z-ab"><b>Bilik Asma</b></div>
+      <div class="s-zone z-gz"><b>Zon Hijau</b></div>
+    </div>
+
+    <ul class="p-pts">
+      <li>Bilangan pesakit dan katil di setiap zon, dikemas kini setiap 15 minit.</li>
+      <li>Status krisis katil bagi setiap zon.</li>
+      <li>Purata masa menunggu di Zon Hijau.</li>
+    </ul>
+
+    <div class="p-act">
+      Status pesakit secara individu tidak dipaparkan. Sila ke kaunter jururawat
+      untuk bertanya tentang ahli keluarga anda.
+    </div>
+
+    <div class="p-en">
+      <h3>What this board shows</h3>
+      <ul>
+        <li>How many patients and beds are in each zone, refreshed every 15 minutes.</li>
+        <li>Whether crisis beds have been activated in a zone.</li>
+        <li>The average waiting time in the Green Zone.</li>
+      </ul>
+      <p class="act">Individual patient details are not shown. Please ask at the nurses'
+         counter about a family member.</p>
+    </div>
+
+    <div class="p-foot">
+      <div class="p-foot-copy">
+        <strong>Pesakit paling kritikal didahulukan</strong>
+        <span>Pesakit dipanggil mengikut tahap kecemasan, bukan mengikut masa pendaftaran.<br>
+              Patients are seen in order of clinical urgency, not order of arrival.</span>
+      </div>
+    </div>
+  </section>
+
+{{POSTERS}}
+
+</div>
+
+<script>
+{{QRLIB}}
+</script>
+<script>
+(function () {
+  'use strict';
+  // The QR is built in the browser from this page's own origin, so a poster
+  // printed from a preview deployment points at the preview and one printed
+  // from the live site points at the live site. Nothing to edit by hand, and
+  // nothing fetched from anywhere.
+  var base = location.origin + '/';
+  var urlNodes = document.querySelectorAll('[data-url]');
+  for (var u = 0; u < urlNodes.length; u++) urlNodes[u].textContent = base;
+  var bar = document.getElementById('barUrl');
+  if (bar) bar.textContent = base;
+
+  function svgFor(text, size) {
+    var qr = qrcode(0, 'M');
+    qr.addData(text);
+    qr.make();
+    var n = qr.getModuleCount(), q = 2, dim = n + q * 2, d = '';
+    for (var r = 0; r < n; r++) {
+      for (var c = 0; c < n; c++) {
+        if (qr.isDark(r, c)) d += 'M' + (c + q) + ' ' + (r + q) + 'h1v1h-1z';
+      }
+    }
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + dim + ' ' + dim +
+      '" shape-rendering="crispEdges" role="img" aria-label="QR: ' + text + '">' +
+      '<rect width="' + dim + '" height="' + dim + '" fill="#fff"/>' +
+      '<path d="' + d + '" fill="#14202a"/></svg>';
+  }
+
+  var figs = document.querySelectorAll('[data-qr]');
+  for (var i = 0; i < figs.length; i++) {
+    figs[i].insertAdjacentHTML('afterbegin', svgFor(base));
+  }
+
+  document.getElementById('printBtn').onclick = function () { window.print(); };
+  window.EDPAC_POSTER = { sheets: document.querySelectorAll('.sheet').length, base: base };
+})();
+</script>
+</body>
+</html>

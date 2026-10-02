@@ -16,6 +16,10 @@
     tab: (window.BOOT_SCOPE && ['wcc', 'bu', 'pac', 'admin'].indexOf(window.BOOT_SCOPE) >= 0)
            ? window.BOOT_SCOPE : 'wcc',
     mode: window.BOOT_MODE === 'tv' ? 'tv' : '',
+    /* Public patient search is off unless the server says otherwise. It was
+       the only path by which this interface could reach an identifiable
+       record, so the default is the safe one and the server has to opt in. */
+    search: window.BOOT_SEARCH === '1' || window.BOOT_SEARCH === true,
     step: 0,
     data: {},          // scope -> payload
     stale: {},         // scope -> true while showing a restored snapshot
@@ -30,7 +34,10 @@
     specs: []          // chart specs currently mounted, for re-render on resize
   };
 
-  var TABS = ['wcc', 'bu', 'pac', 'admin'];
+  /* The administrative tab is served only where an access code can gate it.
+     A front end hosted outside Apps Script declares the public tabs alone. */
+  var TABS = (window.BOOT_TABS && window.BOOT_TABS.length)
+    ? window.BOOT_TABS : ['wcc', 'bu', 'pac', 'admin'];
 
   /* How often the page re-reads the register. Matches CACHE_SECS in Code.gs,
      so a refresh normally costs a cache read rather than a re-read of the
@@ -188,17 +195,29 @@
     $('demoNote').textContent = t('demoNote');
     $('langLabel').textContent = t('langLabel');
     $('langFlag').textContent = t('langFlag');
-    $('searchBtnLabel').textContent = t('searchBtn');
-    $('searchTitle').textContent = t('search.title');
-    $('searchInput').placeholder = t('search.placeholder');
-    $('searchHint').textContent = t('search.hint');
-    $('searchGo').textContent = t('searchBtn');
+    if (S.search) {
+      $('searchBtnLabel').textContent = t('searchBtn');
+      $('searchTitle').textContent = t('search.title');
+      $('searchInput').placeholder = t('search.placeholder');
+      $('searchHint').textContent = t('search.hint');
+      $('searchGo').textContent = t('searchBtn');
+    } else {
+      // Removed rather than hidden: an overlay still in the document is still
+      // a form a visitor can reach, and its result rows would still be built.
+      ['searchBtn', 'ovSearch'].forEach(function (id) {
+        var el = $(id); if (el && el.parentNode) el.parentNode.removeChild(el);
+      });
+    }
     $('gateTitle').textContent = t('admin.gateTitle');
     $('gateBody').textContent = t('admin.gateBody');
     $('gateInput').placeholder = t('admin.passcode');
     $('gateGo').textContent = t('admin.enter');
     $('tblTitle').textContent = t('tableView');
-    $('footerText').textContent = t('footer') + '  ·  ' + t('credit');
+    // The privacy footer lives inside the search overlay, which is removed
+    // outright when search is off. Its message -- ask at the counter -- is
+    // carried by the counter panel on the public tabs instead.
+    var ft = $('footerText');
+    if (ft) ft.textContent = t('footer') + '  ·  ' + t('credit');
     document.documentElement.lang = S.lang;
 
     var tabs = $('tabs');
@@ -790,6 +809,26 @@
      analysis lives on the Administrative tab.
      ══════════════════════════════════════════════════════════ */
 
+  /**
+   * What stands where the search used to.
+   *
+   * Taking the look-up away without replacing it would leave a family with no
+   * answer and no next step, so the panel names the next step: the counter,
+   * which is where a named patient's status can be given to the right person
+   * face to face.
+   */
+  function counterPrompt(area) {
+    var n = node('div', 'seek is-counter');
+    n.style.gridArea = area;
+    n.innerHTML =
+      '<span class="seek-ic" aria-hidden="true">\ud83d\udc69\u200d\u2695\ufe0f</span>' +
+      '<div class="seek-copy">' +
+        '<h2>' + esc(t('public.counterTitle')) + '</h2>' +
+        '<p>' + esc(t('public.counterSub')) + '</p>' +
+      '</div>';
+    return n;
+  }
+
   /** The search prompt, shown inline rather than hidden behind the header. */
   function searchPrompt(area) {
     var n = node('div', 'seek');
@@ -936,7 +975,8 @@
       cols: '1.15fr 1fr',
       areas: '"zones zones" "seek klinik" "guide guide"',
       build: function () {
-        return [zoneCards(d, 'zones'), searchPrompt('seek'),
+        return [zoneCards(d, 'zones'),
+                S.search ? searchPrompt('seek') : counterPrompt('seek'),
                 klinikNotice('klinik'), guidePanel(d, 'guide', true)];
       }
     }];
@@ -1266,6 +1306,10 @@
     if (tab === 'admin' && !S.adminToken) S.gateShown = false;
     S.stepIndex[S.tab] = S.step;
     S.tab = tab;
+    // A host that owns the address bar (the Vercel build) keeps the URL in
+    // step with the tab. Undefined under Apps Script, where the page runs in
+    // a sandbox iframe and has no address bar of its own.
+    if (window.ON_TAB_CHANGE) { try { window.ON_TAB_CHANGE(tab); } catch (e) {} }
     S.step = S.stepIndex[tab] || 0;
     renderChrome();
     if (S.data[tab] && !S.data[tab].error) renderTab(); else loadTab(tab);
@@ -1275,12 +1319,15 @@
      OVERLAYS
      ══════════════════════════════════════════════════════════ */
   function openOv(id) {
-    $(id).classList.add('is-open');
+    var el = $(id);
+    if (!el) return;
+    el.classList.add('is-open');
     document.removeEventListener('keydown', escClose);
     document.addEventListener('keydown', escClose);
   }
   function closeOv(id) {
-    $(id).classList.remove('is-open');
+    var el = $(id);
+    if (el) el.classList.remove('is-open');
   }
   function escClose(e) {
     if (e.key !== 'Escape') return;
@@ -1410,16 +1457,19 @@
     if (S.mode === 'tv') Banner.mount($('rail'), function () { return S.lang; });
 
     $('langBtn').onclick = toggleLang;
-    $('searchBtn').onclick = function () {
-      openOv('ovSearch');
-      setTimeout(function () { $('searchInput').focus(); }, 80);
-    };
-    $('searchGo').onclick = doSearch;
-    $('searchInput').onkeydown = function (e) { if (e.key === 'Enter') doSearch(); };
+    if (S.search) {
+      $('searchBtn').onclick = function () {
+        openOv('ovSearch');
+        setTimeout(function () { $('searchInput').focus(); }, 80);
+      };
+      $('searchGo').onclick = doSearch;
+      $('searchInput').onkeydown = function (e) { if (e.key === 'Enter') doSearch(); };
+    }
     $('gateGo').onclick = submitGate;
     $('gateInput').onkeydown = function (e) { if (e.key === 'Enter') submitGate(); };
     ['ovSearch', 'ovTable', 'ovGate', 'ovHelp'].forEach(function (id) {
       var ov = $(id);
+      if (!ov) return;
       ov.addEventListener('click', function (e) { if (e.target === ov) closeOv(id); });
       ov.querySelector('.ov-x').onclick = function () { closeOv(id); };
     });

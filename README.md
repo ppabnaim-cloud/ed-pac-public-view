@@ -315,6 +315,100 @@ These are reported honestly in the app rather than filled with proxies.
 
 ---
 
+## The public site on Vercel
+
+Two deployments, one data contract. Apps Script keeps the register and does
+the arithmetic; Vercel serves the pages from a CDN. The browser never speaks
+to Apps Script.
+
+```
+   Google Sheet
+        |
+   Apps Script  ?api=status   -> aggregates as JSON (counts, no records)
+        |
+   Vercel /api/status          -> rebuilds the response from a field whitelist,
+        |                          edge-caches it for 60 seconds
+   The visitor's browser        -> landing page, boards, wall display, posters
+```
+
+### Routes
+
+| Path | What it is |
+|---|---|
+| `/` | Landing page: live headline figures for all three units, the non-emergency notice, the five Peranan Rakyat, links onward |
+| `/wcc` `/bu` `/pac` | The zone board for that unit |
+| `/tv` | Wall display with the rotating health-promotion rail |
+| `/poster` | Six A4 sheets to print: one status poster, five Peranan posters, each with a QR to this deployment |
+| `/api/status` | The only data path. Aggregates, 60-second edge cache |
+
+### Setting it up
+
+1. **Vercel → Add New → Project**, import this repository.
+2. **Root Directory: `web`**. Framework preset: *Other*. No build command —
+   `web/` is generated and committed.
+3. **Environment variables:**
+
+   | Name | Required | Value |
+   |---|---|---|
+   | `APPS_SCRIPT_URL` | yes | The web app `/exec` URL. **Must not contain `/u/N/`** — that form is a private, session-scoped link and resolves for nobody else |
+   | `APPS_SCRIPT_KEY` | no | Matches the `API_TOKEN` script property, if you set one |
+
+4. Deploy.
+
+Regenerate `web/` after changing any source file, and commit the result:
+
+```bash
+node build/web.js
+```
+
+One set of partials, two front ends. The status board, the zone arithmetic,
+the bilingual strings and the Peranan content each have exactly one home;
+`build/web.js` emits a second front end *from* them rather than a second copy
+*of* them, so the landing page cannot start disagreeing with the board it
+links to. A test asserts that it does not.
+
+### What can cross the boundary
+
+`web/api/status.js` does not forward the upstream response. It rebuilds it
+from three named field lists — unit, KPI, zone — and returns only those. The
+upstream payload is already aggregates-only and is gated as such against the
+real register, but a proxy that forwarded whatever it was handed would pass on
+a future mistake. The whitelist also cuts the response from about 54 KB to
+under 3 KB, because the public board does not draw the bed board, the scatter,
+the heatmaps or the forecast.
+
+If Apps Script is briefly unreachable the function returns the last good
+figures it held, marked `stale`, rather than an error: a number that says when
+it is from beats a blank panel in a waiting hall. If it has never had a good
+response it answers `502` and says so. An Apps Script fault replies in HTML,
+and the function refuses to pass a login page off as data.
+
+## Patient search has been removed
+
+The public interface no longer looks anyone up. Search was the only path by
+which it could reach an identifiable record; with it gone, everything the
+public side holds is a count, and the Vercel site has no route to a patient at
+all.
+
+What stands in its place, on every public tab and on the status poster: *for a
+patient's status, please ask at the nurses' counter.* Taking the look-up away
+without replacing it would leave a family with no answer and no next step.
+
+The implementation is kept, masking and rate limiting intact, behind a script
+property:
+
+| `PUBLIC_SEARCH` | Effect |
+|---|---|
+| unset (default) | `getPatientStatus` refuses, the header button and the overlay are removed from the document, and the counter panel takes the inline slot |
+| `on` | The search returns, exactly as it was |
+
+Tests assert both states: that nothing of it survives by default — no button,
+no overlay, no free-text input anywhere on the public view or the Vercel site —
+and that one property brings it back intact.
+
+The Vercel build never enables it: `web/` is built with search off and the
+build fails outright if the words reach the landing page.
+
 ## Making it load quickly
 
 Apps Script is slow in a specific way, and it is worth knowing which part. The
@@ -418,6 +512,9 @@ to tell a configuration problem from a data problem.
 - `warmCache()` — rebuild and re-cache all three public payloads now.
 - `installWarmTrigger()` / `removeWarmTrigger()` — add or remove the ten-minute
   warming trigger. Run `installWarmTrigger()` once after deploying.
+- `node build/web.js` — regenerate the Vercel site into `web/`.
+- Script Properties: `PUBLIC_SEARCH` (`on` restores patient search),
+  `API_TOKEN` (requires `?key=` on the JSON endpoint).
 - `clearRegisterData()` — empty the data rows, keeping structure and validation.
 - `generateIllustrations()` — regenerate the public illustrations; review the
   Drive folder afterwards, then `clearIllustrationCache()`.

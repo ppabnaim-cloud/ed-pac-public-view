@@ -29,6 +29,16 @@ var ADMIT_WINDOW_H = 24;       // admitted patients stay visible this long
 var FORECAST_HORIZON = 4;      // hours projected forward
 var MIN_N_WAIT = 10;
 var GZ_AVERAGE_WINDOW = 10;   // green-zone average uses the last N patients called           // below this, waiting-time statistics are suppressed
+/**
+ * Public patient search is OFF unless the Script Property PUBLIC_SEARCH is
+ * set to 'on'.
+ *
+ * Switched off at the hospital's direction. It was the only path by which the
+ * public interface could reach an identifiable record; with it off, everything
+ * the public side holds is a count. The implementation below is kept, masking
+ * and rate limiting intact, so it can be restored with one property rather
+ * than rewritten.
+ */
 var MIN_SEARCH_CHARS = 6;      // raised from 4: 4 characters permits enumeration
 var MAX_SEARCH_RESULTS = 5;    // caps bulk extraction through the public search
 var SEARCH_RATE_LIMIT = 20;    // searches per user per 10 minutes
@@ -109,9 +119,11 @@ var AGE_BANDS = [
 // ── ENTRY POINT ────────────────────────────────────────────
 function doGet(e) {
   var p = (e && e.parameter) || {};
+  if (p.api === 'status') return apiStatus_(p.key);
   var t = HtmlService.createTemplateFromFile('Index');
   t.bootScope = bootScope_(p.tab);
   t.bootMode = bootMode_(p.mode);
+  t.bootSearch = searchEnabled_() ? '1' : '';
   t.bootData = bootData_();
   return t.evaluate()
     .setTitle('Status Pesakit — Jabatan Kecemasan & PAC | HTPN Kajang')
@@ -146,6 +158,11 @@ function jsonForScript_(obj) {
 
 function bootScope_(v) { return (v && SCOPES[v]) ? v : 'wcc'; }
 
+/** Public patient search: off unless PUBLIC_SEARCH is explicitly 'on'. */
+function searchEnabled_() {
+  return String(prop_('PUBLIC_SEARCH') || '').trim().toLowerCase() === 'on';
+}
+
 /** 'tv' turns on the wall-display layout and the health-promotion rail. */
 function bootMode_(v) { return v === 'tv' ? 'tv' : ''; }
 
@@ -162,6 +179,45 @@ function bootMode_(v) { return v === 'tv' ? 'tv' : ''; }
 function bootData_() {
   try { return jsonForScript_(cachedPublicPayloads_()); }
   catch (err) { return '{}'; }
+}
+
+// -- JSON API ----------------------------------------------
+/**
+ * The aggregates, as JSON, for a front end hosted elsewhere.
+ *
+ * Returns exactly what the dashboard renders: counts, capacities and waiting
+ * averages. It carries no name, IC or MRN by construction, and
+ * tests/test_server.js asserts that against the real register rather than
+ * trusting the construction.
+ *
+ * Optional shared key: set the Script Property API_TOKEN and callers must
+ * pass ?key=<token>. Left unset the endpoint is open, which is the same
+ * exposure as the HTML page it mirrors. Its purpose is not secrecy -- the
+ * figures are published on a wall -- but keeping a scraper from spending the
+ * script's daily execution quota and taking the dashboard down with it.
+ */
+function apiStatus_(key) {
+  var want = prop_('API_TOKEN');
+  if (want && String(key || '') !== String(want)) {
+    return jsonOut_({ ok: false, error: 'UNAUTHORISED' });
+  }
+  try {
+    var units = getPublicDashboards();
+    if (units && units.error) return jsonOut_({ ok: false, error: units.error });
+    return jsonOut_({
+      ok: true,
+      generatedAt: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss'),
+      search: searchEnabled_(),
+      units: units
+    });
+  } catch (err) {
+    return jsonOut_({ ok: false, error: 'SERVER_ERROR' });
+  }
+}
+
+function jsonOut_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 // ── DATA ACCESS ────────────────────────────────────────────
@@ -1378,6 +1434,9 @@ function constantTimeEquals_(a, b) {
  * stop the public endpoint being usable to enumerate the register.
  */
 function getPatientStatus(query) {
+  // Off by default. The masking, the result cap and the rate limit below all
+  // still apply when it is switched back on; this is the outer gate.
+  if (!searchEnabled_()) return { error: 'SEARCH_DISABLED' };
   var q = String(query || '').trim();
   if (q.length < MIN_SEARCH_CHARS) return { error: 'MIN_CHARS', minChars: MIN_SEARCH_CHARS };
 

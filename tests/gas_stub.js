@@ -29,6 +29,16 @@ global.ScriptApp = {
   }
 };
 global.Logger = { log: () => {} };
+global.ContentService = {
+  MimeType: { JSON: 'application/json' },
+  createTextOutput: text => {
+    const o = { _text: text, _mime: null,
+      setMimeType(m) { o._mime = m; return o; },
+      getContent: () => o._text, getMimeType: () => o._mime };
+    return o;
+  }
+};
+global.__PROPS__ = _props;
 function pad(n, w) { return ('000' + n).slice(-w); }
 global.Utilities = {
   formatDate: (d, tz, fmt) => fmt

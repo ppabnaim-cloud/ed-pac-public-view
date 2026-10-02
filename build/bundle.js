@@ -20,6 +20,7 @@ page = page.replace(/<\?!=\s*include\('(\w+)'\)\s*\?>/g, (_, name) => read(name 
 // The template tag for the boot scope is substituted by doGet at runtime.
 page = page.replace(/<\?=\s*bootScope\s*\?>/g, '__BOOT_SCOPE__');
 page = page.replace(/<\?=\s*bootMode\s*\?>/g, '__BOOT_MODE__');
+page = page.replace(/<\?=\s*bootSearch\s*\?>/g, '__BOOT_SEARCH__');
 page = page.replace(/<\?!=\s*bootData\s*\?>/g, '__BOOT_DATA__');
 
 if (/<\?/.test(page)) {
@@ -43,14 +44,17 @@ if (!oldDoGet.includes('createTemplateFromFile')) {
 }
 const newDoGet = `function doGet(e) {
   var p = (e && e.parameter) || {};
+  if (p.api === 'status') return apiStatus_(p.key);
   var scope = bootScope_(p.tab);
   var mode = bootMode_(p.mode);
+  var search = searchEnabled_() ? '1' : '';
   var data = bootData_();
   // Function replacements, because a dollar sign followed by a quote or an
   // ampersand in the payload would otherwise be read as a back-reference.
   var html = PAGE_HTML
     .replace('__BOOT_SCOPE__', function () { return scope; })
     .replace('__BOOT_MODE__', function () { return mode; })
+    .replace('__BOOT_SEARCH__', function () { return search; })
     .replace('__BOOT_DATA__', function () { return data; });
   return HtmlService.createHtmlOutput(html)
     .setTitle('Status Pesakit \\u2014 Jabatan Kecemasan & PAC | HTPN Kajang')

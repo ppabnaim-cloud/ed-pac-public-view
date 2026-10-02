@@ -10,6 +10,9 @@ html = html.replace(/<\?=\s*bootScope\s*\?>/g, 'wcc');
 // and has these templated in by doGet instead.
 html = html.replace(/'<\?=\s*bootMode\s*\?>'/g,
   "(new URLSearchParams(location.search)).get('mode') || ''");
+// Search is off unless ?search=1, mirroring the PUBLIC_SEARCH property.
+html = html.replace(/'<\?=\s*bootSearch\s*\?>'/g,
+  "((new URLSearchParams(location.search)).get('search') === '1' ? '1' : '')");
 // Empty by default: the tests exercise the fetch path, and a dedicated test
 // sets window.BOOT_DATA itself to exercise the inlined path.
 html = html.replace(/<\?!=\s*bootData\s*\?>/g, '{}');
@@ -24,7 +27,11 @@ window.__MOCK__ = {
   getIllustrations: function () { return { items: [] }; },
   getAdminDashboard: function () { return window.__PAYLOADS__.admin; },
   verifyAdmin: function () { return { ok: true, token: 'test-token', via: 'passcode' }; },
+  // Mirrors the server: refuses unless PUBLIC_SEARCH is on.
   getPatientStatus: function () {
+    if (new URLSearchParams(location.search).get('search') !== '1') {
+      return { error: 'SEARCH_DISABLED' };
+    }
     return { results: [{
       nameDisplay: 'N. Ibrahim', icMasked: '••••••-••-2527', mrnMasked: 'MRN•••790',
       location: 'ED WCC', zone: 'yz', status: 'preadmit', isCrisisBed: true, isWaiting: false,

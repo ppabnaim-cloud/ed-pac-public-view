@@ -40,6 +40,7 @@ let expected = read('Index.html')
   .replace(/<\?!=\s*include\('(\w+)'\)\s*\?>/g, (_, n) => read(n + '.html'))
   .replace(/<\?=\s*bootScope\s*\?>/g, '__BOOT_SCOPE__')
   .replace(/<\?=\s*bootMode\s*\?>/g, '__BOOT_MODE__')
+  .replace(/<\?=\s*bootSearch\s*\?>/g, '__BOOT_SEARCH__')
   .replace(/<\?!=\s*bootData\s*\?>/g, '__BOOT_DATA__');
 if (page !== expected) {
   failures.push('inlined page differs from the multi-file page (' +
@@ -51,7 +52,7 @@ if (/<\?/.test(page)) failures.push('unresolved <? ?> template tag in the page')
 
 // 4. The page must contain each part exactly once.
 [['<style>', 1], ['var I18N', 1], ['var Charts', 1], ['var Banner', 1],
- ['window.EDPAC', 1], ['__BOOT_SCOPE__', 1], ['__BOOT_MODE__', 1],
+ ['window.EDPAC', 1], ['__BOOT_SCOPE__', 1], ['__BOOT_MODE__', 1], ['__BOOT_SEARCH__', 1],
  ['__BOOT_DATA__', 1]].forEach(([needle, want]) => {
   const got = page.split(needle).length - 1;
   if (got !== want) failures.push(`page contains "${needle}" ${got} times, expected ${want}`);
@@ -60,7 +61,7 @@ if (/<\?/.test(page)) failures.push('unresolved <? ?> template tag in the page')
 // 5. Every server function the page calls must exist in the bundle.
 ['getDashboard', 'getPublicDashboards', 'getAdminDashboard', 'getPatientStatus',
  'verifyAdmin', 'getIllustrations', 'doGet', 'bootScope_', 'bootMode_', 'bootData_',
- 'jsonForScript_', 'setupRegister', 'generateFullScenario', 'clearCaches',
+ 'jsonForScript_', 'searchEnabled_', 'apiStatus_', 'setupRegister', 'generateFullScenario', 'clearCaches',
  'warmCache', 'installWarmTrigger', 'removeWarmTrigger', 'onOpen'].forEach(fn => {
   if (!new RegExp('function\\s+' + fn + '\\s*\\(').test(bundle)) {
     failures.push('missing function: ' + fn);

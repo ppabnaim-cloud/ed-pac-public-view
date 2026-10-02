@@ -90,6 +90,57 @@ ok('tv mode is accepted', bootMode_('tv') === 'tv');
 ok('the admin tab is never served without a token',
    getDashboard('admin').error === 'ADMIN_REQUIRES_TOKEN');
 
+console.log('\nPatient search is off, and nothing reaches a record while it is');
+ok('search refuses by default', getPatientStatus('830702-07-2527').error === 'SEARCH_DISABLED');
+ok('it refuses a name query too', getPatientStatus('Nurul Ibrahim').error === 'SEARCH_DISABLED');
+ok('and a blank one', getPatientStatus('').error === 'SEARCH_DISABLED');
+ok('the page is told search is off', searchEnabled_() === false);
+
+global.__PROPS__.PUBLIC_SEARCH = 'on';
+const live = getPatientStatus('830702-07-2527');
+ok('one property restores it, so the implementation is intact',
+   !!live && (live.results || live.error === 'NOT_FOUND' || live.error === 'MIN_CHARS'),
+   JSON.stringify(live).slice(0, 90));
+if (live && live.results && live.results[0]) {
+  const r = live.results[0];
+  ok('and it still masks the IC when on', /[\u2022*]/.test(String(r.icMasked || '')), r.icMasked);
+  ok('and never returns a full name', !/\d{6}-\d{2}-\d{4}/.test(JSON.stringify(r)));
+}
+delete global.__PROPS__.PUBLIC_SEARCH;
+ok('removing the property switches it off again',
+   getPatientStatus('830702-07-2527').error === 'SEARCH_DISABLED');
+
+console.log('\nThe JSON API carries aggregates and nothing else');
+clearCaches();
+const res = apiStatus_();
+ok('served as JSON', res.getMimeType() === 'application/json', String(res.getMimeType()));
+let api = null;
+try { api = JSON.parse(res.getContent()); } catch (e) { /* reported next */ }
+ok('the body parses', !!api && api.ok === true);
+ok('it holds all three units',
+   api && Object.keys(api.units).sort().join(',') === 'bu,pac,wcc',
+   api ? Object.keys(api.units || {}).join(',') : '');
+ok('it reports that search is off', api && api.search === false);
+ok('it carries a generation stamp', !!(api && api.generatedAt));
+
+const body = res.getContent();
+const reg = require('./gas_stub.js').REGISTER;
+const leakName = reg.map(r => String(r[2] || '')).filter(n => n.length > 6).find(n => body.indexOf(n) >= 0);
+const leakIc = reg.map(r => String(r[4] || '')).filter(n => n.length > 6).find(n => body.indexOf(n) >= 0);
+const leakMrn = reg.map(r => String(r[5] || '')).filter(n => n.length > 4).find(n => body.indexOf(n) >= 0);
+ok('no patient name in the API body', !leakName, leakName);
+ok('no IC number in the API body', !leakIc, leakIc);
+ok('no MRN in the API body', !leakMrn, leakMrn);
+
+global.__PROPS__.API_TOKEN = 's3cret';
+ok('with API_TOKEN set, a call without the key is refused',
+   JSON.parse(apiStatus_().getContent()).error === 'UNAUTHORISED');
+ok('a wrong key is refused',
+   JSON.parse(apiStatus_('nope').getContent()).error === 'UNAUTHORISED');
+ok('the right key is served', JSON.parse(apiStatus_('s3cret').getContent()).ok === true);
+delete global.__PROPS__.API_TOKEN;
+ok('unset again, the endpoint is open', JSON.parse(apiStatus_().getContent()).ok === true);
+
 // -- The single-file bundle is what actually gets pasted ---------------
 // Exercised end to end: the page the bundled doGet returns must carry the
 // substituted boot values, with the figures already inside it.

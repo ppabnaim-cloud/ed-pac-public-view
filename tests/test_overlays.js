@@ -7,7 +7,10 @@ const { findChromium } = require('./chromium');
   for (const vp of [{ w: 768, h: 1024 }, { w: 600, h: 960 }]) {
     const p = await b.newPage({ viewport: { width: vp.w, height: vp.h }, deviceScaleFactor: 2 });
     p.on('pageerror', e => fails.push(`pageerror: ${e.message}`));
-    await p.goto('file://' + path.join(__dirname, 'dashboard_test.html'));
+    // Patient search is off by default now. This pass runs with it switched
+    // back on, so the implementation that remains in the file stays covered;
+    // the pass at the end of this loop proves the default leaves no trace of it.
+    await p.goto('file://' + path.join(__dirname, 'dashboard_test.html?search=1'));
     await p.waitForTimeout(500);
 
     // Search overlay, with a result rendered
@@ -60,6 +63,28 @@ const { findChromium } = require('./chromium');
     if (pub.charts) fails.push(`${vp.w}: public tab renders ${pub.charts} chart(s); it should render none`);
     if (!pub.zoneCards) fails.push(`${vp.w}: public tab shows no zone cards`);
     if (!pub.seek) fails.push(`${vp.w}: public tab has no search prompt`);
+
+    // ── With search off (the default), nothing of it may survive ──
+    await p.goto('file://' + path.join(__dirname, 'dashboard_test.html'));
+    await p.waitForTimeout(500);
+    const off = await p.evaluate(() => ({
+      headerBtn: !!document.getElementById('searchBtn'),
+      overlay: !!document.getElementById('ovSearch'),
+      input: !!document.querySelector('input[type="text"], input[type="password"]:not(#gateInput)'),
+      seekBtn: !!document.querySelector('.seek-btn'),
+      counter: !!document.querySelector('.seek.is-counter'),
+      counterText: (document.querySelector('.seek.is-counter h2') || {}).textContent || '',
+      zoneCards: document.querySelectorAll('.zone-card').length,
+      scroll: document.documentElement.scrollHeight - document.documentElement.clientHeight
+    }));
+    if (off.headerBtn) fails.push(`${vp.w}: the search button is still in the document`);
+    if (off.overlay) fails.push(`${vp.w}: the search overlay is still in the document`);
+    if (off.input) fails.push(`${vp.w}: a free-text input survives on the public view`);
+    if (off.seekBtn) fails.push(`${vp.w}: the inline search prompt is still there`);
+    if (!off.counter) fails.push(`${vp.w}: nothing replaced the search prompt`);
+    if (off.counterText.length < 10) fails.push(`${vp.w}: the counter panel has no heading`);
+    if (!off.zoneCards) fails.push(`${vp.w}: zone cards vanished with search off`);
+    if (off.scroll > 1) fails.push(`${vp.w}: the page scrolls with search off (${off.scroll}px)`);
 
     // Administrative tab: dismissing the access-code dialog must leave a way
     // back in, not a spinner that turns for ever.

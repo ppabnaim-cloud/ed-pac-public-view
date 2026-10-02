@@ -616,6 +616,15 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
 .seek-btn:hover { background: #8f4a00 }
 .seek-btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px }
 
+/* The counter panel that stands where the search used to. No button: there is
+   nothing to click, only somewhere to go, so the icon leads instead. */
+.seek.is-counter { align-items: flex-start }
+.seek-ic {
+  flex: none; font-size: calc(30px * var(--s)); line-height: 1.1;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.25));
+}
+.seek.is-counter .seek-copy p { -webkit-line-clamp: 4; opacity: .94 }
+
 /* ── ZONE CARDS ──────────────────────────────────────────── */
 /* One row, left to right, in escalation order. Columns are set from the
    zone count in App.html so the row never wraps onto a second layer. */
