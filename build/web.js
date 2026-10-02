@@ -102,9 +102,8 @@ let landing = read('build/templates/landing.html')
   .replace('{{TOKENS}}', () => tokens)
   .replace('{{I18N}}', () => i18nSrc)
   .replace('{{PERANAN}}', () => roles);
-if (/\{\{\w+\}\}/.test(landing)) {
-  throw new Error('unfilled placeholder in the landing page: ' + landing.match(/\{\{\w+\}\}/)[0]);
-}
+// The KKM slot is filled in step 7, once it is known whether any posters
+// exist; the placeholder check for the landing page runs after that.
 
 // Nothing to do with search may reach a page built without it -- not a label,
 // not a placeholder, not a leftover dictionary entry.
@@ -224,7 +223,99 @@ if (/\{\{\w+\}\}/.test(poster)) {
   throw new Error('unfilled placeholder in the poster: ' + poster.match(/\{\{\w+\}\}/)[0]);
 }
 
-// ── 7. Write ──────────────────────────────────────────────────────────────
+// ── 7. KKM InfoSihat gallery, when any posters have been added ────────────
+// The files are served from this site rather than linked to moh.gov.my: a
+// hospital display should not render a file that can be moved or replaced
+// after the hospital has put it on a screen, and the page's connect-src
+// policy only holds if nothing is fetched from elsewhere. See web/kkm/README.
+const KKM_DIR = path.join(OUT, 'kkm');
+const kkm = JSON.parse(fs.readFileSync(path.join(KKM_DIR, 'manifest.json'), 'utf8'));
+const kkmItems = Array.isArray(kkm.items) ? kkm.items : [];
+
+for (const it of kkmItems) {
+  if (!it.file) throw new Error('a kkm manifest entry has no file');
+  const f = path.join(KKM_DIR, it.file);
+  if (!fs.existsSync(f)) {
+    throw new Error('kkm/manifest.json lists ' + it.file + ', which is not in web/kkm/');
+  }
+  const mb = fs.statSync(f).size / 1024 / 1024;
+  if (mb > 1) {
+    console.warn('  ! ' + it.file + ' is ' + mb.toFixed(1) +
+      ' MB — resize it; these are read on a phone, not printed');
+  }
+  if (!it.title || !it.title.ms) throw new Error(it.file + ' has no Malay title');
+}
+
+const ROLE_NAMES = {};
+for (const it of Banner.items) if (it.no) ROLE_NAMES[it.no] = it.title;
+
+function kkmCard(it) {
+  const src = it.sourceUrl || kkm.source;
+  return '<figure class="card">' +
+    '<a class="shot" href="kkm/' + encodeURIComponent(it.file) + '" target="_blank" rel="noopener">' +
+      '<img src="kkm/' + encodeURIComponent(it.file) + '" alt="' + esc(it.title.ms) + '" loading="lazy"/>' +
+    '</a>' +
+    '<figcaption>' +
+      '<b>' + esc(it.title.ms) + '</b>' +
+      (it.title.en && it.title.en !== it.title.ms ? '<span class="en">' + esc(it.title.en) + '</span>' : '') +
+      '<span class="src">Sumber: <a href="' + esc(src) + '" rel="noopener">InfoSihat, KKM</a></span>' +
+    '</figcaption>' +
+  '</figure>';
+}
+
+let sihatBuilt = false;
+if (kkmItems.length) {
+  const byRole = new Map();
+  for (const it of kkmItems) {
+    const k = ROLE_NAMES[String(it.role)] ? String(it.role) : 'other';
+    if (!byRole.has(k)) byRole.set(k, []);
+    byRole.get(k).push(it);
+  }
+  const order = ['1', '2', '3', '4', '5', 'other'].filter(k => byRole.has(k));
+  const groups = order.map(k => {
+    const head = k === 'other'
+      ? '<h3>Lain-lain</h3><p>Other health-promotion material</p>'
+      : '<h3>Peranan ' + k + ' — ' + esc(ROLE_NAMES[k].ms) + '</h3>' +
+        '<p>' + esc(ROLE_NAMES[k].en) + '</p>';
+    return '<section class="group">' + head +
+      '<div class="grid">' + byRole.get(k).map(kkmCard).join('') + '</div></section>';
+  }).join('\n');
+
+  let sihat = read('build/templates/sihat.html')
+    .replace('{{TOKENS}}', () => tokens)
+    .replace('{{GROUPS}}', () => groups)
+    .replace(/\{\{PUBLISHER_MS\}\}/g, () => esc((kkm.publisher && kkm.publisher.ms) || 'Kementerian Kesihatan Malaysia'))
+    .replace(/\{\{PUBLISHER_EN\}\}/g, () => esc((kkm.publisher && kkm.publisher.en) || 'Ministry of Health Malaysia'))
+    .replace(/\{\{SOURCE\}\}/g, () => esc(kkm.source || '#'))
+    .replace('{{RETRIEVED}}', () => kkm.retrieved ? ' pada ' + esc(kkm.retrieved) : '');
+  if (/\{\{\w+\}\}/.test(sihat)) {
+    throw new Error('unfilled placeholder in the gallery: ' + sihat.match(/\{\{\w+\}\}/)[0]);
+  }
+  fs.writeFileSync(path.join(OUT, 'sihat.html'), sihat);
+  sihatBuilt = true;
+} else {
+  // No posters yet, so no page and no link to it. An empty gallery behind a
+  // link on the front page is worse than no gallery.
+  const stale = path.join(OUT, 'sihat.html');
+  if (fs.existsSync(stale)) fs.unlinkSync(stale);
+}
+
+const toolsExtra = sihatBuilt
+  ? '<a class="tool" href="/sihat">' +
+      '<span class="note-ic" aria-hidden="true">\ud83d\udccb</span>' +
+      '<div>' +
+        '<h4 data-k="landing.kkmTitle"></h4>' +
+        '<p data-k="landing.kkmBody"></p>' +
+        '<div class="tool-go" data-k="landing.kkmLink"></div>' +
+      '</div>' +
+    '</a>'
+  : '';
+landing = landing.replace('{{TOOLS_EXTRA}}', () => toolsExtra);
+if (/\{\{\w+\}\}/.test(landing)) {
+  throw new Error('unfilled placeholder in the landing page: ' + landing.match(/\{\{\w+\}\}/)[0]);
+}
+
+// ── 8. Write ──────────────────────────────────────────────────────────────
 fs.mkdirSync(OUT, { recursive: true });
 fs.writeFileSync(path.join(OUT, 'index.html'), landing);
 fs.writeFileSync(path.join(OUT, 'board.html'), board);
@@ -235,3 +326,5 @@ console.log('web/ built');
 console.log('  index.html  (landing)      : ' + kb(landing.length) + '  ' + Banner.items.filter(i => i.no).length + ' role cards');
 console.log('  board.html  (wcc/bu/pac/tv): ' + kb(board.length));
 console.log('  poster.html (A4 x ' + (Banner.items.filter(i => i.no).length + 1) + ')      : ' + kb(poster.length));
+console.log('  kkm posters                : ' + (kkmItems.length
+  ? kkmItems.length + ' -> sihat.html' : 'none yet (web/kkm/README.md says how to add them)'));

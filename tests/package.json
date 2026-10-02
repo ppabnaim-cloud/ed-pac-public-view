@@ -4,7 +4,7 @@
   "description": "Layout and behaviour gates for the ED/PAC dashboard",
   "scripts": {
     "build": "node gen_payloads.js && node build_test_page.js && node ../build/bundle.js && node ../build/web.js",
-    "test": "npm run build && node ../build/verify.js && node test_server.js && node test_layout.js && node test_public.js && node test_tv.js && node test_overlays.js && node test_web.js"
+    "test": "npm run build && node ../build/verify.js && node test_server.js && node test_layout.js && node test_public.js && node test_tv.js && node test_overlays.js && node test_web.js && node test_kkm.js"
   },
   "devDependencies": {
     "playwright": "^1.40.0"

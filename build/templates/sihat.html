@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="color-scheme" content="light"/>
+<meta name="description" content="Poster pendidikan kesihatan Kementerian Kesihatan Malaysia, dipaparkan oleh Hospital Tengku Permaisuri Norashikin, Kajang."/>
+<title>Poster Kesihatan KKM — HTPN Kajang</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet"/>
+<style>
+{{TOKENS}}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
+body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background: var(--page); color: var(--ink); line-height: 1.5 }
+.wrap { width: min(1180px, 100% - 32px); margin-inline: auto }
+a { color: inherit }
+
+.top { background: linear-gradient(135deg, var(--brand-dk), var(--brand)); color: #fff; padding: 14px 0 }
+.top .wrap { display: flex; align-items: center; gap: 14px; flex-wrap: wrap }
+.top h1 { font-size: 17px; font-weight: 800; flex: 1; min-width: 0 }
+.back {
+  border: 1px solid rgba(255,255,255,.4); background: rgba(255,255,255,.12); color: #fff;
+  font-size: 13px; font-weight: 700; border-radius: 999px; padding: 8px 15px;
+  text-decoration: none; min-height: 40px; display: inline-flex; align-items: center;
+}
+.back:hover { background: rgba(255,255,255,.22) }
+
+.hero { padding: 32px 0 18px }
+.hero h2 { font-size: clamp(24px, 4.4vw, 36px); font-weight: 800; letter-spacing: -.025em; line-height: 1.12 }
+.hero p { font-size: 15px; color: var(--ink-2); font-weight: 600; margin-top: 8px; max-width: 62ch }
+
+.group { padding: 10px 0 22px }
+.group h3 { font-size: 20px; font-weight: 800; letter-spacing: -.015em; margin-bottom: 4px }
+.group > p { font-size: 13.5px; color: var(--ink-2); font-weight: 600; margin-bottom: 12px }
+
+.grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)) }
+figure.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  overflow: hidden; box-shadow: var(--shadow); display: flex; flex-direction: column;
+}
+figure.card a.shot { display: block; background: var(--surface-2); line-height: 0 }
+figure.card img { width: 100%; height: auto; display: block }
+figcaption { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 4px }
+figcaption b { font-size: 14.5px; font-weight: 800; line-height: 1.25 }
+figcaption .en { font-size: 12.5px; color: var(--ink-2); font-weight: 600; line-height: 1.3 }
+figcaption .src { font-size: 11px; color: var(--ink-3); font-weight: 600; margin-top: 3px }
+figcaption .src a { color: var(--brand-dk); font-weight: 700 }
+
+.credit {
+  margin: 10px 0 0; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; padding: 16px 18px; font-size: 13.5px; font-weight: 600;
+  color: var(--ink-2); line-height: 1.5;
+}
+.credit strong { color: var(--ink) }
+.foot { padding: 22px 0 34px; color: var(--ink-3); font-size: 12.5px; font-weight: 600; text-align: center }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <h1>Poster Kesihatan KKM — HTPN Kajang</h1>
+    <a class="back" href="/">← Status Jabatan Kecemasan</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="hero">
+    <h2>Poster Pendidikan Kesihatan</h2>
+    <p>Bahan pendidikan kesihatan terbitan Kementerian Kesihatan Malaysia, disusun
+       mengikut 5 Peranan Rakyat ke arah Negara Sehat. Klik mana-mana poster untuk
+       melihat atau memuat turun versi penuh.</p>
+  </div>
+
+  {{GROUPS}}
+
+  <div class="credit">
+    <strong>Sumber / Source:</strong> {{PUBLISHER_MS}} · {{PUBLISHER_EN}}.<br>
+    Dimuat turun daripada <a href="{{SOURCE}}" rel="noopener">InfoSihat, KKM</a>{{RETRIEVED}}.
+    Poster dipaparkan semula oleh Hospital Tengku Permaisuri Norashikin, Kajang,
+    untuk tujuan pendidikan kesihatan awam.
+  </div>
+
+  <div class="foot">Hospital Tengku Permaisuri Norashikin, Kajang</div>
+</main>
+</body>
+</html>

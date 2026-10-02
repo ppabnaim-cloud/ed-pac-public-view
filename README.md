@@ -339,6 +339,7 @@ to Apps Script.
 | `/wcc` `/bu` `/pac` | The zone board for that unit |
 | `/tv` | Wall display with the rotating health-promotion rail |
 | `/poster` | Six A4 sheets to print: one status poster, five Peranan posters, each with a QR to this deployment |
+| `/sihat` | KKM InfoSihat posters, grouped by Peranan. Generated only when posters have been added |
 | `/api/status` | The only data path. Aggregates, 60-second edge cache |
 
 ### Setting it up
@@ -382,6 +383,28 @@ figures it held, marked `stale`, rather than an error: a number that says when
 it is from beats a blank panel in a waiting hall. If it has never had a good
 response it answers `502` and says so. An Apps Script fault replies in HTML,
 and the function refuses to pass a login page off as data.
+
+### KKM health posters
+
+Official Ministry of Health posters from
+[InfoSihat](https://infosihat.moh.gov.my/penerbitan-multimedia/poster.html)
+can be served alongside the dashboard. Drop the file in `web/kkm/`, add an
+entry to `web/kkm/manifest.json`, rebuild — the gallery appears at `/sihat`,
+grouped under the Peranan Rakyat it belongs to, and a link appears on the
+landing page. `web/kkm/README.md` has the field reference.
+
+They are **downloaded and self-hosted, not linked to moh.gov.my**, for the
+same reason the rail carries no third-party embeds: a hospital display should
+not render a file that can be moved, renamed or replaced after the hospital
+has put it on a screen, it should not send the people standing in front of it
+to another host, and the page's `connect-src 'self'` policy only holds if
+nothing is fetched from elsewhere. The publisher credit, the source link and
+the retrieval date are printed from the manifest on every gallery page.
+
+The build **fails** if the manifest lists a file that is not in the folder,
+and warns on anything over 1 MB. With no posters listed, neither the page nor
+the link is generated: an empty gallery behind a link on the front page is
+worse than no gallery.
 
 ## Patient search has been removed
 

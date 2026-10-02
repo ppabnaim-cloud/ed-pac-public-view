@@ -26,7 +26,7 @@
  * The "ED/PAC Register" menu can generate a fresh register and a demonstration
  * scenario. Those items CLEAR Sheet1 — run them on a copy, never on live data.
  *
- * Built 2026-10-02 20:21 UTC
+ * Built 2026-10-02 20:38 UTC
  * ============================================================================
  */
 
@@ -3430,6 +3430,9 @@ var I18N = {
       posterTitle: 'Poster untuk dicetak',
       posterBody:  'Poster A4 dengan kod QR ke papan status ini, untuk ditampal di kaunter dan ruang menunggu.',
       posterLink:  'Buka poster',
+      kkmTitle:    'Poster kesihatan KKM',
+      kkmBody:     'Bahan pendidikan kesihatan terbitan Kementerian Kesihatan Malaysia, disusun mengikut 5 Peranan Rakyat.',
+      kkmLink:     'Lihat poster KKM',
       scanMe:      'Imbas untuk melihat status zon'
     },
 
@@ -3746,6 +3749,9 @@ var I18N = {
       posterTitle: 'Printable poster',
       posterBody:  'An A4 poster with a QR code to this status board, for the counter and the waiting area.',
       posterLink:  'Open the poster',
+      kkmTitle:    'MOH health posters',
+      kkmBody:     'Health-education material published by the Ministry of Health, grouped by the five public roles.',
+      kkmLink:     'View the MOH posters',
       scanMe:      'Scan to see zone status'
     },
 
