@@ -113,7 +113,7 @@ All optional unless stated. **Project Settings → Script Properties.**
 
 ---
 
-## The five tabs
+## The six tabs
 
 The split between them is deliberate: **charts live on the Administrative tab
 only.** A family waiting in the department needs to know where their relative
@@ -337,7 +337,8 @@ to Apps Script.
 |---|---|
 | `/` | Landing page: live headline figures for all three units, the non-emergency notice, the five Peranan Rakyat, links onward |
 | `/wcc` `/bu` `/pac` | The zone board for that unit |
-| `/iqms` | IQMS and triage guidance: why order of arrival is not order of treatment, emergency vs non-emergency, and how the queue number works |
+| `/iqms` | The hospital's iQMS poster, with a button straight through to the live queue page |
+| `/triage` | The hospital's emergency vs non-emergency poster |
 | `/tv` | Wall display with the rotating health-promotion rail |
 | `/poster` | Six A4 sheets to print: one status poster, five Peranan posters, each with a QR to this deployment |
 | `/sihat` | KKM InfoSihat posters, grouped by Peranan. Generated only when posters have been added |
@@ -521,6 +522,30 @@ promotion topic" two hundred millimetres away.
 Two citations to confirm against current policy before this goes live: the
 front-of-pack scheme named on the sugar card (*Logo Pilihan Sihat*) and the
 smoking legislation named on the smoking card.
+
+## The poster tabs
+
+Two tabs are one poster each, served from the hospital's own Drive:
+
+| Tab | File | Script Property |
+|---|---|---|
+| `iqms` | *Banting iQMS2.jpg* | `IMG_IQMS_ID` |
+| `triage` | *Poster Size HOSPITAL TENGKU PERMAISURI NORASHIKIN.png* | `IMG_TRIAGE_ID` |
+
+**Both files must be shared "Anyone with the link can view."** Without that the
+image will not load for the public, and the tab falls back to the written
+guidance — which is why that fallback exists rather than a blank screen.
+
+They are served as Drive image URLs, **not** base64 through the script. The
+originals are 2.4 MB and 21 MB; inlining the second would be some 28 MB of
+base64 in one response, which Apps Script will not carry and no phone on
+hospital wifi should be asked to download. The Drive CDN resizes on request,
+so the page asks for 1600px wide, or 2400px on a wall display.
+
+The iQMS tab also carries a button straight to the live queue page
+(`IQMS_URL`, default `https://jknselangor.moh.gov.my/htpn/qms`). The poster's
+QR code is right for a printed sheet; on a screen the reader is already
+holding the device that would scan it.
 
 ## Repairing or redeploying the Apps Script app
 

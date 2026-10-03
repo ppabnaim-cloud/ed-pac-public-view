@@ -21,6 +21,7 @@ page = page.replace(/<\?!=\s*include\('(\w+)'\)\s*\?>/g, (_, name) => read(name 
 page = page.replace(/<\?=\s*bootScope\s*\?>/g, '__BOOT_SCOPE__');
 page = page.replace(/<\?=\s*bootMode\s*\?>/g, '__BOOT_MODE__');
 page = page.replace(/<\?=\s*bootSearch\s*\?>/g, '__BOOT_SEARCH__');
+page = page.replace(/<\?!=\s*bootPosters\s*\?>/g, '__BOOT_POSTERS__');
 page = page.replace(/<\?!=\s*bootData\s*\?>/g, '__BOOT_DATA__');
 
 if (/<\?/.test(page)) {
@@ -48,6 +49,7 @@ const newDoGet = `function doGet(e) {
   var scope = bootScope_(p.tab);
   var mode = bootMode_(p.mode);
   var search = searchEnabled_() ? '1' : '';
+  var posters = jsonForScript_(getPosters());
   var data = bootData_();
   // Function replacements, because a dollar sign followed by a quote or an
   // ampersand in the payload would otherwise be read as a back-reference.
@@ -55,6 +57,7 @@ const newDoGet = `function doGet(e) {
     .replace('__BOOT_SCOPE__', function () { return scope; })
     .replace('__BOOT_MODE__', function () { return mode; })
     .replace('__BOOT_SEARCH__', function () { return search; })
+    .replace('__BOOT_POSTERS__', function () { return posters; })
     .replace('__BOOT_DATA__', function () { return data; });
   return HtmlService.createHtmlOutput(html)
     .setTitle('Status Pesakit \\u2014 Jabatan Kecemasan & PAC | HTPN Kajang')

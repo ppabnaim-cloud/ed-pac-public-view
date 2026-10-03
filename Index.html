@@ -130,12 +130,18 @@
   </div>
 </div>
 
+<!-- Attribution, bottom right on every screen -->
+<div class="credit-mark" id="creditMark"></div>
+
 <div id="tip" role="status" aria-live="polite"></div>
 
 <script>
 window.BOOT_SCOPE = '<?= bootScope ?>';
 window.BOOT_MODE = '<?= bootMode ?>';
 window.BOOT_SEARCH = '<?= bootSearch ?>';
+/* The hospital's own posters, as Drive image URLs. No image data goes
+   through the script: the originals are 2.4 MB and 21 MB. */
+window.BOOT_POSTERS = <?!= bootPosters ?>;
 /* Public figures, already built, inlined by doGet from the warm cache. Saves
    the page a cold server round trip before it can show a single number. */
 window.BOOT_DATA = <?!= bootData ?>;

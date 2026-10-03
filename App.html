@@ -20,6 +20,7 @@
        the only path by which this interface could reach an identifiable
        record, so the default is the safe one and the server has to opt in. */
     search: window.BOOT_SEARCH === '1' || window.BOOT_SEARCH === true,
+    posters: window.BOOT_POSTERS || {},
     step: 0,
     data: {},          // scope -> payload
     stale: {},         // scope -> true while showing a restored snapshot
@@ -38,12 +39,17 @@
   /* The administrative tab is served only where an access code can gate it.
      A front end hosted outside Apps Script declares the public tabs alone. */
   var TABS = (window.BOOT_TABS && window.BOOT_TABS.length)
-    ? window.BOOT_TABS : ['wcc', 'bu', 'pac', 'iqms', 'admin'];
+    ? window.BOOT_TABS : ['wcc', 'bu', 'pac', 'iqms', 'triage', 'admin'];
 
   /* How often the page re-reads the register. Matches CACHE_SECS in Code.gs,
      so a refresh normally costs a cache read rather than a re-read of the
      whole sheet. */
   var REFRESH_MS = 15 * 60 * 1000;
+
+  /* How long to wait for a server call before giving up on it and offering a
+     retry. Generous: a cold Apps Script invocation on a large register is
+     slow, but nothing legitimate takes half a minute. */
+  var SERVER_TIMEOUT_MS = 30000;
 
   var PUBLIC_TABS = ['wcc', 'bu', 'pac'];
 
@@ -221,6 +227,8 @@
     // carried by the counter panel on the public tabs instead.
     var ft = $('footerText');
     if (ft) ft.textContent = t('footer') + '  ·  ' + t('credit');
+    var cm = $('creditMark');
+    if (cm) cm.textContent = t('credit');
     document.documentElement.lang = S.lang;
 
     var tabs = $('tabs');
@@ -1095,7 +1103,8 @@
   }
 
   function stepsFor(tab, d) {
-    if (tab === 'iqms') return iqmsSteps();
+    if (tab === 'iqms') return posterStep('iqms', queueFallback);
+    if (tab === 'triage') return posterStep('triage', triageFallback);
     return tab === 'admin' ? adminSteps(d) : publicSteps(d);
   }
 
@@ -1152,18 +1161,83 @@
     return p;
   }
 
-  function iqmsSteps() {
+  /**
+   * A tab that is one poster.
+   *
+   * The hospital's own artwork says this better than a wall of panels, so the
+   * image fills the screen and nothing else competes with it. The written
+   * version is kept and shown only if the image cannot be loaded -- a blank
+   * tab in a waiting hall is worse than plain text.
+   */
+  function posterPanel(key, area, fallbackBuild) {
+    var wrap = node('div', 'poster-tab');
+    wrap.style.gridArea = area;
+
+    var p = S.posters && S.posters[key];
+    if (!p || !p.src) { return fallbackNode(fallbackBuild, area); }
+
+    var img = node('img', 'poster-img');
+    img.alt = t('tabs.' + key + '.name');
+    img.decoding = 'async';
+    // The wall display asks for the larger rendition; a phone does not.
+    img.src = (window.innerWidth >= 1200 && p.srcLarge) ? p.srcLarge : p.src;
+    img.onerror = function () {
+      var el = fallbackNode(fallbackBuild, area);
+      if (wrap.parentNode) wrap.parentNode.replaceChild(el, wrap);
+    };
+    wrap.appendChild(img);
+    return wrap;
+  }
+
+  /**
+   * The queue page as a link, not a QR code.
+   *
+   * The poster's QR is right for a printed sheet on a wall. On a screen the
+   * reader is already holding the device that would scan it, so asking them to
+   * photograph their own phone is a step for nothing.
+   */
+  function iqmsAction(area) {
+    var url = (S.posters && S.posters.iqmsUrl) || '';
+    if (!url) return null;
+    var n = node('div', 'poster-cta');
+    n.style.gridArea = area;
+    n.innerHTML =
+      '<div class="cta-copy"><strong>' + esc(t('iqms.ctaTitle')) + '</strong>' +
+        '<span>' + esc(t('iqms.ctaSub')) + '</span></div>' +
+      '<a class="cta-btn" href="' + esc(url) + '" target="_blank" rel="noopener">' +
+        '<span aria-hidden="true">\ud83d\udd22</span> ' + esc(t('iqms.ctaBtn')) + '</a>';
+    return n;
+  }
+
+  function fallbackNode(build, area) {
+    var wrap = node('div', 'poster-fallback');
+    wrap.style.gridArea = area;
+    build().forEach(function (n) { if (n) wrap.appendChild(n); });
+    return wrap;
+  }
+
+  function posterStep(key, fallbackBuild) {
+    var cta = key === 'iqms';
     return [{
-      title: t('tabs.iqms.name'),
+      title: t('tabs.' + key + '.name'),
       guide: true,
-      rows: 'minmax(0,0.9fr) minmax(0,1.25fr) minmax(0,0.85fr)',
-      cols: '1fr 1fr',
-      areas: '"why why" "emerg nonemerg" "queue queue"',
+      rows: cta ? 'minmax(0, 1fr) auto' : 'minmax(0, 1fr)',
+      cols: 'minmax(0, 1fr)',
+      areas: cta ? '"poster" "cta"' : '"poster"',
       build: function () {
-        return [whyPanel('why'), emergPanel('emerg'),
-                nonEmergPanel('nonemerg'), queuePanel('queue')];
+        return [posterPanel(key, 'poster', fallbackBuild), cta ? iqmsAction('cta') : null];
       }
     }];
+  }
+
+  /** Shown only when the IQMS poster cannot be loaded. */
+  function queueFallback() {
+    return [queuePanel('')];
+  }
+
+  /** Shown only when the triage poster cannot be loaded. */
+  function triageFallback() {
+    return [whyPanel(''), emergPanel(''), nonEmergPanel('')];
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -1201,7 +1275,7 @@
 
   function renderTab() {
     var d = S.data[S.tab];
-    renderStamp(S.tab === 'iqms'
+    renderStamp((S.tab === 'iqms' || S.tab === 'triage')
       ? (S.data.wcc || S.data.bu || S.data.pac) : d);
 
     // Locked: show a way back in rather than a spinner. Nothing has been
@@ -1214,10 +1288,14 @@
     }
     // Standing guidance, identical whichever unit you came from: it waits on
     // nothing and renders the moment it is opened.
-    var isGuide = S.tab === 'iqms';
+    var isGuide = S.tab === 'iqms' || S.tab === 'triage';
     if (!d && !isGuide) { showState('load', t('loading')); return; }
     if (d && d.error && !isGuide) {
-      showState('err', d.error === 'UNAUTHORISED' ? t('admin.unauth') : t('errBody'));
+      showState('err',
+        d.error === 'UNAUTHORISED' ? t('admin.unauth')
+        : d.error === 'TIMEOUT' ? t('errTimeout')
+        : d.error === 'NO_RESPONSE' ? t('errNoResponse')
+        : t('errBody'));
       return;
     }
 
@@ -1312,10 +1390,26 @@
       onOk({ error: 'NO_BRIDGE' });
       return;
     }
+    // A call that never comes back must not leave a spinner turning. Apps
+    // Script can drop a response without firing either handler -- a dropped
+    // connection, a quota, a redeploy mid-flight -- and the page then showed
+    // "Loading..." for ever with no way out. Whatever happens, something is
+    // delivered exactly once.
+    var settled = false;
+    function settle(res) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      onOk(res === undefined || res === null ? { error: 'NO_RESPONSE' } : res);
+    }
+    var timer = setTimeout(function () {
+      settle({ error: 'TIMEOUT' });
+    }, SERVER_TIMEOUT_MS);
+
     google.script.run
-      .withSuccessHandler(onOk)
+      .withSuccessHandler(settle)
       .withFailureHandler(function (err) {
-        onOk({ error: 'SERVER_ERROR', message: err && err.message });
+        settle({ error: 'SERVER_ERROR', message: err && err.message });
       })[fn](arg);
   }
 

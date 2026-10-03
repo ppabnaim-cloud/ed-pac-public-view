@@ -16,6 +16,13 @@ html = html.replace(/'<\?=\s*bootSearch\s*\?>'/g,
 // Empty by default: the tests exercise the fetch path, and a dedicated test
 // sets window.BOOT_DATA itself to exercise the inlined path.
 html = html.replace(/<\?!=\s*bootData\s*\?>/g, '{}');
+// Posters: a local fixture by default so the image path is exercised, and
+// ?noposter=1 to exercise the written fallback.
+html = html.replace(/<\?!=\s*bootPosters\s*\?>/g,
+  "((new URLSearchParams(location.search)).get('noposter') === '1' ? {} : " +
+  "{ iqms: { id: 'test-iqms', src: 'fixtures/kkm/sample-poster.svg', srcLarge: 'fixtures/kkm/sample-poster.svg' }," +
+  "  triage: { id: 'test-triage', src: 'fixtures/kkm/sample-poster.svg', srcLarge: 'fixtures/kkm/sample-poster.svg' }," +
+  "  iqmsUrl: 'https://jknselangor.moh.gov.my/htpn/qms' })");
 const payloads = JSON.parse(fs.readFileSync(require('path').join(__dirname, 'fixtures', 'payloads.json'), 'utf8'));
 const mock = `
 <script>

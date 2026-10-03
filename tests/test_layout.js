@@ -75,8 +75,20 @@ const TABS = { wcc: 1, bu: 1, pac: 1, iqms: 1, admin: 6 };
             emptyCharts: [],
             panels: 0, charts: 0
           };
+          // Below the phone breakpoint the content area is a scroller by
+          // design, so a step taller than its box is the intended behaviour
+          // there and not the clipping this check exists to catch.
+          const contentScrolls = (() => {
+            const c = document.getElementById('content');
+            if (!c) return false;
+            const oy = getComputedStyle(c).overflowY;
+            return oy === 'auto' || oy === 'scroll';
+          })();
           document.querySelectorAll('.panel, .kpi, .step').forEach(el => {
-            if (el.scrollHeight > el.clientHeight + 2 || el.scrollWidth > el.clientWidth + 2) {
+            const tall = el.scrollHeight > el.clientHeight + 2;
+            const wide = el.scrollWidth > el.clientWidth + 2;
+            if (tall && contentScrolls && el.classList.contains('step')) return;
+            if (tall || wide) {
               res.overflowing.push({
                 cls: el.className,
                 area: el.style.gridArea || '',
@@ -97,12 +109,31 @@ const TABS = { wcc: 1, bu: 1, pac: 1, iqms: 1, admin: 6 };
               res.emptyCharts.push(bd.parentElement.querySelector('h2')?.textContent || '?');
             }
           });
-          // Any element sticking out past the viewport
+          // Any element sticking out past the viewport.
+          //
+          // A deliberate horizontal scroller is the one exception: on a narrow
+          // screen the tab strip scrolls, so the tabs beyond the fold are out
+          // of view BY DESIGN. What still has to hold -- and is asserted
+          // separately below -- is that the page itself never scrolls
+          // sideways, which is the fault this check exists to catch.
+          const scrolls = v => v === 'auto' || v === 'scroll';
+          const inScroller = (el, axis) => {
+            for (let n = el.parentElement; n && n !== document.body; n = n.parentElement) {
+              const cs = getComputedStyle(n);
+              if (scrolls(axis === 'x' ? cs.overflowX : cs.overflowY)) return true;
+            }
+            return false;
+          };
+          res.pageHScroll = document.documentElement.scrollWidth - document.documentElement.clientWidth;
+          res.pageVScroll = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+          res.narrow = window.innerWidth <= 620;
           const vw = window.innerWidth, vh = window.innerHeight;
           document.querySelectorAll('#app *').forEach(el => {
             const q = el.getBoundingClientRect();
             if (q.width === 0 && q.height === 0) return;
-              if (q.right > vw + 1.5 || q.bottom > vh + 1.5 || q.left < -1.5) {
+            const outX = (q.right > vw + 1.5 || q.left < -1.5) && !inScroller(el, 'x');
+            const outY = q.bottom > vh + 1.5 && !inScroller(el, 'y');
+            if (outX || outY) {
               res.overflowing.push({ cls: 'OUTSIDE ' + el.className + ' ' + el.tagName,
                 right: Math.round(q.right), bottom: Math.round(q.bottom), vw, vh,
                 txt: (el.textContent || '').slice(0, 30) });
@@ -124,7 +155,10 @@ const TABS = { wcc: 1, bu: 1, pac: 1, iqms: 1, admin: 6 };
         if (scrolls) {
           failures.push(`${label}: PAGE SCROLLS  h ${r.pageScrollH}>${r.clientH}  w ${r.pageScrollW}>${r.clientW}`);
         }
-        if (r.overflowing.length) {
+        if (r.pageHScroll > 1) {
+        fails.push(`${tag}: the page scrolls sideways by ${r.pageHScroll}px`);
+      }
+      if (r.overflowing.length) {
           failures.push(`${label}: ${r.overflowing.length} overflow(s) ` +
             JSON.stringify(r.overflowing.slice(0, 4)));
         }

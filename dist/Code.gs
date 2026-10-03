@@ -26,7 +26,7 @@
  * The "ED/PAC Register" menu can generate a fresh register and a demonstration
  * scenario. Those items CLEAR Sheet1 — run them on a copy, never on live data.
  *
- * Built 2026-10-03 05:03 UTC
+ * Built 2026-10-03 05:27 UTC
  * ============================================================================
  */
 
@@ -156,6 +156,7 @@ function doGet(e) {
   var scope = bootScope_(p.tab);
   var mode = bootMode_(p.mode);
   var search = searchEnabled_() ? '1' : '';
+  var posters = jsonForScript_(getPosters());
   var data = bootData_();
   // Function replacements, because a dollar sign followed by a quote or an
   // ampersand in the payload would otherwise be read as a back-reference.
@@ -163,6 +164,7 @@ function doGet(e) {
     .replace('__BOOT_SCOPE__', function () { return scope; })
     .replace('__BOOT_MODE__', function () { return mode; })
     .replace('__BOOT_SEARCH__', function () { return search; })
+    .replace('__BOOT_POSTERS__', function () { return posters; })
     .replace('__BOOT_DATA__', function () { return data; });
   return HtmlService.createHtmlOutput(html)
     .setTitle('Status Pesakit \u2014 Jabatan Kecemasan & PAC | HTPN Kajang')
@@ -1347,6 +1349,11 @@ function getDashboard(scopeKey) {
 /** Administrative payload. Requires a token from verifyAdmin(). */
 function getAdminDashboard(token) {
   if (!checkAdminToken_(token)) return { error: 'UNAUTHORISED' };
+  var cache = CacheService.getScriptCache();
+  try {
+    var hit = cache.get('dash_v3_admin');
+    if (hit) return JSON.parse(hit);
+  } catch (err) { /* cache miss or oversize entry: rebuild below */ }
   try {
     var recs = buildRecords_();
     var refInfo = resolveRefTime_(recs);
@@ -1373,6 +1380,8 @@ function getAdminDashboard(token) {
     });
     payload.method = methodMetadata_(payload);
     payload.generatedAt = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
+    try { cache.put('dash_v3_admin', JSON.stringify(payload), CACHE_SECS); }
+    catch (e2) { /* over 100 KB: serve uncached */ }
     return payload;
   } catch (err) {
     return { error: 'SERVER_ERROR', message: String(err && err.message || err) };
@@ -1432,10 +1441,25 @@ function verifyAdmin(passcode) {
   return { ok: true, token: issueAdminToken_(), via: 'passcode' };
 }
 
+/**
+ * Who a session token belongs to.
+ *
+ * This used to fall back to Session.getTemporaryActiveUserKey() when no email
+ * was available, which is the normal case on a deployment set to "Anyone".
+ * That key is documented as TEMPORARY: it rotates, so a token issued under one
+ * value stopped validating under the next and the Administrative tab locked
+ * itself out at random, mid-session, with the correct passcode.
+ *
+ * On an anonymous deployment the token is a bearer credential and nothing
+ * else: an unguessable UUID held in the script cache for thirty minutes.
+ * Binding it to a value that changes underneath it bought no security --
+ * whoever held the token would have been issued the rotating key too -- and
+ * cost reliability. Where a real identity IS available the binding stays.
+ */
 function adminClientId_() {
   var who = '';
   try { who = Session.getActiveUser().getEmail() || ''; } catch (e) { who = ''; }
-  if (!who) { try { who = Session.getTemporaryActiveUserKey() || 'anon'; } catch (e2) { who = 'anon'; } }
+  if (!who) return 'anon';
   return Utilities.base64EncodeWebSafe(Utilities.computeDigest(
     Utilities.DigestAlgorithm.SHA_256, who)).substring(0, 24);
 }
@@ -1559,16 +1583,65 @@ function publicView_(r, refTime) {
 
 // ── POSTER IMAGES ──────────────────────────────────────────
 /** Drive file IDs come from Script Properties so they are not hard-coded. */
-function getImages() {
-  var out = {};
-  var map = {
-    iqms:   prop_('IMG_IQMS_ID')   || '1YsUupb78S4GxlyEt5vtAV6m-TG27Rm96',
-    poster: prop_('IMG_POSTER_ID') || '1QCIpKNxvh1FR94MQPW8tnKjoDwFcgQ4P'
+/**
+ * The hospital's own posters, by tab.
+ *
+ * Served as Drive image URLs rather than base64 through this script. The
+ * originals are 2.4 MB and 21 MB; inlining the second would be some 28 MB of
+ * base64 in a single response, which Apps Script will not carry and no phone
+ * on hospital wifi should be asked to download. The Drive CDN resizes on
+ * request, so the page asks for the width it needs.
+ *
+ * BOTH FILES MUST BE SHARED "Anyone with the link can view", or the image
+ * will not load for the public. Override either with a Script Property.
+ */
+function posterIds_() {
+  return {
+    // "Banting iQMS2.jpg"
+    iqms:   prop_('IMG_IQMS_ID')   || '1QCIpKNxvh1FR94MQPW8tnKjoDwFcgQ4P',
+    // "Poster Size HOSPITAL TENGKU PERMAISURI NORASHIKIN.png"
+    triage: prop_('IMG_TRIAGE_ID') || prop_('IMG_POSTER_ID') ||
+            '1YsUupb78S4GxlyEt5vtAV6m-TG27Rm96'
   };
-  for (var k in map) {
-    if (!map.hasOwnProperty(k)) continue;
+}
+
+/**
+ * The hospital's live queue page, as printed on the iQMS poster. Anyone
+ * reading this on a phone already has a browser open, so give them the link
+ * rather than a QR code to photograph off their own screen.
+ */
+function iqmsUrl_() {
+  return prop_('IQMS_URL') || 'https://jknselangor.moh.gov.my/htpn/qms';
+}
+
+/** Drive's image CDN, which resizes to the requested width. */
+function posterUrl_(id, width) {
+  return 'https://lh3.googleusercontent.com/d/' + encodeURIComponent(id) + '=w' + (width || 1600);
+}
+
+/**
+ * The poster URLs the page needs, at two widths: one for a phone, one for a
+ * wall display. No image data passes through this script.
+ */
+function getPosters() {
+  var ids = posterIds_(), out = {};
+  for (var k in ids) {
+    if (!ids.hasOwnProperty(k)) continue;
+    out[k] = ids[k] ? { id: ids[k], src: posterUrl_(ids[k], 1600), srcLarge: posterUrl_(ids[k], 2400) }
+                    : null;
+  }
+  out.iqmsUrl = iqmsUrl_();
+  return out;
+}
+
+/** Retained for Illustrations.gs, which composes with the posters offline. */
+function getImages() {
+  var ids = posterIds_();
+  var out = {};
+  for (var k in ids) {
+    if (!ids.hasOwnProperty(k)) continue;
     try {
-      var blob = DriveApp.getFileById(map[k]).getBlob();
+      var blob = DriveApp.getFileById(ids[k]).getBlob();
       out[k] = 'data:' + blob.getContentType() + ';base64,' + Utilities.base64Encode(blob.getBytes());
     } catch (err) {
       out[k] = null;
@@ -1773,7 +1846,7 @@ function repairSetup() {
 
 // ── MAINTENANCE ────────────────────────────────
 function clearCaches() {
-  var keys = [];
+  var keys = ['dash_v3_admin'];
   for (var i = 0; i < PUBLIC_SCOPES.length; i++) keys.push(dashKey_(PUBLIC_SCOPES[i]));
   CacheService.getScriptCache().removeAll(keys);
   return 'cleared';
@@ -2859,7 +2932,9 @@ body.is-tv .rail {
      a fifth pushed it onto a second row and cut the strip in half. */
   display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
   background: var(--surface); border-bottom: 1px solid var(--line);
-  height: calc(48px * var(--s));
+  /* Six tabs share this strip, and the longest unit name needs three lines
+     once each has only a sixth of a tablet's width. */
+  height: calc(56px * var(--s));
 }
 .tab {
   border: 0; background: none; font: inherit; cursor: pointer;
@@ -2869,10 +2944,16 @@ body.is-tv .rail {
 }
 .tab-name {
   font-size: calc(11px * var(--s)); font-weight: 700; line-height: 1.15;
-  text-align: center; overflow: hidden; text-overflow: ellipsis;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  text-align: center; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
 }
-.tab-sub { font-size: calc(9px * var(--s)); font-weight: 600; opacity: .85; }
+.tab-sub {
+  font-size: calc(9px * var(--s)); font-weight: 600; opacity: .85;
+  line-height: 1.15; text-align: center; max-width: 100%;
+  /* Clamped like the name above it. Unclamped, a long sub-label was simply
+     cut mid-word once six tabs had to share the strip. */
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
 .tab[aria-selected="true"] {
   color: var(--brand-dk); border-bottom-color: var(--brand);
   background: var(--brand-lt);
@@ -3235,6 +3316,46 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
 .zc-gz-wait strong { color: var(--brand-dk) }
 .zc-muted { color: var(--ink-3); font-style: italic }
 
+/* ── POSTER TABS ─────────────────────────────────────────── */
+/* One image, fitted to the box, nothing else competing with it. */
+.poster-tab {
+  min-width: 0; min-height: 0; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: calc(8px * var(--s));
+}
+.poster-img { max-width: 100%; max-height: 100%; object-fit: contain; display: block }
+/* Written guidance, shown only when the poster cannot be loaded. */
+.poster-fallback {
+  min-width: 0; min-height: 0; overflow: hidden;
+  display: grid; gap: calc(10px * var(--s));
+  grid-auto-rows: minmax(0, auto);
+}
+
+.poster-cta {
+  display: flex; align-items: center; gap: calc(14px * var(--s)); flex-wrap: wrap;
+  background: linear-gradient(135deg, #5b1a8f, #7b2fb5);
+  color: #fff; border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: calc(12px * var(--s)) calc(16px * var(--s)); min-width: 0;
+}
+.cta-copy { flex: 1; min-width: 0; display: flex; flex-direction: column }
+.cta-copy strong { font-size: calc(16px * var(--s)); font-weight: 800; line-height: 1.2 }
+.cta-copy span { font-size: calc(12.5px * var(--s)); font-weight: 600; opacity: .9; line-height: 1.3 }
+.cta-btn {
+  flex: none; text-decoration: none; background: #fff; color: #5b1a8f;
+  font-size: calc(15px * var(--s)); font-weight: 800;
+  border-radius: 999px; padding: calc(11px * var(--s)) calc(22px * var(--s));
+  min-height: calc(44px * var(--s)); display: inline-flex; align-items: center; gap: calc(7px * var(--s));
+  white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,.2);
+}
+.cta-btn:hover { background: #f3e9fb }
+.cta-btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px }
+@media (max-width: 620px) {
+  .poster-cta { flex-direction: column; align-items: stretch; text-align: center }
+  .cta-btn { justify-content: center }
+}
+
 /* ── IQMS & TRIAGE TAB ───────────────────────────────────── */
 .iq-lead {
   font-size: calc(13.5px * var(--s)); line-height: 1.45; color: var(--ink-2);
@@ -3376,9 +3497,49 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
   .zc-gz { margin-top: 0 }
   .zc-big { font-size: calc(40px * var(--s)) }
   .cklist li { font-size: calc(14px * var(--s)) }
+  /* A poster is read by pinching in, so let it have the full width. */
+  .poster-tab { padding: 0; border: 0; box-shadow: none; background: none }
+  .poster-img { max-height: none; width: 100% }
   .seek { flex-direction: column; align-items: stretch; text-align: center }
   .seek-btn { width: 100% }
 }
+
+/* Phones: six tabs across 390px leaves 60px each, which fits no label in any
+   language. The strip scrolls sideways instead, with tabs wide enough to read
+   — the standard answer, and the only one that does not abbreviate a
+   department into something nobody recognises. */
+@media (max-width: 620px) {
+  .tabs {
+    display: flex; overflow-x: auto; overflow-y: hidden;
+    -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity;
+    height: calc(54px * var(--s));
+  }
+  .tabs::-webkit-scrollbar { height: 0 }
+  /* A fade at the right edge, so it is visible that there are more tabs than
+     fit. A scroller with no affordance is a scroller nobody scrolls. */
+  .tabs {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
+  }
+  .tab {
+    flex: 0 0 auto; min-width: 46vw; scroll-snap-align: start;
+    padding-inline: calc(10px * var(--s));
+  }
+  .tab-name { -webkit-line-clamp: 2 }
+}
+
+/* ── CREDIT ──────────────────────────────────────────────── */
+/* Bottom right, quiet, and never in the way of anything: it is an attribution,
+   not a control, so it does not take clicks. */
+.credit-mark {
+  position: fixed; right: calc(8px * var(--s)); bottom: calc(5px * var(--s));
+  z-index: 5; pointer-events: none;
+  font-size: calc(9.5px * var(--s)); font-weight: 700; letter-spacing: .01em;
+  color: var(--ink-3); opacity: .75;
+  background: rgba(255, 255, 255, .72); border-radius: 999px;
+  padding: calc(2px * var(--s)) calc(8px * var(--s));
+}
+@media (max-width: 620px) { .credit-mark { font-size: calc(9px * var(--s)); opacity: .6 } }
 
 /* ── STATES ──────────────────────────────────────────────── */
 .state {
@@ -3531,12 +3692,18 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
   </div>
 </div>
 
+<!-- Attribution, bottom right on every screen -->
+<div class="credit-mark" id="creditMark"></div>
+
 <div id="tip" role="status" aria-live="polite"></div>
 
 <script>
 window.BOOT_SCOPE = '__BOOT_SCOPE__';
 window.BOOT_MODE = '__BOOT_MODE__';
 window.BOOT_SEARCH = '__BOOT_SEARCH__';
+/* The hospital's own posters, as Drive image URLs. No image data goes
+   through the script: the originals are 2.4 MB and 21 MB. */
+window.BOOT_POSTERS = __BOOT_POSTERS__;
 /* Public figures, already built, inlined by doGet from the warm cache. Saves
    the page a cold server round trip before it can show a single number. */
 window.BOOT_DATA = __BOOT_DATA__;
@@ -3572,6 +3739,8 @@ var I18N = {
     closeLbl:    'Tutup',
     errTitle:    'Maklumat tidak dapat dipaparkan',
     errBody:     'Sistem tidak dapat dihubungi. Sila cuba semula sebentar lagi, atau tanya di kaunter jururawat.',
+    errTimeout:  'Pelayan mengambil masa terlalu lama untuk menjawab. Sila cuba semula.',
+    errNoResponse: 'Pelayan tidak memberikan jawapan. Sila cuba semula.',
 
     /* IQMS & triage tab — shared guidance, not unit-specific */
     iqms: {
@@ -3601,6 +3770,9 @@ var I18N = {
       nonWarn: 'Kehadiran untuk kes bukan kecemasan mengalihkan sumber klinikal daripada pesakit yang nyawanya bergantung kepadanya.',
       nonMadani: 'Dilindungi Skim Perubatan MADANI? Sila ke klinik GP yang berdaftar.',
 
+      ctaTitle:   'Semak nombor giliran anda dalam talian',
+      ctaSub:     'Tidak perlu imbas kod QR \\u2014 tekan butang ini terus.',
+      ctaBtn:     'Buka iQMS',
       queueTitle: 'IQMS — nombor giliran masa nyata',
       queueList: [
         'Pesakit Zon Hijau diberi nombor giliran dan dipanggil ke bilik rawatan mengikut giliran.',
@@ -3682,7 +3854,8 @@ var I18N = {
       wcc:   { name: 'Kecemasan — Wanita & Kanak-Kanak', sub: 'WCC' },
       bu:    { name: 'Kecemasan — Bangunan Utama',        sub: 'Bangunan Utama' },
       pac:   { name: 'Pusat Penilaian Pesakit — O&G',     sub: 'Ibu Mengandung' },
-      iqms:  { name: 'IQMS — Nombor Giliran',             sub: 'Kecemasan vs bukan kecemasan' },
+      iqms:   { name: 'iQMS — Nombor Giliran',            sub: 'Semakan dalam talian' },
+      triage: { name: 'Kecemasan atau Bukan?',            sub: 'Panduan pesakit' },
       admin: { name: 'Pentadbiran',                       sub: 'Staf sahaja' }
     },
 
@@ -3907,7 +4080,7 @@ var I18N = {
     },
 
     footer: 'Data dikemas kini setiap 15 minit. Untuk pertanyaan segera, sila ke kaunter jururawat.',
-    credit: 'Dibangunkan oleh Dr Naim AI Team, HTPN'
+    credit: 'Prototaip dibangunkan oleh Dr Naim, HTPN'
   },
 
   en: {
@@ -3929,6 +4102,8 @@ var I18N = {
     closeLbl:    'Close',
     errTitle:    'This information cannot be shown',
     errBody:     'The system could not be reached. Please try again shortly, or ask at the nursing counter.',
+    errTimeout:  'The server took too long to answer. Please try again.',
+    errNoResponse: 'The server gave no answer. Please try again.',
 
     /* IQMS & triage tab — shared guidance, not unit-specific */
     iqms: {
@@ -3958,6 +4133,9 @@ var I18N = {
       nonWarn: 'Attendance for non-emergency conditions diverts clinical resources away from patients whose lives depend on them.',
       nonMadani: 'Covered by Skim Perubatan MADANI? Please go to a registered GP clinic.',
 
+      ctaTitle:   'Check your queue number online',
+      ctaSub:     'No need to scan the QR code \\u2014 just tap here.',
+      ctaBtn:     'Open iQMS',
       queueTitle: 'IQMS — your queue number in real time',
       queueList: [
         'Green Zone patients are given a queue number and called to a consultation room in turn.',
@@ -4038,7 +4216,8 @@ var I18N = {
       wcc:   { name: 'Emergency — Women & Children', sub: 'WCC' },
       bu:    { name: 'Emergency — Main Building',    sub: 'Main Building' },
       pac:   { name: 'Patient Assessment Centre — O&G', sub: 'Antenatal' },
-      iqms:  { name: 'IQMS — Queue Number',            sub: 'Emergency vs non-emergency' },
+      iqms:   { name: 'iQMS — Queue Number',           sub: 'Check it online' },
+      triage: { name: 'Emergency or Not?',             sub: 'Patient guidance' },
       admin: { name: 'Administrative',               sub: 'Staff only' }
     },
 
@@ -4229,7 +4408,7 @@ var I18N = {
     },
 
     footer: 'Data refreshes every 15 minutes. For urgent enquiries please go to the nursing counter.',
-    credit: 'Developed by Dr Naim AI Team, HTPN'
+    credit: 'Prototype developed by Dr Naim, HTPN'
   }
 };
 </script>
@@ -5462,6 +5641,7 @@ var Charts = (function () {
        the only path by which this interface could reach an identifiable
        record, so the default is the safe one and the server has to opt in. */
     search: window.BOOT_SEARCH === '1' || window.BOOT_SEARCH === true,
+    posters: window.BOOT_POSTERS || {},
     step: 0,
     data: {},          // scope -> payload
     stale: {},         // scope -> true while showing a restored snapshot
@@ -5480,12 +5660,17 @@ var Charts = (function () {
   /* The administrative tab is served only where an access code can gate it.
      A front end hosted outside Apps Script declares the public tabs alone. */
   var TABS = (window.BOOT_TABS && window.BOOT_TABS.length)
-    ? window.BOOT_TABS : ['wcc', 'bu', 'pac', 'iqms', 'admin'];
+    ? window.BOOT_TABS : ['wcc', 'bu', 'pac', 'iqms', 'triage', 'admin'];
 
   /* How often the page re-reads the register. Matches CACHE_SECS in Code.gs,
      so a refresh normally costs a cache read rather than a re-read of the
      whole sheet. */
   var REFRESH_MS = 15 * 60 * 1000;
+
+  /* How long to wait for a server call before giving up on it and offering a
+     retry. Generous: a cold Apps Script invocation on a large register is
+     slow, but nothing legitimate takes half a minute. */
+  var SERVER_TIMEOUT_MS = 30000;
 
   var PUBLIC_TABS = ['wcc', 'bu', 'pac'];
 
@@ -5663,6 +5848,8 @@ var Charts = (function () {
     // carried by the counter panel on the public tabs instead.
     var ft = $('footerText');
     if (ft) ft.textContent = t('footer') + '  ·  ' + t('credit');
+    var cm = $('creditMark');
+    if (cm) cm.textContent = t('credit');
     document.documentElement.lang = S.lang;
 
     var tabs = $('tabs');
@@ -6537,7 +6724,8 @@ var Charts = (function () {
   }
 
   function stepsFor(tab, d) {
-    if (tab === 'iqms') return iqmsSteps();
+    if (tab === 'iqms') return posterStep('iqms', queueFallback);
+    if (tab === 'triage') return posterStep('triage', triageFallback);
     return tab === 'admin' ? adminSteps(d) : publicSteps(d);
   }
 
@@ -6594,18 +6782,83 @@ var Charts = (function () {
     return p;
   }
 
-  function iqmsSteps() {
+  /**
+   * A tab that is one poster.
+   *
+   * The hospital's own artwork says this better than a wall of panels, so the
+   * image fills the screen and nothing else competes with it. The written
+   * version is kept and shown only if the image cannot be loaded -- a blank
+   * tab in a waiting hall is worse than plain text.
+   */
+  function posterPanel(key, area, fallbackBuild) {
+    var wrap = node('div', 'poster-tab');
+    wrap.style.gridArea = area;
+
+    var p = S.posters && S.posters[key];
+    if (!p || !p.src) { return fallbackNode(fallbackBuild, area); }
+
+    var img = node('img', 'poster-img');
+    img.alt = t('tabs.' + key + '.name');
+    img.decoding = 'async';
+    // The wall display asks for the larger rendition; a phone does not.
+    img.src = (window.innerWidth >= 1200 && p.srcLarge) ? p.srcLarge : p.src;
+    img.onerror = function () {
+      var el = fallbackNode(fallbackBuild, area);
+      if (wrap.parentNode) wrap.parentNode.replaceChild(el, wrap);
+    };
+    wrap.appendChild(img);
+    return wrap;
+  }
+
+  /**
+   * The queue page as a link, not a QR code.
+   *
+   * The poster's QR is right for a printed sheet on a wall. On a screen the
+   * reader is already holding the device that would scan it, so asking them to
+   * photograph their own phone is a step for nothing.
+   */
+  function iqmsAction(area) {
+    var url = (S.posters && S.posters.iqmsUrl) || '';
+    if (!url) return null;
+    var n = node('div', 'poster-cta');
+    n.style.gridArea = area;
+    n.innerHTML =
+      '<div class="cta-copy"><strong>' + esc(t('iqms.ctaTitle')) + '</strong>' +
+        '<span>' + esc(t('iqms.ctaSub')) + '</span></div>' +
+      '<a class="cta-btn" href="' + esc(url) + '" target="_blank" rel="noopener">' +
+        '<span aria-hidden="true">\\ud83d\\udd22</span> ' + esc(t('iqms.ctaBtn')) + '</a>';
+    return n;
+  }
+
+  function fallbackNode(build, area) {
+    var wrap = node('div', 'poster-fallback');
+    wrap.style.gridArea = area;
+    build().forEach(function (n) { if (n) wrap.appendChild(n); });
+    return wrap;
+  }
+
+  function posterStep(key, fallbackBuild) {
+    var cta = key === 'iqms';
     return [{
-      title: t('tabs.iqms.name'),
+      title: t('tabs.' + key + '.name'),
       guide: true,
-      rows: 'minmax(0,0.9fr) minmax(0,1.25fr) minmax(0,0.85fr)',
-      cols: '1fr 1fr',
-      areas: '"why why" "emerg nonemerg" "queue queue"',
+      rows: cta ? 'minmax(0, 1fr) auto' : 'minmax(0, 1fr)',
+      cols: 'minmax(0, 1fr)',
+      areas: cta ? '"poster" "cta"' : '"poster"',
       build: function () {
-        return [whyPanel('why'), emergPanel('emerg'),
-                nonEmergPanel('nonemerg'), queuePanel('queue')];
+        return [posterPanel(key, 'poster', fallbackBuild), cta ? iqmsAction('cta') : null];
       }
     }];
+  }
+
+  /** Shown only when the IQMS poster cannot be loaded. */
+  function queueFallback() {
+    return [queuePanel('')];
+  }
+
+  /** Shown only when the triage poster cannot be loaded. */
+  function triageFallback() {
+    return [whyPanel(''), emergPanel(''), nonEmergPanel('')];
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -6643,7 +6896,7 @@ var Charts = (function () {
 
   function renderTab() {
     var d = S.data[S.tab];
-    renderStamp(S.tab === 'iqms'
+    renderStamp((S.tab === 'iqms' || S.tab === 'triage')
       ? (S.data.wcc || S.data.bu || S.data.pac) : d);
 
     // Locked: show a way back in rather than a spinner. Nothing has been
@@ -6656,10 +6909,14 @@ var Charts = (function () {
     }
     // Standing guidance, identical whichever unit you came from: it waits on
     // nothing and renders the moment it is opened.
-    var isGuide = S.tab === 'iqms';
+    var isGuide = S.tab === 'iqms' || S.tab === 'triage';
     if (!d && !isGuide) { showState('load', t('loading')); return; }
     if (d && d.error && !isGuide) {
-      showState('err', d.error === 'UNAUTHORISED' ? t('admin.unauth') : t('errBody'));
+      showState('err',
+        d.error === 'UNAUTHORISED' ? t('admin.unauth')
+        : d.error === 'TIMEOUT' ? t('errTimeout')
+        : d.error === 'NO_RESPONSE' ? t('errNoResponse')
+        : t('errBody'));
       return;
     }
 
@@ -6754,10 +7011,26 @@ var Charts = (function () {
       onOk({ error: 'NO_BRIDGE' });
       return;
     }
+    // A call that never comes back must not leave a spinner turning. Apps
+    // Script can drop a response without firing either handler -- a dropped
+    // connection, a quota, a redeploy mid-flight -- and the page then showed
+    // "Loading..." for ever with no way out. Whatever happens, something is
+    // delivered exactly once.
+    var settled = false;
+    function settle(res) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      onOk(res === undefined || res === null ? { error: 'NO_RESPONSE' } : res);
+    }
+    var timer = setTimeout(function () {
+      settle({ error: 'TIMEOUT' });
+    }, SERVER_TIMEOUT_MS);
+
     google.script.run
-      .withSuccessHandler(onOk)
+      .withSuccessHandler(settle)
       .withFailureHandler(function (err) {
-        onOk({ error: 'SERVER_ERROR', message: err && err.message });
+        settle({ error: 'SERVER_ERROR', message: err && err.message });
       })[fn](arg);
   }
 

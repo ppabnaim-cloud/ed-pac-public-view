@@ -124,6 +124,7 @@ function doGet(e) {
   t.bootScope = bootScope_(p.tab);
   t.bootMode = bootMode_(p.mode);
   t.bootSearch = searchEnabled_() ? '1' : '';
+  t.bootPosters = jsonForScript_(getPosters());
   t.bootData = bootData_();
   return t.evaluate()
     .setTitle('Status Pesakit — Jabatan Kecemasan & PAC | HTPN Kajang')
@@ -1312,6 +1313,11 @@ function getDashboard(scopeKey) {
 /** Administrative payload. Requires a token from verifyAdmin(). */
 function getAdminDashboard(token) {
   if (!checkAdminToken_(token)) return { error: 'UNAUTHORISED' };
+  var cache = CacheService.getScriptCache();
+  try {
+    var hit = cache.get('dash_v3_admin');
+    if (hit) return JSON.parse(hit);
+  } catch (err) { /* cache miss or oversize entry: rebuild below */ }
   try {
     var recs = buildRecords_();
     var refInfo = resolveRefTime_(recs);
@@ -1338,6 +1344,8 @@ function getAdminDashboard(token) {
     });
     payload.method = methodMetadata_(payload);
     payload.generatedAt = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
+    try { cache.put('dash_v3_admin', JSON.stringify(payload), CACHE_SECS); }
+    catch (e2) { /* over 100 KB: serve uncached */ }
     return payload;
   } catch (err) {
     return { error: 'SERVER_ERROR', message: String(err && err.message || err) };
@@ -1397,10 +1405,25 @@ function verifyAdmin(passcode) {
   return { ok: true, token: issueAdminToken_(), via: 'passcode' };
 }
 
+/**
+ * Who a session token belongs to.
+ *
+ * This used to fall back to Session.getTemporaryActiveUserKey() when no email
+ * was available, which is the normal case on a deployment set to "Anyone".
+ * That key is documented as TEMPORARY: it rotates, so a token issued under one
+ * value stopped validating under the next and the Administrative tab locked
+ * itself out at random, mid-session, with the correct passcode.
+ *
+ * On an anonymous deployment the token is a bearer credential and nothing
+ * else: an unguessable UUID held in the script cache for thirty minutes.
+ * Binding it to a value that changes underneath it bought no security --
+ * whoever held the token would have been issued the rotating key too -- and
+ * cost reliability. Where a real identity IS available the binding stays.
+ */
 function adminClientId_() {
   var who = '';
   try { who = Session.getActiveUser().getEmail() || ''; } catch (e) { who = ''; }
-  if (!who) { try { who = Session.getTemporaryActiveUserKey() || 'anon'; } catch (e2) { who = 'anon'; } }
+  if (!who) return 'anon';
   return Utilities.base64EncodeWebSafe(Utilities.computeDigest(
     Utilities.DigestAlgorithm.SHA_256, who)).substring(0, 24);
 }
@@ -1524,16 +1547,65 @@ function publicView_(r, refTime) {
 
 // ── POSTER IMAGES ──────────────────────────────────────────
 /** Drive file IDs come from Script Properties so they are not hard-coded. */
-function getImages() {
-  var out = {};
-  var map = {
-    iqms:   prop_('IMG_IQMS_ID')   || '1YsUupb78S4GxlyEt5vtAV6m-TG27Rm96',
-    poster: prop_('IMG_POSTER_ID') || '1QCIpKNxvh1FR94MQPW8tnKjoDwFcgQ4P'
+/**
+ * The hospital's own posters, by tab.
+ *
+ * Served as Drive image URLs rather than base64 through this script. The
+ * originals are 2.4 MB and 21 MB; inlining the second would be some 28 MB of
+ * base64 in a single response, which Apps Script will not carry and no phone
+ * on hospital wifi should be asked to download. The Drive CDN resizes on
+ * request, so the page asks for the width it needs.
+ *
+ * BOTH FILES MUST BE SHARED "Anyone with the link can view", or the image
+ * will not load for the public. Override either with a Script Property.
+ */
+function posterIds_() {
+  return {
+    // "Banting iQMS2.jpg"
+    iqms:   prop_('IMG_IQMS_ID')   || '1QCIpKNxvh1FR94MQPW8tnKjoDwFcgQ4P',
+    // "Poster Size HOSPITAL TENGKU PERMAISURI NORASHIKIN.png"
+    triage: prop_('IMG_TRIAGE_ID') || prop_('IMG_POSTER_ID') ||
+            '1YsUupb78S4GxlyEt5vtAV6m-TG27Rm96'
   };
-  for (var k in map) {
-    if (!map.hasOwnProperty(k)) continue;
+}
+
+/**
+ * The hospital's live queue page, as printed on the iQMS poster. Anyone
+ * reading this on a phone already has a browser open, so give them the link
+ * rather than a QR code to photograph off their own screen.
+ */
+function iqmsUrl_() {
+  return prop_('IQMS_URL') || 'https://jknselangor.moh.gov.my/htpn/qms';
+}
+
+/** Drive's image CDN, which resizes to the requested width. */
+function posterUrl_(id, width) {
+  return 'https://lh3.googleusercontent.com/d/' + encodeURIComponent(id) + '=w' + (width || 1600);
+}
+
+/**
+ * The poster URLs the page needs, at two widths: one for a phone, one for a
+ * wall display. No image data passes through this script.
+ */
+function getPosters() {
+  var ids = posterIds_(), out = {};
+  for (var k in ids) {
+    if (!ids.hasOwnProperty(k)) continue;
+    out[k] = ids[k] ? { id: ids[k], src: posterUrl_(ids[k], 1600), srcLarge: posterUrl_(ids[k], 2400) }
+                    : null;
+  }
+  out.iqmsUrl = iqmsUrl_();
+  return out;
+}
+
+/** Retained for Illustrations.gs, which composes with the posters offline. */
+function getImages() {
+  var ids = posterIds_();
+  var out = {};
+  for (var k in ids) {
+    if (!ids.hasOwnProperty(k)) continue;
     try {
-      var blob = DriveApp.getFileById(map[k]).getBlob();
+      var blob = DriveApp.getFileById(ids[k]).getBlob();
       out[k] = 'data:' + blob.getContentType() + ';base64,' + Utilities.base64Encode(blob.getBytes());
     } catch (err) {
       out[k] = null;
@@ -1738,7 +1810,7 @@ function repairSetup() {
 
 // ── MAINTENANCE ────────────────────────────────
 function clearCaches() {
-  var keys = [];
+  var keys = ['dash_v3_admin'];
   for (var i = 0; i < PUBLIC_SCOPES.length; i++) keys.push(dashKey_(PUBLIC_SCOPES[i]));
   CacheService.getScriptCache().removeAll(keys);
   return 'cleared';

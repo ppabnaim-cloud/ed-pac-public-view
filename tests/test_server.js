@@ -257,6 +257,35 @@ console.log('\nThe single-file bundle serves a page with its figures already in 
   ok('and defaults to the first public tab', /window\.BOOT_SCOPE = 'wcc'/.test(served));
 })();
 
+console.log('\nThe administrative session no longer locks itself out');
+// Session.getTemporaryActiveUserKey() ROTATES. Binding the token to it meant a
+// session issued under one value stopped validating under the next, which is
+// what left the Administrative tab loading for ever with the right passcode.
+let rotations = 0;
+global.Session.getTemporaryActiveUserKey = () => 'key-' + (++rotations);
+global.__PROPS__.ADMIN_PASSCODE = 'test-code';
+
+const v = verifyAdmin('test-code');
+ok('the passcode is accepted', v && v.ok === true, JSON.stringify(v).slice(0, 70));
+ok('a token is issued', !!(v && v.token));
+ok('the token still validates after the temporary key rotates',
+   checkAdminToken_(v.token), 'rotations=' + rotations);
+ok('and again, several rotations later',
+   checkAdminToken_(v.token) && checkAdminToken_(v.token) && checkAdminToken_(v.token));
+const admin = getAdminDashboard(v.token);
+ok('so the administrative payload is served', !admin.error, admin.error || 'ok');
+ok('it carries the unit breakdown', !!(admin.units && admin.units.length === 3));
+ok('a made-up token is still refused', getAdminDashboard('not-a-token').error === 'UNAUTHORISED');
+ok('and an empty one', getAdminDashboard('').error === 'UNAUTHORISED');
+
+const t0 = new Date().getTime();
+const again2 = getAdminDashboard(v.token);
+ok('a second look is served from the cache', !again2.error && (new Date().getTime() - t0) < 50,
+   (new Date().getTime() - t0) + ' ms');
+ok('clearCaches drops the administrative payload too',
+   clearCaches() === 'cleared' && !global.__CACHE__['dash_v3_admin']);
+delete global.__PROPS__.ADMIN_PASSCODE;
+
 // -- A brand-new deployment, before anything is configured -------------
 // The failure that cost the most time was a deployment that did not exist.
 // These prove that once one does, nothing else has to be set up first: no

@@ -129,12 +129,24 @@ const webBoot = `<script>
    browser is never given a path to an identifiable record. */
 (function () {
   var seg = (location.pathname.replace(/\\/+$/, '').split('/').pop() || 'wcc').toLowerCase();
-  if (['wcc', 'bu', 'pac', 'iqms', 'tv'].indexOf(seg) < 0) seg = 'wcc';
+  if (['wcc', 'bu', 'pac', 'iqms', 'triage', 'tv'].indexOf(seg) < 0) seg = 'wcc';
   window.BOOT_SCOPE  = seg === 'tv' ? 'wcc' : seg;
   window.BOOT_MODE   = seg === 'tv' ? 'tv' : '';
   window.BOOT_SEARCH = '';
-  window.BOOT_TABS   = ['wcc', 'bu', 'pac', 'iqms'];
+  window.BOOT_TABS   = ['wcc', 'bu', 'pac', 'iqms', 'triage'];
   window.BOOT_DATA   = {};
+  // The hospital's own posters, straight from Drive. Both files must be shared
+  // "Anyone with the link can view"; without that the written guidance stands
+  // in, which is why the fallback exists.
+  window.BOOT_POSTERS = {
+    iqms:   { id: '1QCIpKNxvh1FR94MQPW8tnKjoDwFcgQ4P',
+              src: 'https://lh3.googleusercontent.com/d/1QCIpKNxvh1FR94MQPW8tnKjoDwFcgQ4P=w1600',
+              srcLarge: 'https://lh3.googleusercontent.com/d/1QCIpKNxvh1FR94MQPW8tnKjoDwFcgQ4P=w2400' },
+    triage: { id: '1YsUupb78S4GxlyEt5vtAV6m-TG27Rm96',
+              src: 'https://lh3.googleusercontent.com/d/1YsUupb78S4GxlyEt5vtAV6m-TG27Rm96=w1600',
+              srcLarge: 'https://lh3.googleusercontent.com/d/1YsUupb78S4GxlyEt5vtAV6m-TG27Rm96=w2400' },
+    iqmsUrl: 'https://jknselangor.moh.gov.my/htpn/qms'
+  };
 
   // Keep the address bar in step, so a tab can be bookmarked and shared.
   window.ON_TAB_CHANGE = function (tab) {

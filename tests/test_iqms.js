@@ -1,12 +1,12 @@
 /**
- * The IQMS & triage tab.
+ * The two poster tabs: IQMS, and emergency vs non-emergency.
  *
- *   - the tab strip stays on ONE row now that there are five tabs
+ *   - the tab strip stays on ONE row now that there are six tabs
  *     (it was hard-coded to four columns and silently wrapped)
- *   - the tab renders with no live data, because it is standing guidance
- *   - nothing is cut short, in either language, phone to television
- *   - the emergency and non-emergency lists never say the same thing twice
- *   - the posters button lives here, not on the status board
+ *   - each tab is one poster, fitted to the screen, with no live data
+ *   - when the poster cannot be loaded the written guidance stands in,
+ *     because a blank tab in a waiting hall is worse than plain text
+ *   - no poster image is ever fetched from a host other than Google's own
  */
 const { chromium } = require('playwright');
 const path = require('path');
@@ -30,6 +30,8 @@ const VIEWPORTS = [
 
 function probe() {
   const panels = [...document.querySelectorAll('#content .panel')];
+  const img = document.querySelector('.poster-img');
+  const box = document.querySelector('.poster-tab, .poster-fallback');
   const text = el => (el ? el.textContent.trim() : '');
   return {
     tabRows: new Set([...document.querySelectorAll('.tab')]
@@ -37,8 +39,13 @@ function probe() {
     tabNames: [...document.querySelectorAll('.tab .tab-name')].map(t => t.textContent.trim()),
     tabCut: [...document.querySelectorAll('.tab .tab-name, .tab .tab-sub')]
       .filter(e => e.scrollWidth - e.clientWidth > 2).length,
+    hasImage: !!img,
+    imgLoaded: !!(img && img.naturalWidth > 0),
+    imgSrc: img ? img.getAttribute('src') : '',
+    imgFits: !!(img && box &&
+      img.getBoundingClientRect().width <= box.getBoundingClientRect().width + 1 &&
+      img.getBoundingClientRect().height <= box.getBoundingClientRect().height + 1),
     panels: panels.length,
-    titles: panels.map(p => text(p.querySelector('.panel-hd h2'))),
     titleCut: panels.filter(p => {
       const h = p.querySelector('.panel-hd h2');
       return h && h.scrollWidth - h.clientWidth > 2;
@@ -50,18 +57,32 @@ function probe() {
     emerg: [...document.querySelectorAll('.cklist.is-emerg li')].map(e => e.textContent.trim()),
     non: [...document.querySelectorAll('.cklist.is-ok li')].map(e => e.textContent.trim()),
     queue: [...document.querySelectorAll('.cklist.is-num li')].map(e => e.textContent.trim()),
+    creditText: text(document.getElementById('creditMark')),
+    creditPos: (() => {
+      const c = document.getElementById('creditMark');
+      if (!c) return 'absent';
+      const b = c.getBoundingClientRect();
+      return Math.round(b.right) + ',' + Math.round(b.bottom);
+    })(),
+    creditBottomRight: (() => {
+      const c = document.getElementById('creditMark');
+      if (!c) return false;
+      const b = c.getBoundingClientRect();
+      return b.right <= window.innerWidth + 1 && b.right > window.innerWidth * 0.5
+          && b.bottom <= window.innerHeight + 1 && b.bottom > window.innerHeight * 0.75;
+    })(),
     hScroll: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     vScroll: document.documentElement.scrollHeight - document.documentElement.clientHeight
   };
 }
 
-async function openIqms(page) {
-  await page.evaluate(() => {
-    const i = (window.EDPAC.state.tabs || []).indexOf('iqms');
-    if (i < 0) throw new Error('no iqms tab');
+async function openTab(page, key) {
+  await page.evaluate((k) => {
+    const i = (window.EDPAC.state.tabs || []).indexOf(k);
+    if (i < 0) throw new Error('no such tab: ' + k);
     document.querySelectorAll('.tab')[i].click();
-  });
-  await page.waitForTimeout(350);
+  }, key);
+  await page.waitForTimeout(400);
 }
 
 (async () => {
@@ -73,31 +94,61 @@ async function openIqms(page) {
     page.on('pageerror', e => fails.push(vp.n + ' pageerror: ' + e.message));
     await page.goto(PAGE);
     await page.waitForTimeout(550);
-    await openIqms(page);
-    const r = await page.evaluate(probe);
 
-    // The bug that adding this tab introduced: the strip was hard-coded to
-    // four columns, so the fifth tab dropped onto a second row and the
-    // administrative tab was half cut off.
-    ok('the five tabs stay on one row', r.tabRows === 1, r.tabRows + ' rows');
-    ok('five tabs are present', r.tabNames.length === 5, r.tabNames.join(' | '));
-    ok('no tab label is cut off', r.tabCut === 0, r.tabCut + ' cut');
+    for (const key of ['iqms', 'triage']) {
+      await openTab(page, key);
+      const r = await page.evaluate(probe);
 
-    ok('four panels render with no live data', r.panels === 4, r.panels + ' panels');
-    ok('no panel title is cut off', r.titleCut === 0, r.titles.join(' | '));
-    ok('no panel overflows', r.panelOver === 0, r.panelOver + ' overflowing');
-    ok('no sentence is cut short', r.textCut.length === 0, r.textCut.join(' | '));
-    ok('the page never scrolls sideways', r.hScroll <= 1, r.hScroll + 'px');
-    if (vp.w > 620) {
-      ok('and does not scroll down above phone width', r.vScroll <= 1, r.vScroll + 'px');
+      // The bug adding these tabs introduced: the strip was hard-coded to
+      // four columns, so the extra tabs dropped onto a second row and took
+      // the administrative tab with them.
+      ok(key + ': the six tabs stay on one row', r.tabRows === 1, r.tabRows + ' rows');
+      ok(key + ': the credit is in the bottom-right corner',
+         r.creditText.length > 8 && r.creditBottomRight,
+         r.creditText + ' @ ' + r.creditPos);
+      ok(key + ': six tabs are present', r.tabNames.length === 6, r.tabNames.join(' | '));
+      ok(key + ': no tab label is cut off', r.tabCut === 0, r.tabCut + ' cut');
+
+      ok(key + ': the poster is shown', r.hasImage);
+      ok(key + ': and it loads', r.imgLoaded, r.imgSrc);
+      ok(key + ': it fits inside its box rather than spilling out',
+         vp.w <= 620 || r.imgFits, 'image larger than its container');
+      ok(key + ': the page never scrolls sideways', r.hScroll <= 1, r.hScroll + 'px');
+      ok(key + ': every tab label is readable in full', r.tabCut === 0, r.tabCut + ' clipped');
+      if (vp.w > 620) {
+        ok(key + ': and does not scroll down above phone width', r.vScroll <= 1, r.vScroll + 'px');
+      }
     }
+    await page.close();
+  }
 
-    ok('the emergency list has entries', r.emerg.length >= 5, r.emerg.length + '');
-    ok('the non-emergency list has entries', r.non.length >= 4, r.non.length + '');
-    ok('the queue steps are numbered', r.queue.length === 4, r.queue.length + '');
+  // ── The written fallback, when the poster cannot be loaded ──────
+  console.log('\nWith no poster configured, the written guidance stands in');
+  for (const vp of [{ n: 'TV', w: 1920, h: 1080 }, { n: 'tablet', w: 768, h: 1024 }]) {
+    const page = await browser.newPage({ viewport: { width: vp.w, height: vp.h } });
+    page.on('pageerror', e => fails.push('fallback pageerror: ' + e.message));
+    await page.goto(PAGE + '?noposter=1');
+    await page.waitForTimeout(550);
+
+    await openTab(page, 'iqms');
+    let r = await page.evaluate(probe);
+    ok(vp.n + ' iqms: falls back to written guidance', !r.hasImage && r.panels === 1,
+       r.panels + ' panels, image=' + r.hasImage);
+    ok(vp.n + ' iqms: the queue steps are numbered', r.queue.length === 4, r.queue.length + '');
+    ok(vp.n + ' iqms: nothing cut short', r.textCut.length === 0, r.textCut.join(' | '));
+    ok(vp.n + ' iqms: no panel overflows', r.panelOver === 0, r.panelOver + '');
+
+    await openTab(page, 'triage');
+    r = await page.evaluate(probe);
+    ok(vp.n + ' triage: falls back to three panels', !r.hasImage && r.panels === 3,
+       r.panels + ' panels, image=' + r.hasImage);
+    ok(vp.n + ' triage: the emergency list has entries', r.emerg.length >= 5, r.emerg.length + '');
+    ok(vp.n + ' triage: the non-emergency list has entries', r.non.length >= 4, r.non.length + '');
     const overlap = r.emerg.filter(e => r.non.indexOf(e) >= 0);
-    ok('nothing appears on both lists', overlap.length === 0, overlap.join(', '));
-
+    ok(vp.n + ' triage: nothing appears on both lists', overlap.length === 0, overlap.join(', '));
+    ok(vp.n + ' triage: nothing cut short', r.textCut.length === 0, r.textCut.join(' | '));
+    ok(vp.n + ' triage: no panel title is cut off', r.titleCut === 0, r.titleCut + '');
+    ok(vp.n + ' triage: no panel overflows', r.panelOver === 0, r.panelOver + '');
     await page.close();
   }
 
@@ -106,19 +157,19 @@ async function openIqms(page) {
   {
     const page = await browser.newPage({ viewport: { width: 768, height: 1024 } });
     page.on('pageerror', e => fails.push('lang pageerror: ' + e.message));
-    await page.goto(PAGE);
+    await page.goto(PAGE + '?noposter=1');
     await page.waitForTimeout(550);
-    await openIqms(page);
+    await openTab(page, 'triage');
     const ms = await page.evaluate(probe);
     await page.evaluate(() => document.getElementById('langBtn').click());
     await page.waitForTimeout(350);
     const en = await page.evaluate(probe);
 
-    ok('the tab survives the language switch', en.panels === 4, en.panels + ' panels');
+    ok('the tab survives the language switch', en.panels === 3, en.panels + ' panels');
     ok('its content really changes language',
        ms.emerg[0] !== en.emerg[0], ms.emerg[0] + ' -> ' + en.emerg[0]);
     ok('nothing is cut short in English', en.textCut.length === 0, en.textCut.join(' | '));
-    ok('no English panel title is cut off', en.titleCut === 0, en.titles.join(' | '));
+    ok('no English panel title is cut off', en.titleCut === 0, en.titleCut + '');
     ok('no English tab label is cut off', en.tabCut === 0, en.tabCut + ' cut');
     ok('the tabs still fit on one row in English', en.tabRows === 1, en.tabRows + ' rows');
     await page.close();
@@ -143,5 +194,5 @@ async function openIqms(page) {
     fails.forEach(f => console.log('  - ' + f));
     process.exit(1);
   }
-  console.log('\nIQMS tab fits every width in both languages; five tabs stay on one row.\n');
+  console.log('\nBoth poster tabs fit every width, with the written guidance as a fallback.\n');
 })();
