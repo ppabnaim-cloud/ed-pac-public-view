@@ -26,7 +26,7 @@
  * The "ED/PAC Register" menu can generate a fresh register and a demonstration
  * scenario. Those items CLEAR Sheet1 — run them on a copy, never on live data.
  *
- * Built 2026-10-03 04:34 UTC
+ * Built 2026-10-03 04:44 UTC
  * ============================================================================
  */
 
@@ -1735,14 +1735,29 @@ function repairSetup() {
   var url = null;
   try { url = ScriptApp.getService().getUrl(); } catch (err) { url = null; }
   if (url) {
-    say('[ ok ] Web app URL (share this one):');
+    say('[ ok ] Web app URL (share this one, exactly as printed):');
     say('       ' + url);
     say('');
     say('       Wall display:  ' + url + '?mode=tv');
     say('       Public JSON:   ' + url + '?api=status');
     say('       Put that /exec URL in Vercel as APPS_SCRIPT_URL.');
+    // A Google Workspace account deploys to a domain-scoped address. Dropping
+    // the /a/macros/<domain>/ segment, or assuming the consumer
+    // script.google.com/macros/s/<id>/exec shape, gives a URL that 404s with a
+    // Google Drive "unable to open the file" page and looks like a broken app.
+    if (url.indexOf('/a/macros/') >= 0) {
+      var dom = url.split('/a/macros/')[1].split('/')[0];
+      say('');
+      say('[note] This is a Google Workspace deployment on ' + dom + '.');
+      say('       Its address MUST keep the /a/macros/' + dom + '/ part.');
+      say('       script.google.com/macros/s/<id>/exec is the personal-account');
+      say('       form and will not resolve for this script.');
+      say('       Check with your Workspace admin that external sharing is');
+      say('       allowed, or people outside ' + dom + ' will be asked to sign in.');
+    }
     if (url.indexOf('/u/') >= 0) {
-      say('[WARN] That URL contains /u/N/. Take the one from');
+      say('[WARN] That URL contains /u/N/, which resolves only in a browser');
+      say('       where that account slot matches. Take the one from');
       say('       Deploy > Manage deployments instead.');
     }
   } else {

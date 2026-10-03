@@ -540,23 +540,40 @@ Deploy > New deployment > type: Web app
 Accept the permissions prompt, then run `repairSetup()` again — it will print
 the URL.
 
-### Always take the URL from repairSetup or Manage deployments
+### The URL shape depends on the account type — this is the trap
 
-The editor shows a `/macros/u/1/s/.../exec` form while more than one Google
-account is signed in. That is a private, session-scoped link: it resolves
-against *account slot 1 in whoever's browser opens it*, so for everyone else
-it fails with a **Google Drive "Sorry, unable to open the file at present"**
-page. It is not a script error and no amount of redeploying fixes it.
+There are two different correct shapes, and using the wrong one gives a
+**Google Drive "Sorry, unable to open the file at present"** page with
+*Page not found* in the tab. It is not a script error, and redeploying,
+re-authorising or pasting a new build will not change it.
 
-The shareable URL has no `/u/N/`:
+| Account | Web app URL |
+|---|---|
+| Personal Google account | `https://script.google.com/macros/s/<id>/exec` |
+| **Google Workspace** (e.g. `moh.gov.my`) | `https://script.google.com/a/macros/<domain>/s/<id>/exec` |
 
-```
-https://script.google.com/macros/s/AKfycb.../exec          the dashboard
-https://script.google.com/macros/s/AKfycb.../exec?mode=tv  the wall display
-https://script.google.com/macros/s/AKfycb.../exec?api=status  the JSON for Vercel
-```
+A Workspace deployment **must keep the `/a/macros/<domain>/` segment**. Strip
+it and the address 404s even though the deployment is alive and the code is
+fine.
 
-`repairSetup()` warns if the URL it finds contains `/u/N/`.
+Separately, the editor shows a `/macros/u/1/s/.../exec` form while more than
+one Google account is signed in. That is a private, session-scoped link: it
+resolves against *account slot 1 in whoever's browser opens it*, so for
+everyone else it fails the same way. The shareable URL has no `/u/N/`.
+
+**Do not reconstruct the URL by hand.** Take it from `repairSetup()`, which
+prints what `ScriptApp.getService().getUrl()` returns, or from
+**Deploy → Manage deployments**. `repairSetup()` names the domain when it sees
+a Workspace deployment, and warns on `/u/N/`.
+
+### Workspace sharing
+
+On a Workspace domain, "Who has access: Anyone" can still be overridden by an
+admin policy that forbids sharing outside the organisation. If that policy is
+in force, members of the public are sent to a Google sign-in page instead of
+the dashboard, and the Vercel proxy records the upstream as unavailable rather
+than passing a login page off as data. Confirm external sharing with the
+Workspace administrator before putting the address on a poster.
 
 ### Nothing has to be configured first
 

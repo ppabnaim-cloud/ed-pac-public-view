@@ -176,6 +176,18 @@ ok('and gives the exact menu path',
 global.__WEBAPP_URL__ = 'https://script.google.com/macros/u/1/s/AKfycbTEST/exec';
 ok('it flags a /u/N/ URL, which resolves for nobody else',
    /contains \/u\/N\//.test(repairSetup()));
+
+// A Workspace account deploys to a domain-scoped address. Reconstructing it as
+// the personal-account form is what produced the Drive "Page not found" page.
+global.__WEBAPP_URL__ = 'https://script.google.com/a/macros/moh.gov.my/s/AKfycbTEST/exec';
+const ws = repairSetup();
+ok('a Workspace deployment is recognised', /Workspace deployment on moh\.gov\.my/.test(ws));
+ok('and the domain segment is spelled out', /\/a\/macros\/moh\.gov\.my\//.test(ws));
+ok('with the personal-account form named as the wrong one',
+   /personal-account/.test(ws));
+ok('and external sharing flagged', /external sharing/.test(ws));
+ok('the printed links keep the domain segment',
+   ws.indexOf('https://script.google.com/a/macros/moh.gov.my/s/AKfycbTEST/exec?mode=tv') >= 0);
 global.__WEBAPP_URL__ = null;
 removeWarmTrigger();
 
