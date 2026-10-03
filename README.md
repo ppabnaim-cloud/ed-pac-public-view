@@ -521,6 +521,52 @@ Two citations to confirm against current policy before this goes live: the
 front-of-pack scheme named on the sugar card (*Logo Pilihan Sihat*) and the
 smoking legislation named on the smoking card.
 
+## Repairing or redeploying the Apps Script app
+
+Run **`repairSetup()`** from the editor (Run > repairSetup) and read the
+execution log. It is the only function you need after pasting a new build. It
+checks the register, confirms patient search is off, primes the cache,
+installs the warming trigger, and then **prints the web app URL**. Safe to run
+as often as you like; nothing in it writes to the register.
+
+If it reports *"no active web app deployment"*, create one:
+
+```
+Deploy > New deployment > type: Web app
+  Execute as:      Me
+  Who has access:  Anyone
+```
+
+Accept the permissions prompt, then run `repairSetup()` again — it will print
+the URL.
+
+### Always take the URL from repairSetup or Manage deployments
+
+The editor shows a `/macros/u/1/s/.../exec` form while more than one Google
+account is signed in. That is a private, session-scoped link: it resolves
+against *account slot 1 in whoever's browser opens it*, so for everyone else
+it fails with a **Google Drive "Sorry, unable to open the file at present"**
+page. It is not a script error and no amount of redeploying fixes it.
+
+The shareable URL has no `/u/N/`:
+
+```
+https://script.google.com/macros/s/AKfycb.../exec          the dashboard
+https://script.google.com/macros/s/AKfycb.../exec?mode=tv  the wall display
+https://script.google.com/macros/s/AKfycb.../exec?api=status  the JSON for Vercel
+```
+
+`repairSetup()` warns if the URL it finds contains `/u/N/`.
+
+### Nothing has to be configured first
+
+A fresh deployment serves the dashboard immediately: no script properties, a
+cold cache, and the trigger not yet installed. Tests assert this against the
+built `dist/Code.gs` with `ScriptApp` removed, which is how an unauthorised
+project behaves. The only things configuration adds are the Administrative tab
+(`ADMIN_PASSCODE`) and speed (`installWarmTrigger`). Patient search stays off
+whatever you do or do not set.
+
 ## Checking the setup
 
 Run **`checkSetup()`** from the Apps Script editor and read the execution log.
@@ -532,6 +578,8 @@ to tell a configuration problem from a data problem.
 ## Maintenance
 
 - `clearCaches()` — force a refresh of the public dashboards (they cache for 15 minutes).
+- `repairSetup()` — the one to run after pasting a new build: checks, primes,
+  installs the trigger and prints the web app URL.
 - `warmCache()` — rebuild and re-cache all three public payloads now.
 - `installWarmTrigger()` / `removeWarmTrigger()` — add or remove the ten-minute
   warming trigger. Run `installWarmTrigger()` once after deploying.

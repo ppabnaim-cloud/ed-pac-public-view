@@ -141,6 +141,44 @@ ok('the right key is served', JSON.parse(apiStatus_('s3cret').getContent()).ok =
 delete global.__PROPS__.API_TOKEN;
 ok('unset again, the endpoint is open', JSON.parse(apiStatus_().getContent()).ok === true);
 
+console.log('\nrepairSetup: one run that fixes what it can and names what it cannot');
+clearCaches();
+removeWarmTrigger();
+global.__WEBAPP_URL__ = 'https://script.google.com/macros/s/AKfycbTEST/exec';
+const rep = repairSetup();
+ok('it reports the register', /Register readable/.test(rep));
+ok('it primes the cache', /Cache primed: 3 public payloads/.test(rep), (rep.match(/Cache primed.*/) || [''])[0]);
+ok('and the cache really is primed afterwards',
+   Object.keys(JSON.parse(bootData_())).length === 3);
+ok('it installs the warming trigger',
+   ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'warmCache').length === 1);
+ok('it prints the web app URL', rep.indexOf(global.__WEBAPP_URL__) >= 0);
+ok('and the two forms built from it', /\?mode=tv/.test(rep) && /\?api=status/.test(rep));
+ok('it confirms patient search is off', /Patient search is off/.test(rep));
+
+const rerun = repairSetup();
+ok('running it twice does not duplicate the trigger',
+   ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'warmCache').length === 1);
+ok('and says so', /reinstalled/.test(rerun));
+
+global.__PROPS__.PUBLIC_SEARCH = 'on';
+ok('it warns when patient search has been switched back on',
+   /Patient search is ON/.test(repairSetup()));
+delete global.__PROPS__.PUBLIC_SEARCH;
+
+global.__WEBAPP_URL__ = null;
+const undeployed = repairSetup();
+ok('with no deployment it says so instead of printing nothing',
+   /no active web app deployment/.test(undeployed));
+ok('and gives the exact menu path',
+   /Deploy > New deployment/.test(undeployed) && /Who has access:  Anyone/.test(undeployed));
+
+global.__WEBAPP_URL__ = 'https://script.google.com/macros/u/1/s/AKfycbTEST/exec';
+ok('it flags a /u/N/ URL, which resolves for nobody else',
+   /contains \/u\/N\//.test(repairSetup()));
+global.__WEBAPP_URL__ = null;
+removeWarmTrigger();
+
 // -- The single-file bundle is what actually gets pasted ---------------
 // Exercised end to end: the page the bundled doGet returns must carry the
 // substituted boot values, with the figures already inside it.
@@ -205,6 +243,67 @@ console.log('\nThe single-file bundle serves a page with its figures already in 
   ok('a cold cache still serves the page, just without figures',
      !!served && /window\.BOOT_DATA = \{\}/.test(served));
   ok('and defaults to the first public tab', /window\.BOOT_SCOPE = 'wcc'/.test(served));
+})();
+
+// -- A brand-new deployment, before anything is configured -------------
+// The failure that cost the most time was a deployment that did not exist.
+// These prove that once one does, nothing else has to be set up first: no
+// script properties, a cold cache, and ScriptApp not yet authorised.
+console.log('\nA fresh deployment serves the page before anything is configured');
+(function () {
+  const fs = require('fs');
+  const path = require('path');
+  const file = path.join(__dirname, '..', 'dist', 'Code.gs');
+  if (!fs.existsSync(file)) { ok('dist/Code.gs exists', false); return; }
+
+  let served = null;
+  global.HtmlService = {
+    createHtmlOutput: html => { served = html;
+      const c = { setTitle: () => c, addMetaTag: () => c, setXFrameOptionsMode: () => c }; return c; },
+    XFrameOptionsMode: { ALLOWALL: 'ALLOWALL' }
+  };
+  const savedScriptApp = global.ScriptApp;
+  delete global.ScriptApp;                       // scopes not yet authorised
+
+  try {
+    (0, eval)('(function(){' + fs.readFileSync(file, 'utf8') +
+      '\nreadRegister_ = global.readRegister_;' +
+      '\nglobal.__FRESH__ = { doGet, clearCaches, checkSetup, installWarmTrigger, repairSetup };})()');
+  } catch (err) {
+    ok('the bundle loads without ScriptApp', false, err.message);
+    global.ScriptApp = savedScriptApp;
+    return;
+  }
+  ok('the bundle loads without ScriptApp', !!global.__FRESH__);
+
+  for (const k of Object.keys(global.__PROPS__)) delete global.__PROPS__[k];
+  global.__FRESH__.clearCaches();
+
+  let threw = null;
+  try { global.__FRESH__.doGet({ parameter: {} }); } catch (e) { threw = e.message; }
+  ok('doGet serves with no properties and a cold cache', !threw && served && served.length > 100000, threw);
+  ok('it does not block on a register read to find the cache empty',
+     /window\.BOOT_DATA = \{\}/.test(served || ''));
+  ok('patient search is off by default, with nothing configured',
+     /BOOT_SEARCH = \'\'/.test(served || ''));
+
+  let api = null;
+  try { api = JSON.parse(global.__FRESH__.doGet({ parameter: { api: 'status' } }).getContent()); }
+  catch (e) { /* reported next */ }
+  ok('the JSON endpoint builds from cold', api && api.ok === true,
+     api ? JSON.stringify(api).slice(0, 60) : 'threw');
+
+  global.__FRESH__.doGet({ parameter: {} });
+  ok('and that call warms the page for the next visitor',
+     /window\.BOOT_DATA = \{"/.test(served || ''));
+
+  ok('checkSetup runs unauthorised', (() => {
+    try { global.__FRESH__.checkSetup(); return true; } catch (e) { return false; }
+  })());
+  ok('installWarmTrigger explains itself rather than throwing',
+     /authorise the script first/.test(global.__FRESH__.installWarmTrigger()));
+
+  global.ScriptApp = savedScriptApp;
 })();
 
 console.log(fails ? '\n' + fails + ' server gate(s) FAILED\n' : '\nServer data path: one read per refresh, warm cache, nothing identifiable leaked.\n');

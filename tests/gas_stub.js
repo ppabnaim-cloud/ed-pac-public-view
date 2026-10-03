@@ -22,6 +22,7 @@ global.__CACHE__ = _cache;
 const _triggers = [];
 global.ScriptApp = {
   getProjectTriggers: () => _triggers.slice(),
+  getService: () => ({ getUrl: () => global.__WEBAPP_URL__ || null }),
   deleteTrigger: tr => { const i = _triggers.indexOf(tr); if (i >= 0) _triggers.splice(i, 1); },
   newTrigger: fn => {
     const tr = { getHandlerFunction: () => fn, _every: null };

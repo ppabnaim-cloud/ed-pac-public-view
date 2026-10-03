@@ -61,7 +61,7 @@ if (/<\?/.test(page)) failures.push('unresolved <? ?> template tag in the page')
 // 5. Every server function the page calls must exist in the bundle.
 ['getDashboard', 'getPublicDashboards', 'getAdminDashboard', 'getPatientStatus',
  'verifyAdmin', 'getIllustrations', 'doGet', 'bootScope_', 'bootMode_', 'bootData_',
- 'jsonForScript_', 'searchEnabled_', 'apiStatus_', 'setupRegister', 'generateFullScenario', 'clearCaches',
+ 'jsonForScript_', 'searchEnabled_', 'apiStatus_', 'repairSetup', 'setupRegister', 'generateFullScenario', 'clearCaches',
  'warmCache', 'installWarmTrigger', 'removeWarmTrigger', 'onOpen'].forEach(fn => {
   if (!new RegExp('function\\s+' + fn + '\\s*\\(').test(bundle)) {
     failures.push('missing function: ' + fn);

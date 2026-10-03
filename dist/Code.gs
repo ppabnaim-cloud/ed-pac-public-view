@@ -26,7 +26,7 @@
  * The "ED/PAC Register" menu can generate a fresh register and a demonstration
  * scenario. Those items CLEAR Sheet1 — run them on a copy, never on live data.
  *
- * Built 2026-10-03 00:59 UTC
+ * Built 2026-10-03 04:34 UTC
  * ============================================================================
  */
 
@@ -1672,6 +1672,90 @@ function checkSetup() {
   return out.join('\n');
 }
 
+/**
+ * Run this ONE function after pasting a new build: Run > repairSetup, then
+ * read the execution log.
+ *
+ * It checks what checkSetup checks, then does the three things that are
+ * actually needed to get a working deployment -- primes the cache, installs
+ * the warming trigger, and prints the web app URL -- so there is no checklist
+ * to follow and no URL to go hunting for. Safe to run as often as you like:
+ * nothing here writes to the register.
+ */
+function repairSetup() {
+  var out = [];
+  function say(line) { out.push(line); try { Logger.log(line); } catch (e) {} }
+
+  say('ED/PAC dashboard \u2014 repair');
+  say('==================================================');
+
+  // 1-4. Everything checkSetup already establishes.
+  var check = checkSetup();
+  say(check);
+  say('==================================================');
+
+  // 5. Patient search: off is the intended state.
+  say(searchEnabled_()
+    ? '[WARN] Patient search is ON (PUBLIC_SEARCH=on). The public interface ' +
+      'can reach an identifiable record. Remove the property to switch it off.'
+    : '[ ok ] Patient search is off. The public side holds counts only.');
+
+  // 6. Prime the cache, so the first visitor does not pay for the register read.
+  try {
+    var t0 = new Date().getTime();
+    var built = buildPublicPayloads_();
+    say('[ ok ] Cache primed: ' + Object.keys(built).length + ' public payloads in ' +
+        (new Date().getTime() - t0) + ' ms.');
+  } catch (err) {
+    say('[FAIL] Could not build the public payloads: ' + (err && err.message || err));
+  }
+
+  // 7. The warming trigger.
+  if (typeof ScriptApp === 'undefined') {
+    say('[FAIL] ScriptApp unavailable \u2014 the script is not authorised yet.');
+    say('       Run this function again and accept the permissions prompt.');
+  } else {
+    try {
+      var had = 0;
+      var trs = ScriptApp.getProjectTriggers();
+      for (var i = 0; i < trs.length; i++) if (trs[i].getHandlerFunction() === 'warmCache') had++;
+      installWarmTrigger();
+      say(had ? '[ ok ] Warming trigger reinstalled (every 10 minutes).'
+              : '[ ok ] Warming trigger installed (every 10 minutes).');
+    } catch (err) {
+      say('[WARN] Could not install the warming trigger: ' + (err && err.message || err));
+      say('       The dashboard still works; each visitor pays for the register read.');
+    }
+  }
+
+  // 8. The link. This is the canonical /exec URL -- never the /u/N/ form the
+  // editor shows while several Google accounts are signed in, which resolves
+  // for nobody else and answers with a Google Drive error page.
+  say('==================================================');
+  var url = null;
+  try { url = ScriptApp.getService().getUrl(); } catch (err) { url = null; }
+  if (url) {
+    say('[ ok ] Web app URL (share this one):');
+    say('       ' + url);
+    say('');
+    say('       Wall display:  ' + url + '?mode=tv');
+    say('       Public JSON:   ' + url + '?api=status');
+    say('       Put that /exec URL in Vercel as APPS_SCRIPT_URL.');
+    if (url.indexOf('/u/') >= 0) {
+      say('[WARN] That URL contains /u/N/. Take the one from');
+      say('       Deploy > Manage deployments instead.');
+    }
+  } else {
+    say('[FAIL] This script has no active web app deployment.');
+    say('       Deploy > New deployment > type: Web app');
+    say('         Execute as:      Me');
+    say('         Who has access:  Anyone');
+    say('       Then run repairSetup again to get the URL.');
+  }
+  say('==================================================');
+  return out.join('\n');
+}
+
 // ── MAINTENANCE ────────────────────────────────
 function clearCaches() {
   var keys = [];
@@ -1707,6 +1791,10 @@ function warmCache() {
  * cold under a visitor.
  */
 function installWarmTrigger() {
+  if (typeof ScriptApp === 'undefined') {
+    return 'ScriptApp is not available: authorise the script first (Run > ' +
+           'repairSetup, then accept the permissions prompt).';
+  }
   var existing = ScriptApp.getProjectTriggers();
   for (var i = 0; i < existing.length; i++) {
     if (existing[i].getHandlerFunction() === 'warmCache') ScriptApp.deleteTrigger(existing[i]);
@@ -1718,6 +1806,7 @@ function installWarmTrigger() {
 
 /** Removes the warming trigger. */
 function removeWarmTrigger() {
+  if (typeof ScriptApp === 'undefined') return 'ScriptApp is not available.';
   var existing = ScriptApp.getProjectTriggers();
   var n = 0;
   for (var i = 0; i < existing.length; i++) {
