@@ -98,7 +98,7 @@ const ORDER = ['rz', 'yz', 'ob', 'ab', 'pac', 'gz'];
         capacity: cards.reduce((a, c) =>
           a + parseInt((c.querySelector('.zc-cap').textContent.match(/\d+/) || [0])[0], 10), 0),
         zones: cards.map(c => (c.className.match(/z-(\w+)/) || [])[1]),
-        tabs: document.querySelectorAll('.tab').length,
+        tabs: (window.EDPAC.state.tabs || []).join(','),
         searchBtn: !!document.getElementById('searchBtn'),
         overlay: !!document.getElementById('ovSearch'),
         counter: !!document.querySelector('.seek.is-counter'),
@@ -111,7 +111,8 @@ const ORDER = ['rz', 'yz', 'ob', 'ab', 'pac', 'gz'];
     ok(tag + ': capacity matches the landing page', r.capacity === u.cap, r.capacity + ' vs ' + u.cap);
     const seq = r.zones.slice().sort((a, c) => ORDER.indexOf(a) - ORDER.indexOf(c));
     ok(tag + ': zones in escalation order', r.zones.join() === seq.join(), r.zones.join());
-    ok(tag + ': three tabs, no administrative tab', r.tabs === 3, r.tabs + ' tabs');
+    ok(tag + ': the three units plus guidance, and no administrative tab',
+       r.tabs === 'wcc,bu,pac,iqms', r.tabs);
     ok(tag + ': no search button', !r.searchBtn);
     ok(tag + ': no search overlay', !r.overlay);
     ok(tag + ': the counter panel stands in its place', r.counter);

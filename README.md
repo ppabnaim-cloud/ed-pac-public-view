@@ -113,7 +113,7 @@ All optional unless stated. **Project Settings → Script Properties.**
 
 ---
 
-## The four tabs
+## The five tabs
 
 The split between them is deliberate: **charts live on the Administrative tab
 only.** A family waiting in the department needs to know where their relative
@@ -337,6 +337,7 @@ to Apps Script.
 |---|---|
 | `/` | Landing page: live headline figures for all three units, the non-emergency notice, the five Peranan Rakyat, links onward |
 | `/wcc` `/bu` `/pac` | The zone board for that unit |
+| `/iqms` | IQMS and triage guidance: why order of arrival is not order of treatment, emergency vs non-emergency, and how the queue number works |
 | `/tv` | Wall display with the rotating health-promotion rail |
 | `/poster` | Six A4 sheets to print: one status poster, five Peranan posters, each with a QR to this deployment |
 | `/sihat` | KKM InfoSihat posters, grouped by Peranan. Generated only when posters have been added |

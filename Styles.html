@@ -333,7 +333,9 @@ body.is-tv .rail {
 
 /* ── TABS ────────────────────────────────────────────────── */
 .tabs {
-  display: grid; grid-template-columns: repeat(4, 1fr);
+  /* Columns follow the number of tabs. It was hard-coded to four, so adding
+     a fifth pushed it onto a second row and cut the strip in half. */
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
   background: var(--surface); border-bottom: 1px solid var(--line);
   height: calc(48px * var(--s));
 }
@@ -711,6 +713,54 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
 .zc-gz-wait strong { color: var(--brand-dk) }
 .zc-muted { color: var(--ink-3); font-style: italic }
 
+/* ── IQMS & TRIAGE TAB ───────────────────────────────────── */
+.iq-lead {
+  font-size: calc(13.5px * var(--s)); line-height: 1.45; color: var(--ink-2);
+  font-weight: 600;
+}
+.iq-lead + .iq-lead { margin-top: calc(7px * var(--s)) }
+.iq-alert {
+  margin-top: calc(9px * var(--s));
+  background: #fff4e0; border-left: calc(4px * var(--s)) solid var(--accent);
+  border-radius: calc(5px * var(--s));
+  padding: calc(8px * var(--s)) calc(11px * var(--s));
+  font-size: calc(13px * var(--s)); line-height: 1.38; font-weight: 800; color: #6b3d00;
+}
+.iq-warn {
+  margin-top: calc(9px * var(--s));
+  font-size: calc(12.5px * var(--s)); line-height: 1.4; font-weight: 800;
+  color: var(--critical);
+}
+.iq-madani {
+  margin-top: calc(5px * var(--s));
+  font-size: calc(12px * var(--s)); line-height: 1.35; font-weight: 700; color: var(--ink-2);
+}
+
+/* The two columns are a triage decision, so they carry the triage colours --
+   with a word and an icon beside them, never colour alone. */
+.panel.is-emerg { border-top: calc(4px * var(--s)) solid var(--zone-rz) }
+.panel.is-non   { border-top: calc(4px * var(--s)) solid var(--zone-gz) }
+
+.cklist { list-style: none; display: flex; flex-direction: column; gap: calc(6px * var(--s)) }
+.cklist li {
+  position: relative; padding-left: calc(20px * var(--s));
+  font-size: calc(13.5px * var(--s)); line-height: 1.38; font-weight: 700; color: var(--ink);
+}
+.cklist li::before {
+  position: absolute; left: 0; top: 0;
+  font-size: calc(13px * var(--s)); line-height: 1.4;
+}
+.cklist.is-emerg li::before { content: '\2192'; color: var(--zone-rz); font-weight: 900 }
+.cklist.is-ok li::before    { content: '\2713'; color: var(--zone-gz); font-weight: 900 }
+.cklist.is-num { counter-reset: ck }
+.cklist.is-num li { padding-left: calc(24px * var(--s)); counter-increment: ck }
+.cklist.is-num li::before {
+  content: counter(ck); color: #fff; background: var(--brand);
+  width: calc(17px * var(--s)); height: calc(17px * var(--s));
+  border-radius: 50%; text-align: center;
+  font-size: calc(11px * var(--s)); line-height: calc(17px * var(--s)); font-weight: 800;
+}
+
 /* ── NON-EMERGENCY NOTICE ────────────────────────────────── */
 /* The one message on this screen that can shorten the queue. */
 .klinik {
@@ -789,12 +839,21 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
   .klinik p, .seek-copy p { -webkit-line-clamp: 6 }
   .step.is-active { grid-template-columns: 1fr !important; grid-template-areas: none !important }
   .step.is-active > * { grid-area: auto !important }
+  /* The guidance tab is prose, and prose that is cut off is useless. Only
+     there do the panels grow to their content and the area scroll; the status
+     board keeps its fixed tracks so it still fits a screen exactly. */
+  .step.is-active.is-guide {
+    grid-template-rows: none !important;
+    grid-auto-rows: max-content !important;
+  }
+  .step.is-active.is-guide .panel { min-height: 0 }
   .zone-grid { grid-template-columns: 1fr !important; grid-auto-rows: max-content }
   .zone-card { flex-direction: row; align-items: center; flex-wrap: wrap }
   .zc-name { width: auto; flex: 1 }
   .zc-bar { order: 10 }
   .zc-gz { margin-top: 0 }
   .zc-big { font-size: calc(40px * var(--s)) }
+  .cklist li { font-size: calc(14px * var(--s)) }
   .seek { flex-direction: column; align-items: stretch; text-align: center }
   .seek-btn { width: 100% }
 }

@@ -26,7 +26,7 @@
  * The "ED/PAC Register" menu can generate a fresh register and a demonstration
  * scenario. Those items CLEAR Sheet1 — run them on a copy, never on live data.
  *
- * Built 2026-10-03 04:44 UTC
+ * Built 2026-10-03 05:03 UTC
  * ============================================================================
  */
 
@@ -2855,7 +2855,9 @@ body.is-tv .rail {
 
 /* ── TABS ────────────────────────────────────────────────── */
 .tabs {
-  display: grid; grid-template-columns: repeat(4, 1fr);
+  /* Columns follow the number of tabs. It was hard-coded to four, so adding
+     a fifth pushed it onto a second row and cut the strip in half. */
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
   background: var(--surface); border-bottom: 1px solid var(--line);
   height: calc(48px * var(--s));
 }
@@ -3233,6 +3235,54 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
 .zc-gz-wait strong { color: var(--brand-dk) }
 .zc-muted { color: var(--ink-3); font-style: italic }
 
+/* ── IQMS & TRIAGE TAB ───────────────────────────────────── */
+.iq-lead {
+  font-size: calc(13.5px * var(--s)); line-height: 1.45; color: var(--ink-2);
+  font-weight: 600;
+}
+.iq-lead + .iq-lead { margin-top: calc(7px * var(--s)) }
+.iq-alert {
+  margin-top: calc(9px * var(--s));
+  background: #fff4e0; border-left: calc(4px * var(--s)) solid var(--accent);
+  border-radius: calc(5px * var(--s));
+  padding: calc(8px * var(--s)) calc(11px * var(--s));
+  font-size: calc(13px * var(--s)); line-height: 1.38; font-weight: 800; color: #6b3d00;
+}
+.iq-warn {
+  margin-top: calc(9px * var(--s));
+  font-size: calc(12.5px * var(--s)); line-height: 1.4; font-weight: 800;
+  color: var(--critical);
+}
+.iq-madani {
+  margin-top: calc(5px * var(--s));
+  font-size: calc(12px * var(--s)); line-height: 1.35; font-weight: 700; color: var(--ink-2);
+}
+
+/* The two columns are a triage decision, so they carry the triage colours --
+   with a word and an icon beside them, never colour alone. */
+.panel.is-emerg { border-top: calc(4px * var(--s)) solid var(--zone-rz) }
+.panel.is-non   { border-top: calc(4px * var(--s)) solid var(--zone-gz) }
+
+.cklist { list-style: none; display: flex; flex-direction: column; gap: calc(6px * var(--s)) }
+.cklist li {
+  position: relative; padding-left: calc(20px * var(--s));
+  font-size: calc(13.5px * var(--s)); line-height: 1.38; font-weight: 700; color: var(--ink);
+}
+.cklist li::before {
+  position: absolute; left: 0; top: 0;
+  font-size: calc(13px * var(--s)); line-height: 1.4;
+}
+.cklist.is-emerg li::before { content: '\\2192'; color: var(--zone-rz); font-weight: 900 }
+.cklist.is-ok li::before    { content: '\\2713'; color: var(--zone-gz); font-weight: 900 }
+.cklist.is-num { counter-reset: ck }
+.cklist.is-num li { padding-left: calc(24px * var(--s)); counter-increment: ck }
+.cklist.is-num li::before {
+  content: counter(ck); color: #fff; background: var(--brand);
+  width: calc(17px * var(--s)); height: calc(17px * var(--s));
+  border-radius: 50%; text-align: center;
+  font-size: calc(11px * var(--s)); line-height: calc(17px * var(--s)); font-weight: 800;
+}
+
 /* ── NON-EMERGENCY NOTICE ────────────────────────────────── */
 /* The one message on this screen that can shorten the queue. */
 .klinik {
@@ -3311,12 +3361,21 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
   .klinik p, .seek-copy p { -webkit-line-clamp: 6 }
   .step.is-active { grid-template-columns: 1fr !important; grid-template-areas: none !important }
   .step.is-active > * { grid-area: auto !important }
+  /* The guidance tab is prose, and prose that is cut off is useless. Only
+     there do the panels grow to their content and the area scroll; the status
+     board keeps its fixed tracks so it still fits a screen exactly. */
+  .step.is-active.is-guide {
+    grid-template-rows: none !important;
+    grid-auto-rows: max-content !important;
+  }
+  .step.is-active.is-guide .panel { min-height: 0 }
   .zone-grid { grid-template-columns: 1fr !important; grid-auto-rows: max-content }
   .zone-card { flex-direction: row; align-items: center; flex-wrap: wrap }
   .zc-name { width: auto; flex: 1 }
   .zc-bar { order: 10 }
   .zc-gz { margin-top: 0 }
   .zc-big { font-size: calc(40px * var(--s)) }
+  .cklist li { font-size: calc(14px * var(--s)) }
   .seek { flex-direction: column; align-items: stretch; text-align: center }
   .seek-btn { width: 100% }
 }
@@ -3514,6 +3573,43 @@ var I18N = {
     errTitle:    'Maklumat tidak dapat dipaparkan',
     errBody:     'Sistem tidak dapat dihubungi. Sila cuba semula sebentar lagi, atau tanya di kaunter jururawat.',
 
+    /* IQMS & triage tab — shared guidance, not unit-specific */
+    iqms: {
+      whyTitle:  'Mengapa pesakit lain mungkin didahulukan?',
+      whyBody1:  'Pesakit di Jabatan Kecemasan dirawat mengikut tahap kecemasan, bukan mengikut masa ketibaan. Setiap pesakit dinilai di kaunter triaj oleh anggota klinikal terlatih dan ditempatkan di zon keutamaan mengikut keseriusan keadaannya.',
+      whyBody2:  'Oleh itu, pesakit yang tiba selepas anda mungkin dipanggil lebih dahulu. Ini tidak bermakna anda dilupakan atau masalah anda tidak penting. Ia bermakna pesakit itu dinilai berada dalam risiko yang lebih mendesak.',
+      whyAlert:  'Jika keadaan anda bertambah teruk semasa menunggu, beritahu kaunter triaj dengan SEGERA supaya anda dinilai semula.',
+
+      emergTitle: 'Kes kecemasan — terus ke Jabatan Kecemasan',
+      emergList: [
+        'Sakit dada atau sesak nafas',
+        'Kelemahan sebelah badan, mulut herot, pertuturan pelat (tanda strok)',
+        'Pendarahan yang tidak berhenti',
+        'Tidak sedarkan diri, sawan atau kekeliruan mengejut',
+        'Kecederaan berat, kemalangan atau patah tulang',
+        'Demam tinggi pada bayi bawah 3 bulan'
+      ],
+
+      nonTitle: 'Bukan kecemasan — Klinik Kesihatan atau GP',
+      nonList: [
+        'Sakit tekak, selesema, batuk ringan',
+        'Demam ringan tanpa sesak nafas',
+        'Luka kecil dan calar',
+        'Ruam kulit yang ringan',
+        'Mengambil ubat berulang atau surat sakit'
+      ],
+      nonWarn: 'Kehadiran untuk kes bukan kecemasan mengalihkan sumber klinikal daripada pesakit yang nyawanya bergantung kepadanya.',
+      nonMadani: 'Dilindungi Skim Perubatan MADANI? Sila ke klinik GP yang berdaftar.',
+
+      queueTitle: 'IQMS — nombor giliran masa nyata',
+      queueList: [
+        'Pesakit Zon Hijau diberi nombor giliran dan dipanggil ke bilik rawatan mengikut giliran.',
+        'Pesakit Zon Merah dan Zon Kuning TIDAK diberi nombor giliran kerana mereka dirawat serta-merta.',
+        'Nombor giliran semasa dipaparkan pada skrin IQMS di ruang menunggu.',
+        'Jangan tinggalkan ruang menunggu tanpa memberitahu kaunter — giliran anda boleh terlepas.'
+      ]
+    },
+
     /* landing page — the Vercel front door, which may scroll */
     landing: {
       kicker:      'Perkhidmatan Awam',
@@ -3586,6 +3682,7 @@ var I18N = {
       wcc:   { name: 'Kecemasan — Wanita & Kanak-Kanak', sub: 'WCC' },
       bu:    { name: 'Kecemasan — Bangunan Utama',        sub: 'Bangunan Utama' },
       pac:   { name: 'Pusat Penilaian Pesakit — O&G',     sub: 'Ibu Mengandung' },
+      iqms:  { name: 'IQMS — Nombor Giliran',             sub: 'Kecemasan vs bukan kecemasan' },
       admin: { name: 'Pentadbiran',                       sub: 'Staf sahaja' }
     },
 
@@ -3833,6 +3930,43 @@ var I18N = {
     errTitle:    'This information cannot be shown',
     errBody:     'The system could not be reached. Please try again shortly, or ask at the nursing counter.',
 
+    /* IQMS & triage tab — shared guidance, not unit-specific */
+    iqms: {
+      whyTitle:  'Why someone else may be seen first',
+      whyBody1:  'Patients in the Emergency Department are attended to according to clinical urgency, not order of arrival. Every patient is assessed at triage by a trained clinician and assigned to a priority zone based on the severity of their condition.',
+      whyBody2:  'Consequently, a patient who arrives after you may be seen before you. This does not indicate that you have been overlooked, nor that your concern is unimportant. It indicates that another patient has been assessed as being at greater immediate risk.',
+      whyAlert:  'Should your condition change while waiting, please inform the triage counter IMMEDIATELY so that you can be reassessed.',
+
+      emergTitle: 'An emergency — come straight here',
+      emergList: [
+        'Chest pain or difficulty breathing',
+        'Weakness on one side, facial droop or slurred speech (signs of stroke)',
+        'Bleeding that will not stop',
+        'Loss of consciousness, fits or sudden confusion',
+        'Serious injury, a road accident or a broken bone',
+        'High fever in a baby under 3 months old'
+      ],
+
+      nonTitle: 'Not an emergency — Klinik Kesihatan or GP',
+      nonList: [
+        'Sore throat, cold or a mild cough',
+        'Mild fever without breathlessness',
+        'Minor cuts and grazes',
+        'A mild skin rash',
+        'Repeat prescriptions or a medical certificate'
+      ],
+      nonWarn: 'Attendance for non-emergency conditions diverts clinical resources away from patients whose lives depend on them.',
+      nonMadani: 'Covered by Skim Perubatan MADANI? Please go to a registered GP clinic.',
+
+      queueTitle: 'IQMS — your queue number in real time',
+      queueList: [
+        'Green Zone patients are given a queue number and called to a consultation room in turn.',
+        'Red and Yellow Zone patients are NOT given a queue number, because they are treated immediately.',
+        'The current number is shown on the IQMS screen in the waiting area.',
+        'Do not leave the waiting area without telling the counter — you may miss your turn.'
+      ]
+    },
+
     /* landing page — the Vercel front door, which may scroll */
     landing: {
       kicker:      'Public Service',
@@ -3904,6 +4038,7 @@ var I18N = {
       wcc:   { name: 'Emergency — Women & Children', sub: 'WCC' },
       bu:    { name: 'Emergency — Main Building',    sub: 'Main Building' },
       pac:   { name: 'Patient Assessment Centre — O&G', sub: 'Antenatal' },
+      iqms:  { name: 'IQMS — Queue Number',            sub: 'Emergency vs non-emergency' },
       admin: { name: 'Administrative',               sub: 'Staff only' }
     },
 
@@ -5338,13 +5473,14 @@ var Charts = (function () {
     illustrations: null,
     illustrationsLoading: false,
     busy: {},
+    tabs: null,        // filled from TABS once it is resolved, for diagnostics
     specs: []          // chart specs currently mounted, for re-render on resize
   };
 
   /* The administrative tab is served only where an access code can gate it.
      A front end hosted outside Apps Script declares the public tabs alone. */
   var TABS = (window.BOOT_TABS && window.BOOT_TABS.length)
-    ? window.BOOT_TABS : ['wcc', 'bu', 'pac', 'admin'];
+    ? window.BOOT_TABS : ['wcc', 'bu', 'pac', 'iqms', 'admin'];
 
   /* How often the page re-reads the register. Matches CACHE_SECS in Code.gs,
      so a refresh normally costs a cache read rather than a re-read of the
@@ -5407,6 +5543,8 @@ var Charts = (function () {
     }
     return 'none';
   }
+
+  S.tabs = TABS;
 
   // ── i18n ─────────────────────────────────────────────────
   function dict() { return I18N[S.lang] || I18N.ms; }
@@ -5620,7 +5758,7 @@ var Charts = (function () {
      PANELS
      ══════════════════════════════════════════════════════════ */
   function panel(def) {
-    var p = node('div', 'panel');
+    var p = node('div', 'panel' + (def.cls ? ' ' + def.cls : ''));
     p.style.gridArea = def.area;
 
     var hd = node('div', 'panel-hd');
@@ -6245,17 +6383,9 @@ var Charts = (function () {
       return '<div class="guide-row"><span class="guide-ic" aria-hidden="true">' + esc(g.icon) +
              '</span><div><strong>' + esc(g.title) + '</strong><p>' + esc(g.body) + '</p></div></div>';
     }).join('') + '</div>';
-    var p = panel({ area: area, title: t('public.guideTitle'), html: html });
-
-    // Posters appear only once an administrator has generated and reviewed
-    // them; without them there is nothing to open, so no button is offered.
-    if (S.illustrations && S.illustrations.items && S.illustrations.items.length) {
-      var btn = node('button', 'panel-tbl', esc(t('public.posterBtn')));
-      btn.type = 'button';
-      btn.onclick = openPosters;
-      p.querySelector('.panel-hd').appendChild(btn);
-    }
-    return p;
+    // The posters used to hang off this panel's header as a small button. They
+    // have their own tab now, where there is room to say what they are.
+    return panel({ area: area, title: t('public.guideTitle'), html: html });
   }
 
   /* Below this width the five zone cards cannot share a row, so they stack
@@ -6407,7 +6537,75 @@ var Charts = (function () {
   }
 
   function stepsFor(tab, d) {
+    if (tab === 'iqms') return iqmsSteps();
     return tab === 'admin' ? adminSteps(d) : publicSteps(d);
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     IQMS & TRIAGE TAB
+     Standing guidance shared by all three units: why order of arrival is not
+     order of treatment, which conditions belong here and which do not, and
+     how the queue number works. One screen, no live data.
+     ══════════════════════════════════════════════════════════ */
+  function bulletList(items, cls) {
+    return '<ul class="cklist' + (cls ? ' ' + cls : '') + '">' +
+      items.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>';
+  }
+
+  function whyPanel(area) {
+    var html =
+      '<p class="iq-lead">' + esc(t('iqms.whyBody1')) + '</p>' +
+      '<p class="iq-lead">' + esc(t('iqms.whyBody2')) + '</p>' +
+      '<p class="iq-alert"><span aria-hidden="true">\\u26a0\\ufe0f</span> ' +
+        esc(t('iqms.whyAlert')) + '</p>';
+    return panel({ area: area, title: '\\ud83d\\ude91 ' + t('iqms.whyTitle'), html: html });
+  }
+
+  function emergPanel(area) {
+    return panel({
+      area: area,
+      title: '\\ud83d\\udd34 ' + t('iqms.emergTitle'),
+      cls: 'is-emerg',
+      html: bulletList(t('iqms.emergList'), 'is-emerg')
+    });
+  }
+
+  function nonEmergPanel(area) {
+    var html = bulletList(t('iqms.nonList'), 'is-ok') +
+      '<p class="iq-warn">' + esc(t('iqms.nonWarn')) + '</p>' +
+      '<p class="iq-madani">' + esc(t('iqms.nonMadani')) + '</p>';
+    return panel({ area: area, title: '\\ud83c\\udfe5 ' + t('iqms.nonTitle'), cls: 'is-non', html: html });
+  }
+
+  function queuePanel(area) {
+    var p = panel({
+      area: area,
+      title: '\\ud83d\\udd22 ' + t('iqms.queueTitle'),
+      html: bulletList(t('iqms.queueList'), 'is-num')
+    });
+    // The reviewed posters live here now rather than behind a small button on
+    // the status board, where they were easy to miss.
+    if (S.illustrations && S.illustrations.items && S.illustrations.items.length) {
+      var btn = node('button', 'panel-tbl', esc(t('public.posterBtn')));
+      btn.type = 'button';
+      btn.onclick = openPosters;
+      p.querySelector('.panel-hd').appendChild(btn);
+    }
+    return p;
+  }
+
+  function iqmsSteps() {
+    return [{
+      title: t('tabs.iqms.name'),
+      guide: true,
+      rows: 'minmax(0,0.9fr) minmax(0,1.25fr) minmax(0,0.85fr)',
+      cols: '1fr 1fr',
+      areas: '"why why" "emerg nonemerg" "queue queue"',
+      build: function () {
+        return [whyPanel('why'), emergPanel('emerg'),
+                nonEmergPanel('nonemerg'), queuePanel('queue')];
+      }
+    }];
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -6445,7 +6643,8 @@ var Charts = (function () {
 
   function renderTab() {
     var d = S.data[S.tab];
-    renderStamp(d);
+    renderStamp(S.tab === 'iqms'
+      ? (S.data.wcc || S.data.bu || S.data.pac) : d);
 
     // Locked: show a way back in rather than a spinner. Nothing has been
     // requested, so a spinner would turn forever - which is exactly what it
@@ -6455,13 +6654,16 @@ var Charts = (function () {
       if (!S.gateShown) { S.gateShown = true; openGate(); }
       return;
     }
-    if (!d) { showState('load', t('loading')); return; }
-    if (d.error) {
+    // Standing guidance, identical whichever unit you came from: it waits on
+    // nothing and renders the moment it is opened.
+    var isGuide = S.tab === 'iqms';
+    if (!d && !isGuide) { showState('load', t('loading')); return; }
+    if (d && d.error && !isGuide) {
       showState('err', d.error === 'UNAUTHORISED' ? t('admin.unauth') : t('errBody'));
       return;
     }
 
-    renderNarrative(S.tab === 'admin' ? null : d);
+    renderNarrative((S.tab === 'admin' || isGuide) ? null : d);
     var steps = stepsFor(S.tab, d);
     S.step = Math.min(S.step, steps.length - 1);
 
@@ -6470,7 +6672,7 @@ var Charts = (function () {
     S.specs = [];
 
     var def = steps[S.step];
-    var stepEl = node('div', 'step is-active');
+    var stepEl = node('div', 'step is-active' + (def.guide ? ' is-guide' : ''));
     stepEl.style.gridTemplateRows = def.rows;
     stepEl.style.gridTemplateColumns = def.cols;
     stepEl.style.gridTemplateAreas = def.areas;

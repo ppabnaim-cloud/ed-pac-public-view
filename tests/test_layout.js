@@ -16,7 +16,7 @@ const VIEWPORTS = [
 ];
 // Every public tab is a single page with no pager. Phones are exempt from
 // the no-scroll assertion: the guarantee is for a 10-inch tablet and larger.
-const TABS = { wcc: 1, bu: 1, pac: 1, admin: 6 };
+const TABS = { wcc: 1, bu: 1, pac: 1, iqms: 1, admin: 6 };
 
 (async () => {
   const browser = await chromium.launch({ executablePath: findChromium() });
@@ -33,10 +33,12 @@ const TABS = { wcc: 1, bu: 1, pac: 1, admin: 6 };
 
     const tabSteps = TABS;
     for (const [tab, nSteps] of Object.entries(tabSteps)) {
+      // By key, never by position: a new tab must not silently redirect these.
       await page.evaluate((tb) => {
-        const btns = [...document.querySelectorAll('.tab')];
-        const order = ['wcc','bu','pac','admin'];
-        btns[order.indexOf(tb)].click();
+        const order = window.EDPAC.state.tabs || ['wcc', 'bu', 'pac', 'iqms', 'admin'];
+        const i = order.indexOf(tb);
+        if (i < 0) throw new Error('no such tab: ' + tb);
+        document.querySelectorAll('.tab')[i].click();
       }, tab);
       await page.waitForTimeout(400);
 

@@ -11,7 +11,8 @@ const path = require('path');
 const WEB = path.join(__dirname, '..', 'web');
 const payloads = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'payloads.json'), 'utf8'));
 
-const ROUTES = { '/wcc': '/board.html', '/bu': '/board.html', '/pac': '/board.html', '/tv': '/board.html' };
+const ROUTES = { '/wcc': '/board.html', '/bu': '/board.html', '/pac': '/board.html',
+                 '/iqms': '/board.html', '/tv': '/board.html' };
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
                 '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png' };
 

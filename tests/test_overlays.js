@@ -88,7 +88,10 @@ const { findChromium } = require('./chromium');
 
     // Administrative tab: dismissing the access-code dialog must leave a way
     // back in, not a spinner that turns for ever.
-    await p.evaluate(() => document.querySelectorAll('.tab')[3].click());
+    await p.evaluate(() => {
+      const i = (window.EDPAC.state.tabs || []).indexOf('admin');
+      document.querySelectorAll('.tab')[i].click();
+    });
     await p.waitForTimeout(350);
     const gateOpen = await p.evaluate(() =>
       document.getElementById('ovGate').classList.contains('is-open'));

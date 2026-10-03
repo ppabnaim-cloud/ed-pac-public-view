@@ -129,11 +129,11 @@ const webBoot = `<script>
    browser is never given a path to an identifiable record. */
 (function () {
   var seg = (location.pathname.replace(/\\/+$/, '').split('/').pop() || 'wcc').toLowerCase();
-  if (['wcc', 'bu', 'pac', 'tv'].indexOf(seg) < 0) seg = 'wcc';
+  if (['wcc', 'bu', 'pac', 'iqms', 'tv'].indexOf(seg) < 0) seg = 'wcc';
   window.BOOT_SCOPE  = seg === 'tv' ? 'wcc' : seg;
   window.BOOT_MODE   = seg === 'tv' ? 'tv' : '';
   window.BOOT_SEARCH = '';
-  window.BOOT_TABS   = ['wcc', 'bu', 'pac'];
+  window.BOOT_TABS   = ['wcc', 'bu', 'pac', 'iqms'];
   window.BOOT_DATA   = {};
 
   // Keep the address bar in step, so a tab can be bookmarked and shared.

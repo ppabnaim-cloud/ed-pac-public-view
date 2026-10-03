@@ -31,13 +31,14 @@
     illustrations: null,
     illustrationsLoading: false,
     busy: {},
+    tabs: null,        // filled from TABS once it is resolved, for diagnostics
     specs: []          // chart specs currently mounted, for re-render on resize
   };
 
   /* The administrative tab is served only where an access code can gate it.
      A front end hosted outside Apps Script declares the public tabs alone. */
   var TABS = (window.BOOT_TABS && window.BOOT_TABS.length)
-    ? window.BOOT_TABS : ['wcc', 'bu', 'pac', 'admin'];
+    ? window.BOOT_TABS : ['wcc', 'bu', 'pac', 'iqms', 'admin'];
 
   /* How often the page re-reads the register. Matches CACHE_SECS in Code.gs,
      so a refresh normally costs a cache read rather than a re-read of the
@@ -100,6 +101,8 @@
     }
     return 'none';
   }
+
+  S.tabs = TABS;
 
   // ── i18n ─────────────────────────────────────────────────
   function dict() { return I18N[S.lang] || I18N.ms; }
@@ -313,7 +316,7 @@
      PANELS
      ══════════════════════════════════════════════════════════ */
   function panel(def) {
-    var p = node('div', 'panel');
+    var p = node('div', 'panel' + (def.cls ? ' ' + def.cls : ''));
     p.style.gridArea = def.area;
 
     var hd = node('div', 'panel-hd');
@@ -938,17 +941,9 @@
       return '<div class="guide-row"><span class="guide-ic" aria-hidden="true">' + esc(g.icon) +
              '</span><div><strong>' + esc(g.title) + '</strong><p>' + esc(g.body) + '</p></div></div>';
     }).join('') + '</div>';
-    var p = panel({ area: area, title: t('public.guideTitle'), html: html });
-
-    // Posters appear only once an administrator has generated and reviewed
-    // them; without them there is nothing to open, so no button is offered.
-    if (S.illustrations && S.illustrations.items && S.illustrations.items.length) {
-      var btn = node('button', 'panel-tbl', esc(t('public.posterBtn')));
-      btn.type = 'button';
-      btn.onclick = openPosters;
-      p.querySelector('.panel-hd').appendChild(btn);
-    }
-    return p;
+    // The posters used to hang off this panel's header as a small button. They
+    // have their own tab now, where there is room to say what they are.
+    return panel({ area: area, title: t('public.guideTitle'), html: html });
   }
 
   /* Below this width the five zone cards cannot share a row, so they stack
@@ -1100,7 +1095,75 @@
   }
 
   function stepsFor(tab, d) {
+    if (tab === 'iqms') return iqmsSteps();
     return tab === 'admin' ? adminSteps(d) : publicSteps(d);
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     IQMS & TRIAGE TAB
+     Standing guidance shared by all three units: why order of arrival is not
+     order of treatment, which conditions belong here and which do not, and
+     how the queue number works. One screen, no live data.
+     ══════════════════════════════════════════════════════════ */
+  function bulletList(items, cls) {
+    return '<ul class="cklist' + (cls ? ' ' + cls : '') + '">' +
+      items.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>';
+  }
+
+  function whyPanel(area) {
+    var html =
+      '<p class="iq-lead">' + esc(t('iqms.whyBody1')) + '</p>' +
+      '<p class="iq-lead">' + esc(t('iqms.whyBody2')) + '</p>' +
+      '<p class="iq-alert"><span aria-hidden="true">\u26a0\ufe0f</span> ' +
+        esc(t('iqms.whyAlert')) + '</p>';
+    return panel({ area: area, title: '\ud83d\ude91 ' + t('iqms.whyTitle'), html: html });
+  }
+
+  function emergPanel(area) {
+    return panel({
+      area: area,
+      title: '\ud83d\udd34 ' + t('iqms.emergTitle'),
+      cls: 'is-emerg',
+      html: bulletList(t('iqms.emergList'), 'is-emerg')
+    });
+  }
+
+  function nonEmergPanel(area) {
+    var html = bulletList(t('iqms.nonList'), 'is-ok') +
+      '<p class="iq-warn">' + esc(t('iqms.nonWarn')) + '</p>' +
+      '<p class="iq-madani">' + esc(t('iqms.nonMadani')) + '</p>';
+    return panel({ area: area, title: '\ud83c\udfe5 ' + t('iqms.nonTitle'), cls: 'is-non', html: html });
+  }
+
+  function queuePanel(area) {
+    var p = panel({
+      area: area,
+      title: '\ud83d\udd22 ' + t('iqms.queueTitle'),
+      html: bulletList(t('iqms.queueList'), 'is-num')
+    });
+    // The reviewed posters live here now rather than behind a small button on
+    // the status board, where they were easy to miss.
+    if (S.illustrations && S.illustrations.items && S.illustrations.items.length) {
+      var btn = node('button', 'panel-tbl', esc(t('public.posterBtn')));
+      btn.type = 'button';
+      btn.onclick = openPosters;
+      p.querySelector('.panel-hd').appendChild(btn);
+    }
+    return p;
+  }
+
+  function iqmsSteps() {
+    return [{
+      title: t('tabs.iqms.name'),
+      guide: true,
+      rows: 'minmax(0,0.9fr) minmax(0,1.25fr) minmax(0,0.85fr)',
+      cols: '1fr 1fr',
+      areas: '"why why" "emerg nonemerg" "queue queue"',
+      build: function () {
+        return [whyPanel('why'), emergPanel('emerg'),
+                nonEmergPanel('nonemerg'), queuePanel('queue')];
+      }
+    }];
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -1138,7 +1201,8 @@
 
   function renderTab() {
     var d = S.data[S.tab];
-    renderStamp(d);
+    renderStamp(S.tab === 'iqms'
+      ? (S.data.wcc || S.data.bu || S.data.pac) : d);
 
     // Locked: show a way back in rather than a spinner. Nothing has been
     // requested, so a spinner would turn forever - which is exactly what it
@@ -1148,13 +1212,16 @@
       if (!S.gateShown) { S.gateShown = true; openGate(); }
       return;
     }
-    if (!d) { showState('load', t('loading')); return; }
-    if (d.error) {
+    // Standing guidance, identical whichever unit you came from: it waits on
+    // nothing and renders the moment it is opened.
+    var isGuide = S.tab === 'iqms';
+    if (!d && !isGuide) { showState('load', t('loading')); return; }
+    if (d && d.error && !isGuide) {
       showState('err', d.error === 'UNAUTHORISED' ? t('admin.unauth') : t('errBody'));
       return;
     }
 
-    renderNarrative(S.tab === 'admin' ? null : d);
+    renderNarrative((S.tab === 'admin' || isGuide) ? null : d);
     var steps = stepsFor(S.tab, d);
     S.step = Math.min(S.step, steps.length - 1);
 
@@ -1163,7 +1230,7 @@
     S.specs = [];
 
     var def = steps[S.step];
-    var stepEl = node('div', 'step is-active');
+    var stepEl = node('div', 'step is-active' + (def.guide ? ' is-guide' : ''));
     stepEl.style.gridTemplateRows = def.rows;
     stepEl.style.gridTemplateColumns = def.cols;
     stepEl.style.gridTemplateAreas = def.areas;
