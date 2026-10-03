@@ -57,6 +57,6 @@ links.
 |---|---|
 | 1 | Bergerak setiap hari |
 | 2 | Kurangkan gula |
-| 3 | Berhenti suplemen terlebih janji |
-| 4 | Lapor merokok di kawasan larangan |
-| 5 | Guna perkhidmatan yang betul |
+| 3 | Jalani saringan kesihatan awal |
+| 4 | Berhenti suplemen terlebih janji |
+| 5 | Lapor merokok di kawasan larangan |

@@ -196,7 +196,7 @@ body.is-tv .rail {
 .rail-card.is-sugar { --rail-tone: #4a3aa7 }
 .rail-card.is-meds  { --rail-tone: #8a3fa8 }
 .rail-card.is-smoke { --rail-tone: #4a5763 }
-.rail-card.is-use   { --rail-tone: var(--brand-dk) }
+.rail-card.is-screen { --rail-tone: var(--brand-dk) }
 
 .rail-top { display: flex; align-items: center; gap: calc(10px * var(--s)); flex: none }
 .rail-icon { font-size: calc(30px * var(--s)); line-height: 1 }
@@ -1670,6 +1670,8 @@ var Banner = (function () {
       points: [
         { ms: '5,000 langkah untuk permulaan. 7,000\u20138,000 untuk manfaat penuh.',
           en: '5,000 steps to start. 7,000\u20138,000 for the full benefit.' },
+        { ms: '29.9% rakyat Malaysia tidak cukup bergerak (NHMS 2023).',
+          en: '29.9% of Malaysians are physically inactive (NHMS 2023).' },
         { ms: 'Manfaat terbesar pada yang paling kurang bergerak.',
           en: 'The biggest gains go to those who move least.' },
         { ms: 'Menurunkan risiko kencing manis, darah tinggi dan strok.',
@@ -1679,8 +1681,8 @@ var Banner = (function () {
       ],
       action: { ms: 'Jadikan langkah harian KPI jabatan anda. Mula hari ini.',
                 en: 'Make daily steps your department\u2019s KPI. Start today.' },
-      source: { ms: 'Garis panduan aktiviti fizikal WHO, 2020',
-                en: 'WHO physical activity guidelines, 2020' }
+      source: { ms: 'NHMS 2023, IKU KKM; garis panduan aktiviti fizikal WHO, 2020',
+                en: 'NHMS 2023, IPH Malaysia; WHO physical activity guidelines, 2020' }
     },
     {
       id: 'p2', tone: 'sugar', icon: '\ud83e\udd64', no: '2',
@@ -1697,13 +1699,31 @@ var Banner = (function () {
         { ms: 'Jantung: serangan jantung dan strok lebih awal.',
           en: 'Heart: heart attack and stroke, earlier in life.' }
       ],
-      action: { ms: 'Baca label; pilih Logo Pilihan Sihat KKM. Berat turun hanya apabila kalori digunakan melebihi yang dimakan.',
-                en: 'Read the label; look for the MOH Healthier Choice logo. Weight falls only when calories used exceed calories eaten.' },
-      source: { ms: 'CPG Pengurusan Obesiti (MEMS, 2023); Logo Pilihan Sihat, KKM',
+      action: { ms: 'Baca label; cari Logo Pilihan Lebih Sihat KKM. Berat turun hanya apabila kalori digunakan melebihi yang dimakan.',
+                en: 'Read the label; look for the MOH Healthier Choice Logo. Weight falls only when calories used exceed calories eaten.' },
+      source: { ms: 'CPG Pengurusan Obesiti (MEMS, 2023); Logo Pilihan Lebih Sihat, KKM',
                 en: 'CPG Management of Obesity (MEMS, 2023); Healthier Choice Logo, MOH' }
     },
     {
-      id: 'p3', tone: 'meds', icon: '\u26a0\ufe0f', no: '3',
+      id: 'p3', tone: 'screen', icon: '\ud83e\ude7a', no: '3',
+      title: { ms: 'Jalani saringan kesihatan awal', en: 'Get screened early' },
+      lead:  { ms: 'Penyakit kronik tidak menunggu simptom. Saringan menjumpainya sebelum ia merosakkan organ.',
+               en: 'Chronic disease does not wait for symptoms. Screening finds it before it damages organs.' },
+      points: [
+        { ms: 'Periksa tekanan darah, gula dalam darah dan BMI di Klinik Kesihatan.',
+          en: 'Have your blood pressure, blood glucose and BMI checked at a Klinik Kesihatan.' },
+        { ms: 'Hadir setiap temujanji susulan \u2014 yang dilangkau sering berakhir di sini.',
+          en: 'Keep every follow-up appointment \u2014 a missed one often ends up here.' },
+        { ms: 'Bawa senarai ubat anda setiap kali datang.',
+          en: 'Bring your list of medicines every time you come.' }
+      ],
+      action: { ms: 'Klinik Kesihatan juga tempat yang betul untuk kes bukan kecemasan.',
+                en: 'A Klinik Kesihatan is also the right place for anything that is not an emergency.' },
+      source: { ms: 'Jabatan Kecemasan & PAC, HTPN Kajang',
+                en: 'Emergency Department & PAC, HTPN Kajang' }
+    },
+    {
+      id: 'p4', tone: 'meds', icon: '\u26a0\ufe0f', no: '4',
       title: { ms: 'Berhenti suplemen terlebih janji',
                en: 'Stop over-claimed supplements' },
       lead:  { ms: '\u201cSemula jadi\u201d bukan bermakna selamat. Wad dialisis kami menanggung akibatnya.',
@@ -1724,7 +1744,7 @@ var Banner = (function () {
                 en: 'National Pharmaceutical Regulatory Agency (NPRA), MOH' }
     },
     {
-      id: 'p4', tone: 'smoke', icon: '\ud83d\udead', no: '4',
+      id: 'p5', tone: 'smoke', icon: '\ud83d\udead', no: '5',
       title: { ms: 'Lapor merokok di kawasan larangan',
                en: 'Report smoking where it is banned' },
       lead:  { ms: 'Asap orang lain adalah masalah kesihatan anda.',
@@ -1742,27 +1762,6 @@ var Banner = (function () {
       source: { ms: 'Akta Kawalan Produk Merokok untuk Kesihatan Awam 2024',
                 en: 'Control of Smoking Products for Public Health Act 2024' }
     },
-    {
-      id: 'p5', tone: 'use', icon: '\ud83c\udfe5', no: '5',
-      title: { ms: 'Guna perkhidmatan yang betul',
-               en: 'Use the right service' },
-      lead:  { ms: 'Kesesakan di Jabatan Kecemasan bermula di luar pintu ini.',
-               en: 'Crowding in the Emergency Department begins outside these doors.' },
-      points: [
-        { ms: 'Sakit tekak, demam ringan, luka kecil: ke Klinik Kesihatan atau GP.',
-          en: 'Sore throat, mild fever, minor wounds: a Klinik Kesihatan or GP.' },
-        { ms: 'Hadir setiap temujanji susulan.',
-          en: 'Keep every follow-up appointment.' },
-        { ms: 'Bawa senarai ubat anda setiap kali.',
-          en: 'Bring your list of medicines every time.' },
-        { ms: 'Periksa tekanan darah, gula dan BMI di Klinik Kesihatan.',
-          en: 'Have your blood pressure, glucose and BMI checked.' }
-      ],
-      action: { ms: 'Dilindungi Skim Perubatan MADANI? Sila ke klinik GP yang berdaftar.',
-                en: 'Covered by Skim Perubatan MADANI? Go to a registered GP clinic.' },
-      source: { ms: 'Jabatan Kecemasan & PAC, HTPN Kajang',
-                en: 'Emergency Department & PAC, HTPN Kajang' }
-    }
   ];
 
   var st = { i: 0, timer: null, el: null, langFn: null };

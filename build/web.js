@@ -178,7 +178,7 @@ if (/<\?/.test(board)) {
 // ── 6. Printable posters ──────────────────────────────────────────────────
 // One A4 sheet per role, from the same content objects as the rail and the
 // landing page, so a poster on a wall cannot contradict the screen beside it.
-const TONE = { move: '#2a78d6', sugar: '#4a3aa7', meds: '#8a3fa8', smoke: '#4a5763', use: 'var(--brand-dk)' };
+const TONE = { move: '#2a78d6', sugar: '#4a3aa7', meds: '#8a3fa8', smoke: '#4a5763', screen: 'var(--brand-dk)' };
 
 function posterSheet(it) {
   const pts = (it.points || []).map(p => '<li>' + esc(p.ms) + '</li>').join('');
