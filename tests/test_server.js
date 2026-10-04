@@ -90,6 +90,64 @@ ok('tv mode is accepted', bootMode_('tv') === 'tv');
 ok('the admin tab is never served without a token',
    getDashboard('admin').error === 'ADMIN_REQUIRES_TOKEN');
 
+console.log('\nThe green-zone average is the mean of the last N called');
+(function () {
+  const recs = buildRecords_();
+  for (const [name, locs] of [['ED WCC', ['ED WCC']], ['ED BU', ['ED BU']]]) {
+    const g = gzWaitStats_(recs, locs, GZ_AVERAGE_WINDOW);
+
+    // Recompute independently: every green-zone patient with a call time,
+    // the last N of them, summed and divided. This is the arithmetic the
+    // figure claims to be, checked against the figure itself.
+    const waits = recs
+      .filter(r => locs.indexOf(r.location) >= 0)
+      .filter(r => (r.bed.valid ? r.bed.zone : r.zone) === 'gz')
+      .filter(r => r.calledGZ && r.triage)
+      .sort((a, b) => a.calledGZ - b.calledGZ)
+      .map(r => (r.calledGZ - r.triage) / 60000)
+      .filter(m => m >= 0 && m <= 1440);
+    const last = waits.slice(-GZ_AVERAGE_WINDOW);
+    const expect = last.length ? Math.round(last.reduce((a, b) => a + b, 0) / last.length) : null;
+
+    ok(name + ': the average matches the mean of the last ' + GZ_AVERAGE_WINDOW,
+       g.averageMin === expect, g.averageMin + ' vs ' + expect);
+    ok(name + ': it averages over at most ' + GZ_AVERAGE_WINDOW + ' patients',
+       g.recentN <= GZ_AVERAGE_WINDOW && g.recentN === last.length, g.recentN + '');
+    ok(name + ': it is shown even on a handful of patients',
+       g.nCalled > 0 ? g.suppressed === false : true, 'n=' + g.nCalled);
+    ok(name + ': but the analysis panels still know the sample is thin',
+       g.thinAnalysis === (g.nCalled < MIN_N_WAIT), String(g.thinAnalysis));
+  }
+
+  // The public payload carries the figure and what it rests on.
+  clearCaches();
+  const pub = getPublicDashboards();
+  for (const k of ['wcc', 'bu']) {
+    const kpi = pub[k].kpi;
+    ok(k + ': the payload carries the average', typeof kpi.gzAverageWaitMin === 'number',
+       String(kpi.gzAverageWaitMin));
+    ok(k + ': and how many patients it rests on',
+       kpi.gzAverageBasis > 0 && kpi.gzAverageBasis <= GZ_AVERAGE_WINDOW,
+       String(kpi.gzAverageBasis));
+  }
+
+  // A clinic that records the waiting time in column 20 instead of a call
+  // time must still get an average.
+  const colOnly = recs
+    .filter(r => r.location === 'ED WCC')
+    .filter(r => (r.bed.valid ? r.bed.zone : r.zone) === 'gz')
+    .map(r => Object.assign({}, r, { calledGZ: null, gzwtMin: 42 }));
+  const g2 = gzWaitStats_(colOnly, ['ED WCC'], GZ_AVERAGE_WINDOW);
+  ok('a recorded waiting time is used when there is no call time',
+     g2.averageMin === 42 && g2.source === 'column',
+     g2.averageMin + ' / ' + g2.source);
+
+  // And nothing at all is still reported as nothing, not as zero.
+  const none = gzWaitStats_([], ['ED WCC'], GZ_AVERAGE_WINDOW);
+  ok('no patients called reads as no average, not as zero',
+     none.averageMin === null && none.suppressed === true, String(none.averageMin));
+})();
+
 console.log('\nPatient search is off, and nothing reaches a record while it is');
 ok('search refuses by default', getPatientStatus('830702-07-2527').error === 'SEARCH_DISABLED');
 ok('it refuses a name query too', getPatientStatus('Nurul Ibrahim').error === 'SEARCH_DISABLED');

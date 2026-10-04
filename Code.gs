@@ -36,8 +36,16 @@ var CACHE_SECS = 900;          // 15 minutes, matching the page's refresh cadenc
                                // waiting family can perceive.
 var ADMIT_WINDOW_H = 24;       // admitted patients stay visible this long
 var FORECAST_HORIZON = 4;      // hours projected forward
-var MIN_N_WAIT = 10;
-var GZ_AVERAGE_WINDOW = 10;   // green-zone average uses the last N patients called           // below this, waiting-time statistics are suppressed
+var MIN_N_WAIT = 10;          // analysis on the Administrative tab is suppressed
+                              // below this: a histogram of four observations
+                              // invites conclusions it cannot support
+var GZ_AVERAGE_WINDOW = 10;   // the green-zone average is the mean of the last
+                              // N patients called
+var GZ_MIN_CALLS = 1;         // ...and is shown from the first one, with the
+                              // number it rests on printed beside it. A waiting
+                              // family wants an indication, not a research
+                              // estimate, and "not yet available" tells them
+                              // nothing at all
 /**
  * Public patient search is OFF unless the Script Property PUBLIC_SEARCH is
  * set to 'on'.
@@ -857,21 +865,51 @@ function arrivalSeries_(recs, refTime) {
  * pre-computed GZWT column, and averaged over the most recent callsN patients
  * so the figure shown to waiting families reflects the current pace.
  */
+/**
+ * How long green-zone patients have been waiting to be called.
+ *
+ * The figure is the mean of the last N patients called: sum their waits,
+ * divide by how many there are. Two sources, in order of preference --
+ * the clock arithmetic (called minus triage) where both times are recorded,
+ * otherwise the waiting time the clinic entered in column 20. Taking either
+ * means the average works off whichever column is actually being filled in,
+ * rather than going blank because one of them is not.
+ */
 function gzWaitStats_(recs, locations, callsN) {
-  var called = [];
+  var called = [], fromClock = 0, fromColumn = 0;
   for (var i = 0; i < recs.length; i++) {
     var r = recs[i];
     if (locations.indexOf(r.location) < 0) continue;
     var zone = r.bed.valid ? r.bed.zone : r.zone;
     if (zone !== 'gz') continue;
-    if (!r.calledGZ || !r.triage) continue;
-    var mins = (r.calledGZ - r.triage) / 60000;
-    if (mins < 0 || mins > 24 * 60) continue;
-    called.push({ at: r.calledGZ, mins: mins });
+
+    var mins = null, src = null;
+    if (r.calledGZ && r.triage) {
+      var m = (r.calledGZ - r.triage) / 60000;
+      if (m >= 0 && m <= 24 * 60) { mins = m; src = 'clock'; }
+    }
+    if (mins === null && r.gzwtMin !== null && r.gzwtMin >= 0 && r.gzwtMin <= 24 * 60) {
+      mins = r.gzwtMin; src = 'column';
+    }
+    if (mins === null) continue;
+
+    if (src === 'clock') fromClock++; else fromColumn++;
+    // Ordered by when they were called where that is known, and by their place
+    // in the register otherwise, so "the last ten" means the last ten either way.
+    called.push({ at: r.calledGZ || null, seq: i, mins: mins });
   }
-  called.sort(function (a, b) { return a.at - b.at; });
+  called.sort(function (a, b) {
+    if (a.at && b.at) return a.at - b.at;
+    if (a.at) return -1;
+    if (b.at) return 1;
+    return a.seq - b.seq;
+  });
+
   var recent = called.slice(-callsN).map(function (c) { return c.mins; });
   var all = called.map(function (c) { return c.mins; });
+  var lastAt = null;
+  for (var j = called.length - 1; j >= 0; j--) { if (called[j].at) { lastAt = called[j].at; break; } }
+
   return {
     nCalled: called.length,
     window: callsN,
@@ -879,8 +917,13 @@ function gzWaitStats_(recs, locations, callsN) {
     averageMin: recent.length ? Math.round(mean_(recent)) : null,
     medianMin: all.length ? Math.round(quantile_(all.slice().sort(function (a, b) { return a - b; }), 0.5)) : null,
     summary: summarise_(all),
-    suppressed: called.length < MIN_N_WAIT,
-    lastCalledAt: called.length ? called[called.length - 1].at : null
+    // The public average stands from the first patient called. The analysis on
+    // the Administrative tab keeps the higher bar: thinAnalysis is what the
+    // histograms and percentiles there are gated on.
+    suppressed: called.length < GZ_MIN_CALLS,
+    thinAnalysis: called.length < MIN_N_WAIT,
+    source: fromClock && fromColumn ? 'mixed' : (fromColumn ? 'column' : 'clock'),
+    lastCalledAt: lastAt
   };
 }
 
@@ -1102,6 +1145,7 @@ function buildScope_(scopeKey, recs, refInfo) {
       gzRoomCapacity: gzRoomCap,
       medianElapsedMin: summarise_(elapsed).median,
       gzAverageWaitMin: gzStats.suppressed ? null : gzStats.averageMin,
+      gzAverageBasis: gzStats.suppressed ? 0 : gzStats.recentN,
       medianBwtMin: summarise_(bwt).n >= 5 ? summarise_(bwt).median : null,
       medianTwtMin: twtSummary.n >= 5 ? twtSummary.median : null,
       lastHourArrivals: lastHourArrivals,

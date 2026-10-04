@@ -196,6 +196,35 @@ would leave the text too small to read at distance.
 `docs/VARIABLE_VISUAL_MAP.md` sets out which of the register's columns each
 visual carries.
 
+## The green-zone average
+
+The mean of the last ten green-zone patients called: sum their waits, divide
+by how many there are. Fewer than ten called so far means fewer than ten in
+the mean, and the card says which — *"Average of the last 3 called: 58m"* —
+so a reader can see how thin the figure is rather than having to assume.
+
+It is shown **from the first patient called**. It used to be withheld until
+ten, which is a reasonable bar for a histogram and the wrong one for a waiting
+hall: *"Average not yet available"* tells a family nothing, while a number
+resting on three patients tells them roughly what to expect. The higher bar
+still applies to the analysis on the Administrative tab, which is what
+`thinAnalysis` gates.
+
+Two sources, in order of preference:
+
+| | |
+|---|---|
+| `Calling GZ` − `Triage Date/Time` | used wherever both are recorded |
+| `GZ Waiting Time` (column 20) | used where they are not |
+
+Either will do, so the average works off whichever column your clinic actually
+fills in rather than going blank because one of them is empty. Waits outside
+0–24 hours are discarded as data-entry errors.
+
+**If the card reads "No patient called yet"**, neither column has a usable
+value for any green-zone patient. Column 15 (`Calling GZ`) is the one to check
+first.
+
 ## The statistical model
 
 Stated in full in `docs/VARIABLE_VISUAL_MAP.md` §4, and printed inside the app

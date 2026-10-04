@@ -1368,7 +1368,8 @@ var I18N = {
       crisisBeds:  'katil krisis diaktifkan',
       waitingNow:  'sedang menunggu',
       avgWait:     'Purata masa dipanggil:',
-      avgWaitNone: 'Purata masa belum dapat dikira',
+      avgWaitBasis: function (n) { return 'Purata ' + n + ' terakhir dipanggil:'; },
+      avgWaitNone: 'Belum ada pesakit dipanggil',
       state: { ok: 'Ada ruang', busy: 'Sibuk', full: 'Penuh', crisis: 'Krisis diaktifkan' },
       crisisTitle: 'Jabatan sangat sibuk.',
       crisisBody:  function (n) {
@@ -1746,7 +1747,8 @@ var I18N = {
       crisisBeds:  'bed crisis activated',
       waitingNow:  'waiting now',
       avgWait:     'Average time to be called:',
-      avgWaitNone: 'Average not yet available',
+      avgWaitBasis: function (n) { return 'Average of the last ' + n + ' called:'; },
+      avgWaitNone: 'No patient called yet',
       state: { ok: 'Space available', busy: 'Busy', full: 'Full', crisis: 'Crisis activated' },
       crisisTitle: 'The department is very busy.',
       crisisBody:  function (n) {
@@ -4093,8 +4095,8 @@ var Charts = (function () {
           '<div class="zc-gz-row"><span class="zc-gz-n">' + z.waiting + '</span>' +
             '<span class="zc-gz-l">' + esc(t('public.waitingNow')) + '</span></div>' +
           (d.kpi.gzAverageWaitMin
-            ? '<div class="zc-gz-wait">' + esc(t('public.avgWait')) + ' <strong>' +
-              esc(fmtMin(d.kpi.gzAverageWaitMin)) + '</strong></div>'
+            ? '<div class="zc-gz-wait">' + esc(tf('public.avgWaitBasis', d.kpi.gzAverageBasis || 0)) +
+              ' <strong>' + esc(fmtMin(d.kpi.gzAverageWaitMin)) + '</strong></div>'
             : '<div class="zc-gz-wait zc-muted">' + esc(t('public.avgWaitNone')) + '</div>') +
           '</div>';
       }

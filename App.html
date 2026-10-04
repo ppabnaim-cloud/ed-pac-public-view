@@ -910,8 +910,8 @@
           '<div class="zc-gz-row"><span class="zc-gz-n">' + z.waiting + '</span>' +
             '<span class="zc-gz-l">' + esc(t('public.waitingNow')) + '</span></div>' +
           (d.kpi.gzAverageWaitMin
-            ? '<div class="zc-gz-wait">' + esc(t('public.avgWait')) + ' <strong>' +
-              esc(fmtMin(d.kpi.gzAverageWaitMin)) + '</strong></div>'
+            ? '<div class="zc-gz-wait">' + esc(tf('public.avgWaitBasis', d.kpi.gzAverageBasis || 0)) +
+              ' <strong>' + esc(fmtMin(d.kpi.gzAverageWaitMin)) + '</strong></div>'
             : '<div class="zc-gz-wait zc-muted">' + esc(t('public.avgWaitNone')) + '</div>') +
           '</div>';
       }
