@@ -730,6 +730,70 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
 .zc-gz-wait strong { color: var(--brand-dk) }
 .zc-muted { color: var(--ink-3); font-style: italic }
 
+/* ── PERANAN RAKYAT GALLERY ──────────────────────────────── */
+/* The one place in the app that scrolls at every width. A wall of posters is
+   not a screenful of figures, and clipping it would hide the point. */
+.step.is-active.is-scroll { overflow-y: auto; -webkit-overflow-scrolling: touch }
+.rk-wrap { min-width: 0; display: flex; flex-direction: column; gap: calc(14px * var(--s)) }
+.rk-head { flex: none }
+.rk-head h2 {
+  font-size: calc(22px * var(--s)); font-weight: 800; line-height: 1.15;
+  letter-spacing: -.015em; color: var(--ink);
+}
+.rk-sub {
+  font-size: calc(14px * var(--s)); font-weight: 800; color: var(--brand-dk);
+  margin-top: calc(2px * var(--s));
+}
+.rk-lead {
+  font-size: calc(13px * var(--s)); font-weight: 600; color: var(--ink-2);
+  line-height: 1.45; margin-top: calc(6px * var(--s)); max-width: 72ch;
+}
+.rk-empty {
+  font-size: calc(14px * var(--s)); font-weight: 700; color: var(--ink-3);
+  padding: calc(20px * var(--s)); text-align: center;
+}
+.rk-group { flex: none }
+.rk-group-h {
+  font-size: calc(15px * var(--s)); font-weight: 800; color: var(--ink);
+  padding-bottom: calc(6px * var(--s)); margin-bottom: calc(10px * var(--s));
+  border-bottom: 2px solid var(--line);
+}
+.rk-grid {
+  display: grid; gap: calc(14px * var(--s));
+  grid-template-columns: repeat(auto-fill, minmax(calc(300px * var(--s)), 1fr));
+}
+.rk-card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; min-width: 0;
+}
+/* Portrait and landscape posters sit in the same grid, so the image box is
+   capped and the art is fitted inside it. Without that, one tall sheet
+   stretched its whole row and left the others floating in white. */
+.rk-shot {
+  display: flex; align-items: center; justify-content: center;
+  line-height: 0; background: var(--surface-2);
+  height: calc(210px * var(--s)); overflow: hidden;
+}
+.rk-shot img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain }
+.rk-card figcaption {
+  padding: calc(10px * var(--s)) calc(12px * var(--s)) calc(12px * var(--s));
+  display: flex; flex-direction: column; gap: calc(3px * var(--s));
+}
+.rk-card figcaption b {
+  font-size: calc(13.5px * var(--s)); font-weight: 800; line-height: 1.3; color: var(--ink);
+}
+.rk-credit { font-size: calc(11px * var(--s)); font-weight: 700; color: var(--ink-3) }
+.rk-dl {
+  align-self: flex-start; margin-top: calc(5px * var(--s));
+  text-decoration: none; background: var(--brand-lt); color: var(--brand-dk);
+  font-size: calc(12px * var(--s)); font-weight: 800;
+  border-radius: 999px; padding: calc(7px * var(--s)) calc(14px * var(--s));
+  min-height: calc(36px * var(--s)); display: inline-flex; align-items: center;
+}
+.rk-dl:hover { background: #cdeff0 }
+.rk-dl:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px }
+
 /* ── POSTER TABS ─────────────────────────────────────────── */
 /* One image, fitted to the box, nothing else competing with it. */
 .poster-tab {
@@ -894,22 +958,25 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
   /* One narrow column, and the area scrolls, so nothing needs clamping. */
   .guide.is-compact .guide-row p { -webkit-line-clamp: 6 }
   .klinik p, .seek-copy p { -webkit-line-clamp: 6 }
-  .step.is-active { grid-template-columns: 1fr !important; grid-template-areas: none !important }
-  .step.is-active > * { grid-area: auto !important }
-  /* The guidance tab is prose, and prose that is cut off is useless. Only
-     there do the panels grow to their content and the area scroll; the status
-     board keeps its fixed tracks so it still fits a screen exactly. */
-  .step.is-active.is-guide {
+  /* One column, each block as tall as its own content, and the content area
+     scrolls. The fractional row tracks are a tablet and wall-display device:
+     keeping them here capped the zone row at a phone's proportions and clipped
+     three of the five zone cards clean off the screen -- the figures people
+     open this page to read. The no-scroll rule has never applied to phones. */
+  .step.is-active {
+    grid-template-columns: 1fr !important;
+    grid-template-areas: none !important;
     grid-template-rows: none !important;
     grid-auto-rows: max-content !important;
   }
-  .step.is-active.is-guide .panel { min-height: 0 }
+  .step.is-active > * { grid-area: auto !important }
+  .step.is-active .panel, .step.is-active .zone-grid { min-height: 0 }
   .zone-grid { grid-template-columns: 1fr !important; grid-auto-rows: max-content }
-  .zone-card { flex-direction: row; align-items: center; flex-wrap: wrap }
-  .zc-name { width: auto; flex: 1 }
-  .zc-bar { order: 10 }
-  .zc-gz { margin-top: 0 }
-  .zc-big { font-size: calc(40px * var(--s)) }
+  .zc-gz { margin-top: calc(6px * var(--s)) }
+  .zc-big { font-size: calc(52px * var(--s)) }
+  .zone-card { padding: calc(12px * var(--s)) calc(14px * var(--s)) }
+  /* The standing message wraps instead of being cut off; there is room now. */
+  .narr-text { -webkit-line-clamp: 4 }
   .cklist li { font-size: calc(14px * var(--s)) }
   /* A poster is read by pinching in, so let it have the full width. */
   .poster-tab { padding: 0; border: 0; box-shadow: none; background: none }
@@ -954,6 +1021,10 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
   padding: calc(2px * var(--s)) calc(8px * var(--s));
 }
 @media (max-width: 620px) { .credit-mark { font-size: calc(9px * var(--s)); opacity: .6 } }
+/* The step pager occupies the same corner. It appears only on the staff tab,
+   which does not need an attribution, so the credit stands down rather than
+   printing itself across the Next button. */
+body.has-pager .credit-mark { display: none }
 
 /* ── STATES ──────────────────────────────────────────────── */
 .state {
@@ -1117,11 +1188,11 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
    browser is never given a path to an identifiable record. */
 (function () {
   var seg = (location.pathname.replace(/\/+$/, '').split('/').pop() || 'wcc').toLowerCase();
-  if (['wcc', 'bu', 'pac', 'iqms', 'triage', 'tv'].indexOf(seg) < 0) seg = 'wcc';
+  if (['wcc', 'bu', 'pac', 'iqms', 'triage', 'rakyat', 'tv'].indexOf(seg) < 0) seg = 'wcc';
   window.BOOT_SCOPE  = seg === 'tv' ? 'wcc' : seg;
   window.BOOT_MODE   = seg === 'tv' ? 'tv' : '';
   window.BOOT_SEARCH = '';
-  window.BOOT_TABS   = ['wcc', 'bu', 'pac', 'iqms', 'triage'];
+  window.BOOT_TABS   = ['wcc', 'bu', 'pac', 'iqms', 'triage', 'rakyat'];
   window.BOOT_DATA   = {};
   // The hospital's own posters, straight from Drive. Both files must be shared
   // "Anyone with the link can view"; without that the written guidance stands
@@ -1133,7 +1204,8 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
     triage: { id: '1YsUupb78S4GxlyEt5vtAV6m-TG27Rm96',
               src: 'https://lh3.googleusercontent.com/d/1YsUupb78S4GxlyEt5vtAV6m-TG27Rm96=w1600',
               srcLarge: 'https://lh3.googleusercontent.com/d/1YsUupb78S4GxlyEt5vtAV6m-TG27Rm96=w2400' },
-    iqmsUrl: 'https://jknselangor.moh.gov.my/htpn/qms'
+    iqmsUrl: 'https://jknselangor.moh.gov.my/htpn/qms',
+    rakyat: [{"file":"rakyat-02.jpg","role":1,"credit":"naim","title":{"ms":"Bangun awal untuk berjalan itu susah","en":"Getting up early to walk is hard"},"src":"rakyat/rakyat-02.jpg"},{"file":"kkm-langkah-sihat.jpg","role":1,"credit":"kkm","title":{"ms":"Cabaran Langkah Sihat Itu Saya — rekod kebangsaan","en":"Healthy Steps Challenge — national record"},"src":"rakyat/kkm-langkah-sihat.jpg"},{"file":"rakyat-03.jpg","role":2,"credit":"naim","title":{"ms":"Mengurangkan manis dalam teh tarik itu susah","en":"Cutting the sugar in your teh tarik is hard"},"src":"rakyat/rakyat-03.jpg"},{"file":"rakyat-04.jpg","role":3,"credit":"naim","title":{"ms":"Mengambil cuti sehari untuk saringan itu susah","en":"Taking a day off for screening is hard"},"src":"rakyat/rakyat-04.jpg"},{"file":"rakyat-01.jpg","role":4,"credit":"naim","title":{"ms":"Menolak pujukan \"ubat ajaib\" itu susah","en":"Refusing a friend's \"miracle cure\" is hard"},"src":"rakyat/rakyat-01.jpg"}]
   };
 
   // Keep the address bar in step, so a tab can be bookmarked and shared.
@@ -1201,6 +1273,20 @@ var I18N = {
     errBody:     'Sistem tidak dapat dihubungi. Sila cuba semula sebentar lagi, atau tanya di kaunter jururawat.',
     errTimeout:  'Pelayan mengambil masa terlalu lama untuk menjawab. Sila cuba semula.',
     errNoResponse: 'Pelayan tidak memberikan jawapan. Sila cuba semula.',
+
+    /* Peranan Rakyat poster gallery */
+    rakyat: {
+      heading:  'Peranan Rakyat Ke Arah Negara Sihat',
+      sub:      'Mengurangkan kesesakan di Jabatan Kecemasan',
+      lead:     'Setiap poster di bawah menerangkan satu pilihan harian yang kecil \u2014 dan apa yang berlaku apabila pilihan itu tidak dibuat. Tekan mana-mana poster untuk melihatnya besar atau memuat turun.',
+      download: 'Muat turun',
+      viewFull: 'Lihat besar',
+      roleLbl:  'Peranan',
+      other:    'Lain-lain',
+      none:     'Belum ada poster. Sila hubungi pentadbir.',
+      byNaim:   'Reka bentuk: Dr Naim, HTPN',
+      byKkm:    'Kementerian Kesihatan Malaysia'
+    },
 
     /* IQMS & triage tab — shared guidance, not unit-specific */
     iqms: {
@@ -1316,6 +1402,7 @@ var I18N = {
       pac:   { name: 'Pusat Penilaian Pesakit — O&G',     sub: 'Ibu Mengandung' },
       iqms:   { name: 'iQMS — Nombor Giliran',            sub: 'Semakan dalam talian' },
       triage: { name: 'Kecemasan atau Bukan?',            sub: 'Panduan pesakit' },
+      rakyat: { name: 'Peranan Rakyat',                   sub: 'Ke arah negara sihat' },
       admin: { name: 'Pentadbiran',                       sub: 'Staf sahaja' }
     },
 
@@ -1565,6 +1652,20 @@ var I18N = {
     errTimeout:  'The server took too long to answer. Please try again.',
     errNoResponse: 'The server gave no answer. Please try again.',
 
+    /* Peranan Rakyat poster gallery */
+    rakyat: {
+      heading:  'The Public\u2019s Role Towards a Healthier Nation',
+      sub:      'Easing the crowding in the Emergency Department',
+      lead:     'Each poster below shows one small daily choice \u2014 and what happens when it is not made. Tap any poster to see it large or download it.',
+      download: 'Download',
+      viewFull: 'View large',
+      roleLbl:  'Role',
+      other:    'Other',
+      none:     'No posters yet. Please contact the administrator.',
+      byNaim:   'Designed by Dr Naim, HTPN',
+      byKkm:    'Ministry of Health Malaysia'
+    },
+
     /* IQMS & triage tab — shared guidance, not unit-specific */
     iqms: {
       whyTitle:  'Why someone else may be seen first',
@@ -1678,6 +1779,7 @@ var I18N = {
       pac:   { name: 'Patient Assessment Centre — O&G', sub: 'Antenatal' },
       iqms:   { name: 'iQMS — Queue Number',           sub: 'Check it online' },
       triage: { name: 'Emergency or Not?',             sub: 'Patient guidance' },
+      rakyat: { name: 'Peranan Rakyat',                sub: 'Towards a healthier nation' },
       admin: { name: 'Administrative',               sub: 'Staff only' }
     },
 
@@ -3094,8 +3196,9 @@ var Charts = (function () {
 
   var S = {
     lang: 'ms',
-    tab: (window.BOOT_SCOPE && ['wcc', 'bu', 'pac', 'admin'].indexOf(window.BOOT_SCOPE) >= 0)
-           ? window.BOOT_SCOPE : 'wcc',
+    // Validated against TABS below, once that is resolved. Hard-coding the
+    // list here meant every tab added later booted to the first one instead.
+    tab: String(window.BOOT_SCOPE || 'wcc'),
     mode: window.BOOT_MODE === 'tv' ? 'tv' : '',
     /* Public patient search is off unless the server says otherwise. It was
        the only path by which this interface could reach an identifiable
@@ -3120,7 +3223,7 @@ var Charts = (function () {
   /* The administrative tab is served only where an access code can gate it.
      A front end hosted outside Apps Script declares the public tabs alone. */
   var TABS = (window.BOOT_TABS && window.BOOT_TABS.length)
-    ? window.BOOT_TABS : ['wcc', 'bu', 'pac', 'iqms', 'triage', 'admin'];
+    ? window.BOOT_TABS : ['wcc', 'bu', 'pac', 'iqms', 'triage', 'rakyat', 'admin'];
 
   /* How often the page re-reads the register. Matches CACHE_SECS in Code.gs,
      so a refresh normally costs a cache read rather than a re-read of the
@@ -3189,6 +3292,7 @@ var Charts = (function () {
     return 'none';
   }
 
+  if (TABS.indexOf(S.tab) < 0) S.tab = TABS[0];
   S.tabs = TABS;
 
   // ── i18n ─────────────────────────────────────────────────
@@ -3253,6 +3357,12 @@ var Charts = (function () {
     // height, which on a 1080p television is no taller than a tablet.
     if (w >= 1000) s *= 1.22;
     if (w >= 1600) s *= 1.06;
+
+    // A phone scrolls, so fitting a whole screen is not the constraint there;
+    // legibility in the hand is. Scaling against a 1024px-tall tablet design
+    // pinned every phone to the 0.78 floor and shrank the figures people came
+    // to read.
+    if (w <= 620) s = Math.max(0.92, Math.min(1.15, w / 400));
 
     s = Math.max(0.78, Math.min(1.75, s));
     document.documentElement.style.setProperty('--s', String(Math.round(s * 1000) / 1000));
@@ -4186,6 +4296,7 @@ var Charts = (function () {
   function stepsFor(tab, d) {
     if (tab === 'iqms') return posterStep('iqms', queueFallback);
     if (tab === 'triage') return posterStep('triage', triageFallback);
+    if (tab === 'rakyat') return rakyatSteps();
     return tab === 'admin' ? adminSteps(d) : publicSteps(d);
   }
 
@@ -4322,6 +4433,95 @@ var Charts = (function () {
   }
 
   /* ══════════════════════════════════════════════════════════
+     PERANAN RAKYAT — the poster gallery
+     A scrolling wall of the hospital's own posters, grouped by the role each
+     belongs to. Every poster opens full size and can be downloaded, because a
+     poster that cannot leave the screen is a poster that never reaches a
+     noticeboard.
+     ══════════════════════════════════════════════════════════ */
+  function roleName(no) {
+    var it = (typeof Banner !== 'undefined' && Banner.items || []).filter(function (x) {
+      return String(x.no) === String(no);
+    })[0];
+    return it ? (it.title[S.lang] || it.title.ms) : '';
+  }
+
+  function posterCard(p) {
+    var card = node('figure', 'rk-card');
+    var title = (p.title && (p.title[S.lang] || p.title.ms)) || p.file;
+    var credit = p.credit === 'kkm' ? t('rakyat.byKkm') : t('rakyat.byNaim');
+    card.innerHTML =
+      '<a class="rk-shot" href="' + esc(p.src) + '" target="_blank" rel="noopener" ' +
+         'title="' + esc(t('rakyat.viewFull')) + '">' +
+        '<img src="' + esc(p.src) + '" alt="' + esc(title) + '" loading="lazy" decoding="async"/>' +
+      '</a>' +
+      '<figcaption>' +
+        '<b>' + esc(title) + '</b>' +
+        '<span class="rk-credit">' + esc(credit) + '</span>' +
+        '<a class="rk-dl" href="' + esc(p.src) + '" download="' + esc(p.file) + '">' +
+          '\u2b07 ' + esc(t('rakyat.download')) + '</a>' +
+      '</figcaption>';
+    return card;
+  }
+
+  function rakyatPanel(area) {
+    var list = (S.posters && S.posters.rakyat) || [];
+    var wrap = node('div', 'rk-wrap');
+    wrap.style.gridArea = area;
+
+    var head = node('div', 'rk-head');
+    head.innerHTML =
+      '<h2>' + esc(t('rakyat.heading')) + '</h2>' +
+      '<p class="rk-sub">' + esc(t('rakyat.sub')) + '</p>' +
+      '<p class="rk-lead">' + esc(t('rakyat.lead')) + '</p>';
+    wrap.appendChild(head);
+
+    if (!list.length) {
+      wrap.appendChild(node('p', 'rk-empty', esc(t('rakyat.none'))));
+      return wrap;
+    }
+
+    // Grouped by role, in the campaign's own order, with anything unassigned
+    // gathered at the end rather than dropped.
+    var seen = {}, order = [];
+    list.forEach(function (p) {
+      var k = p.role >= 1 && p.role <= 5 ? String(p.role) : 'other';
+      if (!seen[k]) { seen[k] = []; order.push(k); }
+      seen[k].push(p);
+    });
+    order.sort(function (a, b) {
+      if (a === 'other') return 1;
+      if (b === 'other') return -1;
+      return Number(a) - Number(b);
+    });
+
+    order.forEach(function (k) {
+      var g = node('section', 'rk-group');
+      var label = k === 'other'
+        ? t('rakyat.other')
+        : t('rakyat.roleLbl') + ' ' + k + ' \u2014 ' + roleName(k);
+      g.appendChild(node('h3', 'rk-group-h', esc(label)));
+      var grid = node('div', 'rk-grid');
+      seen[k].forEach(function (p) { grid.appendChild(posterCard(p)); });
+      g.appendChild(grid);
+      wrap.appendChild(g);
+    });
+    return wrap;
+  }
+
+  function rakyatSteps() {
+    return [{
+      title: t('tabs.rakyat.name'),
+      guide: true,
+      scroll: true,
+      rows: 'minmax(0, 1fr)',
+      cols: 'minmax(0, 1fr)',
+      areas: '"gallery"',
+      build: function () { return [rakyatPanel('gallery')]; }
+    }];
+  }
+
+  /* ══════════════════════════════════════════════════════════
      RENDER
      ══════════════════════════════════════════════════════════ */
   function showState(kind, msg) {
@@ -4334,6 +4534,7 @@ var Charts = (function () {
                         esc(t('retry')) + '</button>' : '') +
       '</div>';
     $('pager').style.display = 'none';
+    document.body.classList.remove('has-pager');
     var r = $('retryBtn');
     if (r) r.onclick = function () { loadTab(S.tab, true); };
   }
@@ -4351,12 +4552,13 @@ var Charts = (function () {
           esc(t('admin.openGate')) + '</button>' +
       '</div>';
     $('pager').style.display = 'none';
+    document.body.classList.remove('has-pager');
     $('lockedBtn').onclick = openGate;
   }
 
   function renderTab() {
     var d = S.data[S.tab];
-    renderStamp((S.tab === 'iqms' || S.tab === 'triage')
+    renderStamp(['iqms', 'triage', 'rakyat'].indexOf(S.tab) >= 0
       ? (S.data.wcc || S.data.bu || S.data.pac) : d);
 
     // Locked: show a way back in rather than a spinner. Nothing has been
@@ -4369,7 +4571,7 @@ var Charts = (function () {
     }
     // Standing guidance, identical whichever unit you came from: it waits on
     // nothing and renders the moment it is opened.
-    var isGuide = S.tab === 'iqms' || S.tab === 'triage';
+    var isGuide = S.tab === 'iqms' || S.tab === 'triage' || S.tab === 'rakyat';
     if (!d && !isGuide) { showState('load', t('loading')); return; }
     if (d && d.error && !isGuide) {
       showState('err',
@@ -4389,7 +4591,8 @@ var Charts = (function () {
     S.specs = [];
 
     var def = steps[S.step];
-    var stepEl = node('div', 'step is-active' + (def.guide ? ' is-guide' : ''));
+    var stepEl = node('div', 'step is-active' +
+      (def.guide ? ' is-guide' : '') + (def.scroll ? ' is-scroll' : ''));
     stepEl.style.gridTemplateRows = def.rows;
     stepEl.style.gridTemplateColumns = def.cols;
     stepEl.style.gridTemplateAreas = def.areas;
@@ -4404,7 +4607,14 @@ var Charts = (function () {
     var p = $('pager');
     // A single-step tab has nothing to page through, so the bar is removed
     // rather than shown with two disabled buttons.
-    if (steps.length <= 1) { p.style.display = 'none'; return; }
+    // The credit mark lives in the same corner; it stands down where the
+    // pager appears rather than printing itself across the Next button.
+    if (steps.length <= 1) {
+      p.style.display = 'none';
+      document.body.classList.remove('has-pager');
+      return;
+    }
+    document.body.classList.add('has-pager');
     p.style.display = 'flex';
     p.style.visibility = 'visible';
     var prev = $('pgPrev'), next = $('pgNext');

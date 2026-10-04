@@ -2,6 +2,11 @@
 // so the layout can be tested in a real browser.
 const fs = require('fs');
 const R = require('path').join(__dirname, '..') + '/';
+// The poster gallery is exercised with the real manifest, pointed at the
+// fixture image so the test needs no network.
+const RAKYAT_FIXTURE = JSON.parse(fs.readFileSync(R + 'web/rakyat/manifest.json', 'utf8'))
+  .items.map(i => ({ file: i.file, role: i.role, credit: i.credit, title: i.title,
+                     src: 'fixtures/kkm/sample-poster.svg' }));
 let html = fs.readFileSync(R + 'Index.html', 'utf8');
 html = html.replace(/<\?!=\s*include\('(\w+)'\)\s*\?>/g, (_, name) => fs.readFileSync(R + name + '.html', 'utf8'));
 html = html.replace(/<\?=\s*bootScope\s*\?>/g, 'wcc');
@@ -22,7 +27,8 @@ html = html.replace(/<\?!=\s*bootPosters\s*\?>/g,
   "((new URLSearchParams(location.search)).get('noposter') === '1' ? {} : " +
   "{ iqms: { id: 'test-iqms', src: 'fixtures/kkm/sample-poster.svg', srcLarge: 'fixtures/kkm/sample-poster.svg' }," +
   "  triage: { id: 'test-triage', src: 'fixtures/kkm/sample-poster.svg', srcLarge: 'fixtures/kkm/sample-poster.svg' }," +
-  "  iqmsUrl: 'https://jknselangor.moh.gov.my/htpn/qms' })");
+  "  iqmsUrl: 'https://jknselangor.moh.gov.my/htpn/qms'," +
+  "  rakyat: " + JSON.stringify(RAKYAT_FIXTURE) + " })");
 const payloads = JSON.parse(fs.readFileSync(require('path').join(__dirname, 'fixtures', 'payloads.json'), 'utf8'));
 const mock = `
 <script>

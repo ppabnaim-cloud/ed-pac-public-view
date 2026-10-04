@@ -113,7 +113,7 @@ All optional unless stated. **Project Settings → Script Properties.**
 
 ---
 
-## The six tabs
+## The seven tabs
 
 The split between them is deliberate: **charts live on the Administrative tab
 only.** A family waiting in the department needs to know where their relative
@@ -339,6 +339,7 @@ to Apps Script.
 | `/wcc` `/bu` `/pac` | The zone board for that unit |
 | `/iqms` | The hospital's iQMS poster, with a button straight through to the live queue page |
 | `/triage` | The hospital's emergency vs non-emergency poster |
+| `/rakyat` | Peranan Rakyat: a scrolling gallery of the hospital's own health-promotion posters, grouped by role, each downloadable |
 | `/tv` | Wall display with the rotating health-promotion rail |
 | `/poster` | Six A4 sheets to print: one status poster, five Peranan posters, each with a QR to this deployment |
 | `/sihat` | KKM InfoSihat posters, grouped by Peranan. Generated only when posters have been added |
@@ -546,6 +547,35 @@ The iQMS tab also carries a button straight to the live queue page
 (`IQMS_URL`, default `https://jknselangor.moh.gov.my/htpn/qms`). The poster's
 QR code is right for a printed sheet; on a screen the reader is already
 holding the device that would scan it.
+
+## Adding a Peranan Rakyat poster
+
+1. Put the image in `web/rakyat/`.
+2. Add an entry to `web/rakyat/manifest.json`:
+
+```json
+{ "file": "rakyat-05.jpg", "role": 2, "credit": "naim",
+  "title": { "ms": "...", "en": "..." } }
+```
+
+   `role` 1–5 groups it under a Peranan; omit it for "Lain-lain". `credit` is
+   `naim` for the hospital's own work or `kkm` for ministry material.
+3. `node build/bundle.js && node build/web.js`, then commit.
+
+The build **fails** if the manifest lists a file that is not in the folder.
+
+**Where the images are served from.** The Vercel site serves them itself. The
+Apps Script app fetches them from the repository's raw host, so the gallery
+works the moment the script is pasted — nothing to upload, no Drive sharing to
+set. Point the Script Property `RAKYAT_BASE` at a different prefix (a Drive
+CDN folder, the hospital's own web space) and the same filenames are fetched
+from there instead.
+
+**Attribution.** `build/` has no image processing step: the posters in
+`web/rakyat/` were prepared once with the generator's watermark cropped off
+and the designer's credit burnt into a strip along the bottom, so the credit
+travels with the file when it is downloaded or printed. A new poster should
+be prepared the same way before being added.
 
 ## Repairing or redeploying the Apps Script app
 

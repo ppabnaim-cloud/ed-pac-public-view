@@ -13,8 +13,9 @@
 
   var S = {
     lang: 'ms',
-    tab: (window.BOOT_SCOPE && ['wcc', 'bu', 'pac', 'admin'].indexOf(window.BOOT_SCOPE) >= 0)
-           ? window.BOOT_SCOPE : 'wcc',
+    // Validated against TABS below, once that is resolved. Hard-coding the
+    // list here meant every tab added later booted to the first one instead.
+    tab: String(window.BOOT_SCOPE || 'wcc'),
     mode: window.BOOT_MODE === 'tv' ? 'tv' : '',
     /* Public patient search is off unless the server says otherwise. It was
        the only path by which this interface could reach an identifiable
@@ -39,7 +40,7 @@
   /* The administrative tab is served only where an access code can gate it.
      A front end hosted outside Apps Script declares the public tabs alone. */
   var TABS = (window.BOOT_TABS && window.BOOT_TABS.length)
-    ? window.BOOT_TABS : ['wcc', 'bu', 'pac', 'iqms', 'triage', 'admin'];
+    ? window.BOOT_TABS : ['wcc', 'bu', 'pac', 'iqms', 'triage', 'rakyat', 'admin'];
 
   /* How often the page re-reads the register. Matches CACHE_SECS in Code.gs,
      so a refresh normally costs a cache read rather than a re-read of the
@@ -108,6 +109,7 @@
     return 'none';
   }
 
+  if (TABS.indexOf(S.tab) < 0) S.tab = TABS[0];
   S.tabs = TABS;
 
   // ── i18n ─────────────────────────────────────────────────
@@ -172,6 +174,12 @@
     // height, which on a 1080p television is no taller than a tablet.
     if (w >= 1000) s *= 1.22;
     if (w >= 1600) s *= 1.06;
+
+    // A phone scrolls, so fitting a whole screen is not the constraint there;
+    // legibility in the hand is. Scaling against a 1024px-tall tablet design
+    // pinned every phone to the 0.78 floor and shrank the figures people came
+    // to read.
+    if (w <= 620) s = Math.max(0.92, Math.min(1.15, w / 400));
 
     s = Math.max(0.78, Math.min(1.75, s));
     document.documentElement.style.setProperty('--s', String(Math.round(s * 1000) / 1000));
@@ -1105,6 +1113,7 @@
   function stepsFor(tab, d) {
     if (tab === 'iqms') return posterStep('iqms', queueFallback);
     if (tab === 'triage') return posterStep('triage', triageFallback);
+    if (tab === 'rakyat') return rakyatSteps();
     return tab === 'admin' ? adminSteps(d) : publicSteps(d);
   }
 
@@ -1241,6 +1250,95 @@
   }
 
   /* ══════════════════════════════════════════════════════════
+     PERANAN RAKYAT — the poster gallery
+     A scrolling wall of the hospital's own posters, grouped by the role each
+     belongs to. Every poster opens full size and can be downloaded, because a
+     poster that cannot leave the screen is a poster that never reaches a
+     noticeboard.
+     ══════════════════════════════════════════════════════════ */
+  function roleName(no) {
+    var it = (typeof Banner !== 'undefined' && Banner.items || []).filter(function (x) {
+      return String(x.no) === String(no);
+    })[0];
+    return it ? (it.title[S.lang] || it.title.ms) : '';
+  }
+
+  function posterCard(p) {
+    var card = node('figure', 'rk-card');
+    var title = (p.title && (p.title[S.lang] || p.title.ms)) || p.file;
+    var credit = p.credit === 'kkm' ? t('rakyat.byKkm') : t('rakyat.byNaim');
+    card.innerHTML =
+      '<a class="rk-shot" href="' + esc(p.src) + '" target="_blank" rel="noopener" ' +
+         'title="' + esc(t('rakyat.viewFull')) + '">' +
+        '<img src="' + esc(p.src) + '" alt="' + esc(title) + '" loading="lazy" decoding="async"/>' +
+      '</a>' +
+      '<figcaption>' +
+        '<b>' + esc(title) + '</b>' +
+        '<span class="rk-credit">' + esc(credit) + '</span>' +
+        '<a class="rk-dl" href="' + esc(p.src) + '" download="' + esc(p.file) + '">' +
+          '\u2b07 ' + esc(t('rakyat.download')) + '</a>' +
+      '</figcaption>';
+    return card;
+  }
+
+  function rakyatPanel(area) {
+    var list = (S.posters && S.posters.rakyat) || [];
+    var wrap = node('div', 'rk-wrap');
+    wrap.style.gridArea = area;
+
+    var head = node('div', 'rk-head');
+    head.innerHTML =
+      '<h2>' + esc(t('rakyat.heading')) + '</h2>' +
+      '<p class="rk-sub">' + esc(t('rakyat.sub')) + '</p>' +
+      '<p class="rk-lead">' + esc(t('rakyat.lead')) + '</p>';
+    wrap.appendChild(head);
+
+    if (!list.length) {
+      wrap.appendChild(node('p', 'rk-empty', esc(t('rakyat.none'))));
+      return wrap;
+    }
+
+    // Grouped by role, in the campaign's own order, with anything unassigned
+    // gathered at the end rather than dropped.
+    var seen = {}, order = [];
+    list.forEach(function (p) {
+      var k = p.role >= 1 && p.role <= 5 ? String(p.role) : 'other';
+      if (!seen[k]) { seen[k] = []; order.push(k); }
+      seen[k].push(p);
+    });
+    order.sort(function (a, b) {
+      if (a === 'other') return 1;
+      if (b === 'other') return -1;
+      return Number(a) - Number(b);
+    });
+
+    order.forEach(function (k) {
+      var g = node('section', 'rk-group');
+      var label = k === 'other'
+        ? t('rakyat.other')
+        : t('rakyat.roleLbl') + ' ' + k + ' \u2014 ' + roleName(k);
+      g.appendChild(node('h3', 'rk-group-h', esc(label)));
+      var grid = node('div', 'rk-grid');
+      seen[k].forEach(function (p) { grid.appendChild(posterCard(p)); });
+      g.appendChild(grid);
+      wrap.appendChild(g);
+    });
+    return wrap;
+  }
+
+  function rakyatSteps() {
+    return [{
+      title: t('tabs.rakyat.name'),
+      guide: true,
+      scroll: true,
+      rows: 'minmax(0, 1fr)',
+      cols: 'minmax(0, 1fr)',
+      areas: '"gallery"',
+      build: function () { return [rakyatPanel('gallery')]; }
+    }];
+  }
+
+  /* ══════════════════════════════════════════════════════════
      RENDER
      ══════════════════════════════════════════════════════════ */
   function showState(kind, msg) {
@@ -1253,6 +1351,7 @@
                         esc(t('retry')) + '</button>' : '') +
       '</div>';
     $('pager').style.display = 'none';
+    document.body.classList.remove('has-pager');
     var r = $('retryBtn');
     if (r) r.onclick = function () { loadTab(S.tab, true); };
   }
@@ -1270,12 +1369,13 @@
           esc(t('admin.openGate')) + '</button>' +
       '</div>';
     $('pager').style.display = 'none';
+    document.body.classList.remove('has-pager');
     $('lockedBtn').onclick = openGate;
   }
 
   function renderTab() {
     var d = S.data[S.tab];
-    renderStamp((S.tab === 'iqms' || S.tab === 'triage')
+    renderStamp(['iqms', 'triage', 'rakyat'].indexOf(S.tab) >= 0
       ? (S.data.wcc || S.data.bu || S.data.pac) : d);
 
     // Locked: show a way back in rather than a spinner. Nothing has been
@@ -1288,7 +1388,7 @@
     }
     // Standing guidance, identical whichever unit you came from: it waits on
     // nothing and renders the moment it is opened.
-    var isGuide = S.tab === 'iqms' || S.tab === 'triage';
+    var isGuide = S.tab === 'iqms' || S.tab === 'triage' || S.tab === 'rakyat';
     if (!d && !isGuide) { showState('load', t('loading')); return; }
     if (d && d.error && !isGuide) {
       showState('err',
@@ -1308,7 +1408,8 @@
     S.specs = [];
 
     var def = steps[S.step];
-    var stepEl = node('div', 'step is-active' + (def.guide ? ' is-guide' : ''));
+    var stepEl = node('div', 'step is-active' +
+      (def.guide ? ' is-guide' : '') + (def.scroll ? ' is-scroll' : ''));
     stepEl.style.gridTemplateRows = def.rows;
     stepEl.style.gridTemplateColumns = def.cols;
     stepEl.style.gridTemplateAreas = def.areas;
@@ -1323,7 +1424,14 @@
     var p = $('pager');
     // A single-step tab has nothing to page through, so the bar is removed
     // rather than shown with two disabled buttons.
-    if (steps.length <= 1) { p.style.display = 'none'; return; }
+    // The credit mark lives in the same corner; it stands down where the
+    // pager appears rather than printing itself across the Next button.
+    if (steps.length <= 1) {
+      p.style.display = 'none';
+      document.body.classList.remove('has-pager');
+      return;
+    }
+    document.body.classList.add('has-pager');
     p.style.display = 'flex';
     p.style.visibility = 'visible';
     var prev = $('pgPrev'), next = $('pgNext');

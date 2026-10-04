@@ -102,11 +102,11 @@ async function openTab(page, key) {
       // The bug adding these tabs introduced: the strip was hard-coded to
       // four columns, so the extra tabs dropped onto a second row and took
       // the administrative tab with them.
-      ok(key + ': the six tabs stay on one row', r.tabRows === 1, r.tabRows + ' rows');
+      ok(key + ': every tab stays on one row', r.tabRows === 1, r.tabRows + ' rows');
       ok(key + ': the credit is in the bottom-right corner',
          r.creditText.length > 8 && r.creditBottomRight,
          r.creditText + ' @ ' + r.creditPos);
-      ok(key + ': six tabs are present', r.tabNames.length === 6, r.tabNames.join(' | '));
+      ok(key + ': all seven tabs are present', r.tabNames.length === 7, r.tabNames.join(' | '));
       ok(key + ': no tab label is cut off', r.tabCut === 0, r.tabCut + ' cut');
 
       ok(key + ': the poster is shown', r.hasImage);
@@ -172,6 +172,51 @@ async function openTab(page, key) {
     ok('no English panel title is cut off', en.titleCut === 0, en.titleCut + '');
     ok('no English tab label is cut off', en.tabCut === 0, en.tabCut + ' cut');
     ok('the tabs still fit on one row in English', en.tabRows === 1, en.tabRows + ' rows');
+    await page.close();
+  }
+
+  // ── The Peranan Rakyat gallery ──────────────────────────────────
+  console.log('\nThe Peranan Rakyat poster gallery');
+  for (const vp of [{ n: 'desktop', w: 1280, h: 900 }, { n: 'phone', w: 390, h: 844 }]) {
+    const page = await browser.newPage({ viewport: { width: vp.w, height: vp.h } });
+    page.on('pageerror', e => fails.push('rakyat pageerror: ' + e.message));
+    await page.goto(PAGE);
+    await page.waitForTimeout(550);
+    await openTab(page, 'rakyat');
+    await page.waitForTimeout(400);
+    const r = await page.evaluate(() => ({
+      heading: (document.querySelector('.rk-head h2') || {}).textContent || '',
+      sub: (document.querySelector('.rk-sub') || {}).textContent || '',
+      cards: document.querySelectorAll('.rk-card').length,
+      loaded: [...document.querySelectorAll('.rk-shot img')].filter(i => i.naturalWidth > 0).length,
+      groups: [...document.querySelectorAll('.rk-group-h')].map(h => h.textContent.trim()),
+      downloads: document.querySelectorAll('.rk-dl[download]').length,
+      // Every poster opens full size in its own tab.
+      opens: [...document.querySelectorAll('.rk-shot')].filter(a => a.getAttribute('target') === '_blank').length,
+      credits: [...document.querySelectorAll('.rk-credit')].map(c => c.textContent.trim()),
+      fits: [...document.querySelectorAll('.rk-shot img')].every(i => {
+        const box = i.parentElement.getBoundingClientRect(), b = i.getBoundingClientRect();
+        return b.width <= box.width + 1 && b.height <= box.height + 1;
+      }),
+      hScroll: document.documentElement.scrollWidth - document.documentElement.clientWidth
+    }));
+    ok(vp.n + ': the heading names the campaign', /Peranan Rakyat/i.test(r.heading), r.heading);
+    ok(vp.n + ': and the crowding it is aimed at', /[Kk]esesakan|crowding/.test(r.sub), r.sub);
+    ok(vp.n + ': every poster in the manifest is shown', r.cards === 5, r.cards + ' cards');
+    ok(vp.n + ': every poster image loads', r.loaded === r.cards, r.loaded + '/' + r.cards);
+    ok(vp.n + ': no image spills out of its box', r.fits);
+    ok(vp.n + ': grouped under the Peranan they belong to',
+       r.groups.length >= 4 && r.groups.every(g => /Peranan \d|Lain|Other|Role \d/.test(g)),
+       r.groups.join(' | '));
+    ok(vp.n + ': every poster can be downloaded', r.downloads === r.cards, r.downloads + '');
+    ok(vp.n + ': and opened full size', r.opens === r.cards, r.opens + '');
+    ok(vp.n + ': the designer is credited on every poster',
+       r.credits.length === r.cards && r.credits.every(c => c.length > 5), r.credits.join(' | '));
+    ok(vp.n + ": the hospital's own work is credited to Dr Naim",
+       r.credits.some(c => /Dr Naim/.test(c)), r.credits.join(' | '));
+    ok(vp.n + ": and KKM's is credited to KKM",
+       r.credits.some(c => /Kesihatan Malaysia|Ministry of Health/.test(c)), r.credits.join(' | '));
+    ok(vp.n + ': no sideways scroll', r.hScroll <= 1, r.hScroll + 'px');
     await page.close();
   }
 

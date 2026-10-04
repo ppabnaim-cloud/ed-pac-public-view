@@ -129,11 +129,11 @@ const webBoot = `<script>
    browser is never given a path to an identifiable record. */
 (function () {
   var seg = (location.pathname.replace(/\\/+$/, '').split('/').pop() || 'wcc').toLowerCase();
-  if (['wcc', 'bu', 'pac', 'iqms', 'triage', 'tv'].indexOf(seg) < 0) seg = 'wcc';
+  if (['wcc', 'bu', 'pac', 'iqms', 'triage', 'rakyat', 'tv'].indexOf(seg) < 0) seg = 'wcc';
   window.BOOT_SCOPE  = seg === 'tv' ? 'wcc' : seg;
   window.BOOT_MODE   = seg === 'tv' ? 'tv' : '';
   window.BOOT_SEARCH = '';
-  window.BOOT_TABS   = ['wcc', 'bu', 'pac', 'iqms', 'triage'];
+  window.BOOT_TABS   = ['wcc', 'bu', 'pac', 'iqms', 'triage', 'rakyat'];
   window.BOOT_DATA   = {};
   // The hospital's own posters, straight from Drive. Both files must be shared
   // "Anyone with the link can view"; without that the written guidance stands
@@ -145,7 +145,8 @@ const webBoot = `<script>
     triage: { id: '1YsUupb78S4GxlyEt5vtAV6m-TG27Rm96',
               src: 'https://lh3.googleusercontent.com/d/1YsUupb78S4GxlyEt5vtAV6m-TG27Rm96=w1600',
               srcLarge: 'https://lh3.googleusercontent.com/d/1YsUupb78S4GxlyEt5vtAV6m-TG27Rm96=w2400' },
-    iqmsUrl: 'https://jknselangor.moh.gov.my/htpn/qms'
+    iqmsUrl: 'https://jknselangor.moh.gov.my/htpn/qms',
+    rakyat: __RAKYAT__
   };
 
   // Keep the address bar in step, so a tab can be bookmarked and shared.
@@ -181,7 +182,18 @@ const webBoot = `<script>
 })();
 </script>`;
 
-board = board.replace(bootBlock[0], () => webBoot);
+// Served from this site, so the gallery needs no external host at all.
+const rakyatManifest = JSON.parse(read('web/rakyat/manifest.json'));
+const rakyatList = (rakyatManifest.items || []).map(i => ({
+  file: i.file, role: i.role || 0, credit: i.credit || 'naim',
+  title: i.title || {}, src: 'rakyat/' + i.file
+}));
+for (const i of rakyatList) {
+  if (!fs.existsSync(path.join(OUT, 'rakyat', i.file))) {
+    throw new Error('web/rakyat/manifest.json lists ' + i.file + ', which is not in web/rakyat/');
+  }
+}
+board = board.replace(bootBlock[0], () => webBoot.replace('__RAKYAT__', () => JSON.stringify(rakyatList)));
 if (/<\?/.test(board)) {
   throw new Error('unresolved Apps Script template tag in the board page: ' +
     board.match(/<\?[^>]{0,60}/g).join(', '));

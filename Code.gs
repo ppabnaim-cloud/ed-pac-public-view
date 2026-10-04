@@ -13,6 +13,15 @@
  *     any statistic resting on too few observations instead of drawing it anyway.
  */
 
+/**
+ * The Peranan Rakyat poster list.
+ *
+ * GENERATED from web/rakyat/manifest.json by build/bundle.js. The copy here
+ * keeps the multi-file build runnable in the editor; edit the manifest, not
+ * this, and rebuild.
+ */
+var RAKYAT_MANIFEST = { baseUrl: '', items: [] };
+
 // ── CONFIGURATION ──────────────────────────────────────────
 var SHEET_NAME = 'Sheet1';
 var HEADER_ROW = 2;
@@ -1595,6 +1604,31 @@ function getPosters() {
                     : null;
   }
   out.iqmsUrl = iqmsUrl_();
+  out.rakyat = rakyatPosters_();
+  return out;
+}
+
+/**
+ * The Peranan Rakyat gallery.
+ *
+ * The files live in the repository and are served from its raw host, so the
+ * tab works the moment this script is pasted, with nothing to upload and no
+ * sharing to set. Point RAKYAT_BASE somewhere else -- a Drive folder's CDN
+ * prefix, the hospital's own web space -- and the same filenames are fetched
+ * from there instead.
+ */
+function rakyatPosters_() {
+  var base = prop_('RAKYAT_BASE') || RAKYAT_MANIFEST.baseUrl;
+  if (base && base.charAt(base.length - 1) !== '/') base += '/';
+  var items = RAKYAT_MANIFEST.items || [];
+  var out = [];
+  for (var i = 0; i < items.length; i++) {
+    var it = items[i];
+    out.push({
+      file: it.file, role: it.role || 0, credit: it.credit || 'naim',
+      title: it.title || {}, src: base + it.file
+    });
+  }
   return out;
 }
 

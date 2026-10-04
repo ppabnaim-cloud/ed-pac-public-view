@@ -1,0 +1,16 @@
+{
+  "_comment": "Posters for the Peranan Rakyat tab. Drop a file in this folder, add an entry, run node build/web.js. Role 1-5 groups it under a Peranan; omit for 'Lain-lain'.",
+  "baseUrl": "https://raw.githubusercontent.com/ppabnaim-cloud/ed-pac-public-view/claude/amazing-feynman-662t5d/web/rakyat/",
+  "items": [
+    { "file": "rakyat-02.jpg", "role": 1, "credit": "naim",
+      "title": { "ms": "Bangun awal untuk berjalan itu susah", "en": "Getting up early to walk is hard" } },
+    { "file": "kkm-langkah-sihat.jpg", "role": 1, "credit": "kkm",
+      "title": { "ms": "Cabaran Langkah Sihat Itu Saya — rekod kebangsaan", "en": "Healthy Steps Challenge — national record" } },
+    { "file": "rakyat-03.jpg", "role": 2, "credit": "naim",
+      "title": { "ms": "Mengurangkan manis dalam teh tarik itu susah", "en": "Cutting the sugar in your teh tarik is hard" } },
+    { "file": "rakyat-04.jpg", "role": 3, "credit": "naim",
+      "title": { "ms": "Mengambil cuti sehari untuk saringan itu susah", "en": "Taking a day off for screening is hard" } },
+    { "file": "rakyat-01.jpg", "role": 4, "credit": "naim",
+      "title": { "ms": "Menolak pujukan \"ubat ajaib\" itu susah", "en": "Refusing a friend's \"miracle cure\" is hard" } }
+  ]
+}

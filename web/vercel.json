@@ -24,6 +24,10 @@
       "destination": "/board.html"
     },
     {
+      "source": "/rakyat",
+      "destination": "/board.html"
+    },
+    {
       "source": "/tv",
       "destination": "/board.html"
     }

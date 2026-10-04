@@ -721,6 +721,70 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
 .zc-gz-wait strong { color: var(--brand-dk) }
 .zc-muted { color: var(--ink-3); font-style: italic }
 
+/* ── PERANAN RAKYAT GALLERY ──────────────────────────────── */
+/* The one place in the app that scrolls at every width. A wall of posters is
+   not a screenful of figures, and clipping it would hide the point. */
+.step.is-active.is-scroll { overflow-y: auto; -webkit-overflow-scrolling: touch }
+.rk-wrap { min-width: 0; display: flex; flex-direction: column; gap: calc(14px * var(--s)) }
+.rk-head { flex: none }
+.rk-head h2 {
+  font-size: calc(22px * var(--s)); font-weight: 800; line-height: 1.15;
+  letter-spacing: -.015em; color: var(--ink);
+}
+.rk-sub {
+  font-size: calc(14px * var(--s)); font-weight: 800; color: var(--brand-dk);
+  margin-top: calc(2px * var(--s));
+}
+.rk-lead {
+  font-size: calc(13px * var(--s)); font-weight: 600; color: var(--ink-2);
+  line-height: 1.45; margin-top: calc(6px * var(--s)); max-width: 72ch;
+}
+.rk-empty {
+  font-size: calc(14px * var(--s)); font-weight: 700; color: var(--ink-3);
+  padding: calc(20px * var(--s)); text-align: center;
+}
+.rk-group { flex: none }
+.rk-group-h {
+  font-size: calc(15px * var(--s)); font-weight: 800; color: var(--ink);
+  padding-bottom: calc(6px * var(--s)); margin-bottom: calc(10px * var(--s));
+  border-bottom: 2px solid var(--line);
+}
+.rk-grid {
+  display: grid; gap: calc(14px * var(--s));
+  grid-template-columns: repeat(auto-fill, minmax(calc(300px * var(--s)), 1fr));
+}
+.rk-card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; min-width: 0;
+}
+/* Portrait and landscape posters sit in the same grid, so the image box is
+   capped and the art is fitted inside it. Without that, one tall sheet
+   stretched its whole row and left the others floating in white. */
+.rk-shot {
+  display: flex; align-items: center; justify-content: center;
+  line-height: 0; background: var(--surface-2);
+  height: calc(210px * var(--s)); overflow: hidden;
+}
+.rk-shot img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain }
+.rk-card figcaption {
+  padding: calc(10px * var(--s)) calc(12px * var(--s)) calc(12px * var(--s));
+  display: flex; flex-direction: column; gap: calc(3px * var(--s));
+}
+.rk-card figcaption b {
+  font-size: calc(13.5px * var(--s)); font-weight: 800; line-height: 1.3; color: var(--ink);
+}
+.rk-credit { font-size: calc(11px * var(--s)); font-weight: 700; color: var(--ink-3) }
+.rk-dl {
+  align-self: flex-start; margin-top: calc(5px * var(--s));
+  text-decoration: none; background: var(--brand-lt); color: var(--brand-dk);
+  font-size: calc(12px * var(--s)); font-weight: 800;
+  border-radius: 999px; padding: calc(7px * var(--s)) calc(14px * var(--s));
+  min-height: calc(36px * var(--s)); display: inline-flex; align-items: center;
+}
+.rk-dl:hover { background: #cdeff0 }
+.rk-dl:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px }
+
 /* ── POSTER TABS ─────────────────────────────────────────── */
 /* One image, fitted to the box, nothing else competing with it. */
 .poster-tab {
@@ -885,22 +949,25 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
   /* One narrow column, and the area scrolls, so nothing needs clamping. */
   .guide.is-compact .guide-row p { -webkit-line-clamp: 6 }
   .klinik p, .seek-copy p { -webkit-line-clamp: 6 }
-  .step.is-active { grid-template-columns: 1fr !important; grid-template-areas: none !important }
-  .step.is-active > * { grid-area: auto !important }
-  /* The guidance tab is prose, and prose that is cut off is useless. Only
-     there do the panels grow to their content and the area scroll; the status
-     board keeps its fixed tracks so it still fits a screen exactly. */
-  .step.is-active.is-guide {
+  /* One column, each block as tall as its own content, and the content area
+     scrolls. The fractional row tracks are a tablet and wall-display device:
+     keeping them here capped the zone row at a phone's proportions and clipped
+     three of the five zone cards clean off the screen -- the figures people
+     open this page to read. The no-scroll rule has never applied to phones. */
+  .step.is-active {
+    grid-template-columns: 1fr !important;
+    grid-template-areas: none !important;
     grid-template-rows: none !important;
     grid-auto-rows: max-content !important;
   }
-  .step.is-active.is-guide .panel { min-height: 0 }
+  .step.is-active > * { grid-area: auto !important }
+  .step.is-active .panel, .step.is-active .zone-grid { min-height: 0 }
   .zone-grid { grid-template-columns: 1fr !important; grid-auto-rows: max-content }
-  .zone-card { flex-direction: row; align-items: center; flex-wrap: wrap }
-  .zc-name { width: auto; flex: 1 }
-  .zc-bar { order: 10 }
-  .zc-gz { margin-top: 0 }
-  .zc-big { font-size: calc(40px * var(--s)) }
+  .zc-gz { margin-top: calc(6px * var(--s)) }
+  .zc-big { font-size: calc(52px * var(--s)) }
+  .zone-card { padding: calc(12px * var(--s)) calc(14px * var(--s)) }
+  /* The standing message wraps instead of being cut off; there is room now. */
+  .narr-text { -webkit-line-clamp: 4 }
   .cklist li { font-size: calc(14px * var(--s)) }
   /* A poster is read by pinching in, so let it have the full width. */
   .poster-tab { padding: 0; border: 0; box-shadow: none; background: none }
@@ -945,6 +1012,10 @@ table.dt tbody tr:hover { background: var(--brand-lt) }
   padding: calc(2px * var(--s)) calc(8px * var(--s));
 }
 @media (max-width: 620px) { .credit-mark { font-size: calc(9px * var(--s)); opacity: .6 } }
+/* The step pager occupies the same corner. It appears only on the staff tab,
+   which does not need an attribution, so the credit stands down rather than
+   printing itself across the Next button. */
+body.has-pager .credit-mark { display: none }
 
 /* ── STATES ──────────────────────────────────────────────── */
 .state {

@@ -36,7 +36,16 @@ const escaped = page
   .replace(/\$\{/g, '\\${');
 
 // ── 2. Server files ──────────────────────────────────────────
-let code = read('Code.gs');
+// The poster manifest becomes a constant in the bundle, so the gallery needs
+// no round trip and no file the script cannot read.
+const manifest = JSON.parse(read('web/rakyat/manifest.json'));
+delete manifest._comment;
+let code = read('Code.gs').replace(
+  /var RAKYAT_MANIFEST = \{ baseUrl: '', items: \[\] \};/,
+  () => 'var RAKYAT_MANIFEST = ' + JSON.stringify(manifest) + ';');
+if (code.indexOf('var RAKYAT_MANIFEST = {"') < 0) {
+  throw new Error('the poster manifest was not substituted into Code.gs');
+}
 
 // Replace the multi-file doGet and drop the include() helper.
 const oldDoGet = code.slice(code.indexOf('function doGet(e) {'), code.indexOf('function prop_(key) {'));

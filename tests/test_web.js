@@ -112,7 +112,7 @@ const ORDER = ['rz', 'yz', 'ob', 'ab', 'pac', 'gz'];
     const seq = r.zones.slice().sort((a, c) => ORDER.indexOf(a) - ORDER.indexOf(c));
     ok(tag + ': zones in escalation order', r.zones.join() === seq.join(), r.zones.join());
     ok(tag + ': the three units plus guidance, and no administrative tab',
-       r.tabs === 'wcc,bu,pac,iqms,triage', r.tabs);
+       r.tabs === 'wcc,bu,pac,iqms,triage,rakyat', r.tabs);
     ok(tag + ': no search button', !r.searchBtn);
     ok(tag + ': no search overlay', !r.overlay);
     ok(tag + ': the counter panel stands in its place', r.counter);
