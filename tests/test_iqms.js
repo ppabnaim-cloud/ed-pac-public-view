@@ -13,6 +13,9 @@ const path = require('path');
 const { findChromium } = require('./chromium');
 
 const PAGE = 'file://' + path.join(__dirname, 'dashboard_test.html');
+const MANIFEST_COUNT = JSON.parse(
+  require('fs').readFileSync(path.join(__dirname, '..', 'web', 'rakyat', 'manifest.json'), 'utf8')
+).items.length;
 const fails = [];
 function ok(name, cond, detail) {
   if (cond) { console.log('  ok  ' + name); return; }
@@ -202,7 +205,8 @@ async function openTab(page, key) {
     }));
     ok(vp.n + ': the heading names the campaign', /Peranan Rakyat/i.test(r.heading), r.heading);
     ok(vp.n + ': and the crowding it is aimed at', /[Kk]esesakan|crowding/.test(r.sub), r.sub);
-    ok(vp.n + ': every poster in the manifest is shown', r.cards === 5, r.cards + ' cards');
+    ok(vp.n + ': every poster in the manifest is shown', r.cards === MANIFEST_COUNT,
+       r.cards + ' of ' + MANIFEST_COUNT);
     ok(vp.n + ': every poster image loads', r.loaded === r.cards, r.loaded + '/' + r.cards);
     ok(vp.n + ': no image spills out of its box', r.fits);
     ok(vp.n + ': grouped under the Peranan they belong to',

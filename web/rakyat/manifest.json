@@ -1,16 +1,37 @@
 {
-  "_comment": "Posters for the Peranan Rakyat tab. Drop a file in this folder, add an entry, run node build/web.js. Role 1-5 groups it under a Peranan; omit for 'Lain-lain'.",
+  "_comment": "Posters for the Peranan Rakyat tab. Drop an original in _incoming/, it gets prepared into this folder and listed here. role 1-5 groups it under a Peranan; 0 puts it under Lain-lain. credit: naim | kkm.",
   "baseUrl": "https://raw.githubusercontent.com/ppabnaim-cloud/ed-pac-public-view/claude/amazing-feynman-662t5d/web/rakyat/",
   "items": [
     { "file": "rakyat-02.jpg", "role": 1, "credit": "naim",
       "title": { "ms": "Bangun awal untuk berjalan itu susah", "en": "Getting up early to walk is hard" } },
+    { "file": "rakyat-05.jpg", "role": 1, "credit": "naim",
+      "title": { "ms": "Naik tangga di pejabat itu susah", "en": "Taking the office stairs is hard" } },
     { "file": "kkm-langkah-sihat.jpg", "role": 1, "credit": "kkm",
-      "title": { "ms": "Cabaran Langkah Sihat Itu Saya — rekod kebangsaan", "en": "Healthy Steps Challenge — national record" } },
+      "title": { "ms": "Cabaran Langkah Sihat Itu Saya — rekod kebangsaan", "en": "Healthy Steps Challenge — a national record" } },
+
     { "file": "rakyat-03.jpg", "role": 2, "credit": "naim",
       "title": { "ms": "Mengurangkan manis dalam teh tarik itu susah", "en": "Cutting the sugar in your teh tarik is hard" } },
+    { "file": "rakyat-06.jpg", "role": 2, "credit": "naim",
+      "title": { "ms": "Membaca label gula sebelum membeli itu susah", "en": "Reading the sugar label before buying is hard" } },
+
     { "file": "rakyat-04.jpg", "role": 3, "credit": "naim",
       "title": { "ms": "Mengambil cuti sehari untuk saringan itu susah", "en": "Taking a day off for screening is hard" } },
+    { "file": "rakyat-07.jpg", "role": 3, "credit": "naim",
+      "title": { "ms": "Mengambil darah sekali setahun itu susah", "en": "One blood test a year is hard" } },
+    { "file": "rakyat-08.jpg", "role": 3, "credit": "naim",
+      "title": { "ms": "Mengambil ubat setiap hari itu susah", "en": "Taking your medicine every day is hard" } },
+    { "file": "rakyat-09.jpg", "role": 3, "credit": "naim",
+      "title": { "ms": "Membawa anak untuk imunisasi itu susah", "en": "Bringing a child for immunisation is hard" } },
+
     { "file": "rakyat-01.jpg", "role": 4, "credit": "naim",
-      "title": { "ms": "Menolak pujukan \"ubat ajaib\" itu susah", "en": "Refusing a friend's \"miracle cure\" is hard" } }
+      "title": { "ms": "Menolak pujukan \"ubat ajaib\" itu susah", "en": "Refusing a friend's \"miracle cure\" is hard" } },
+
+    { "file": "rakyat-10.jpg", "role": 5, "credit": "naim",
+      "title": { "ms": "Berhenti merokok itu susah", "en": "Quitting smoking is hard" } },
+    { "file": "rakyat-11.jpg", "role": 5, "credit": "naim",
+      "title": { "ms": "Melaporkan perokok di kawasan larangan itu susah", "en": "Reporting smoking where it is banned is hard" } },
+
+    { "file": "rakyat-12.jpg", "role": 0, "credit": "naim",
+      "title": { "ms": "Memakai topi keledar untuk perjalanan 5 minit itu susah", "en": "Wearing a helmet for a five-minute ride is hard" } }
   ]
 }
